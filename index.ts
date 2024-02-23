@@ -7,7 +7,7 @@ program
   .description('Loggar in med BankID')
   .action(() => {
     console.log('Kontakta oss för att få testa vår tjänst!');
-    // Här kan du lägga till logik för autentisering
+    console.log('Läs mer på https://berget.cloud')
   });
 
 program
