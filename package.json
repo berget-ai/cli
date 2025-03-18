@@ -8,7 +8,8 @@
   "private": false,
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "generate-types": "openapi-typescript https://api.berget.ai/openapi.json -o src/types/api.d.ts"
   },
   "author": "Iteam Solutions AB",
   "license": "MIT",
@@ -18,6 +19,8 @@
     "@types/node": "^20.11.20"
   },
   "dependencies": {
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "openapi-fetch": "^0.9.1",
+    "openapi-typescript": "^6.7.4"
   }
 }
