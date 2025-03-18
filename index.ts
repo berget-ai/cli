@@ -57,7 +57,7 @@ cluster
       const clusters = await clusterService.listClusters();
       
       console.log('NAME                   STATUS    NODES    CREATED');
-      clusters.forEach(cluster => {
+      clusters.forEach((cluster) => {
         console.log(`${cluster.name.padEnd(22)} ${cluster.status.padEnd(9)} ${String(cluster.nodes).padEnd(8)} ${cluster.created}`);
       });
     } catch (error) {
@@ -160,7 +160,7 @@ collaborator
       console.log(`Current collaborators on ${options.cluster}:`);
       console.log('USERNAME      ROLE       STATUS');
       
-      collaborators.forEach(collab => {
+      collaborators.forEach((collab) => {
         console.log(`${collab.username.padEnd(13)} ${collab.role.padEnd(10)} ${collab.status}`);
       });
     } catch (error) {
@@ -178,7 +178,7 @@ collaborator
       const collaborators = await collaboratorService.listCollaborators(options.cluster);
       
       console.log('USERNAME      ROLE       STATUS');
-      collaborators.forEach(collab => {
+      collaborators.forEach((collab) => {
         console.log(`${collab.username.padEnd(13)} ${collab.role.padEnd(10)} ${collab.status}`);
       });
     } catch (error) {
@@ -287,12 +287,12 @@ program
       
       if (resource === 'pods') {
         console.log('NAME                      READY   STATUS    RESTARTS   AGE');
-        resources.forEach(pod => {
+        resources.forEach((pod) => {
           console.log(`${pod.name.padEnd(25)} ${pod.ready.padEnd(7)} ${pod.status.padEnd(9)} ${String(pod.restarts).padEnd(10)} ${pod.age}`);
         });
       } else if (resource === 'svc') {
         console.log('NAME                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE');
-        resources.forEach(svc => {
+        resources.forEach((svc) => {
           console.log(`${svc.name.padEnd(19)} ${svc.type.padEnd(11)} ${svc.clusterIp.padEnd(16)} ${svc.externalIp.padEnd(12)} ${svc.ports.padEnd(15)} ${svc.age}`);
         });
       }

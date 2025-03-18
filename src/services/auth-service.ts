@@ -1,5 +1,4 @@
 import { createAuthenticatedClient, saveAuthToken } from '../client';
-import * as readline from 'readline';
 import * as open from 'open';
 
 export class AuthService {

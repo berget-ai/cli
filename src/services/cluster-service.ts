@@ -81,7 +81,10 @@ export class ClusterService {
 
   public async getClusterUsage(clusterId: string): Promise<any> {
     try {
-      const { data, error } = await this.client.GET(`/v1/clusters/${clusterId}/usage`);
+      // Using a valid path from the API spec
+      const { data, error } = await this.client.GET('/v1/clusters/{clusterId}/usage', {
+        params: { path: { clusterId } }
+      });
       if (error) throw new Error(JSON.stringify(error));
       return data;
     } catch (error) {
