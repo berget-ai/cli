@@ -15,11 +15,12 @@
   "license": "MIT",
   "description": "This is a cli command for interacting with the swedish cloud provider Berget",
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/node": "^20.11.20"
+    "@types/node": "^20.11.20",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "commander": "^12.0.0",
+    "fs-extra": "^11.3.0",
     "openapi-fetch": "^0.9.1",
     "openapi-typescript": "^6.7.4"
   }
