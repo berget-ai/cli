@@ -12,7 +12,7 @@ program
 
 // Import services
 import { AuthService } from './services/auth-service';
-import { ApiKeyService } from './services/api-key-service';
+import { ApiKeyService, ApiKey } from './services/api-key-service';
 import { ClusterService, Cluster } from './services/cluster-service';
 import { CollaboratorService, Collaborator } from './services/collaborator-service';
 import { FluxService } from './services/flux-service';
@@ -76,7 +76,7 @@ apiKey
       const keys = await apiKeyService.listApiKeys();
       
       console.log('ID                       NAME                  PREFIX     CREATED             LAST USED');
-      keys.forEach((key) => {
+      keys.forEach((key: ApiKey) => {
         const lastUsed = key.lastUsed ? key.lastUsed : 'Never';
         console.log(`${key.id.padEnd(24)} ${key.name.padEnd(22)} ${key.prefix.padEnd(10)} ${key.created.substring(0, 10).padEnd(19)} ${lastUsed.substring(0, 10)}`);
       });
