@@ -12,19 +12,140 @@ program
 
 // Import services
 import { AuthService } from './services/auth-service';
+import { ApiKeyService } from './services/api-key-service';
 import { ClusterService, Cluster } from './services/cluster-service';
 import { CollaboratorService, Collaborator } from './services/collaborator-service';
 import { FluxService } from './services/flux-service';
 import { HelmService } from './services/helm-service';
 import { KubectlService } from './services/kubectl-service';
 
-// Login command
+// Auth commands
 program
   .command('login')
   .description('Loggar in med BankID')
   .action(async () => {
     const authService = AuthService.getInstance();
     await authService.login();
+  });
+
+program
+  .command('logout')
+  .description('Loggar ut från Berget')
+  .action(() => {
+    const { clearAuthToken } = require('./client');
+    clearAuthToken();
+    console.log('Du har loggats ut från Berget');
+  });
+
+program
+  .command('whoami')
+  .description('Visa information om inloggad användare')
+  .action(async () => {
+    try {
+      const authService = AuthService.getInstance();
+      const profile = await authService.getUserProfile();
+      
+      if (profile) {
+        console.log(`Inloggad som: ${profile.name || profile.login}`);
+        console.log(`Email: ${profile.email || 'Inte tillgänglig'}`);
+        console.log(`Roll: ${profile.role || 'Inte tillgänglig'}`);
+        
+        if (profile.company) {
+          console.log(`Företag: ${profile.company.name}`);
+        }
+      } else {
+        console.log('Du är inte inloggad. Använd `berget login` för att logga in.');
+      }
+    } catch (error) {
+      console.error('Du är inte inloggad eller så uppstod ett fel:', error);
+      console.log('Använd `berget login` för att logga in.');
+    }
+  });
+
+// API Key commands
+const apiKey = program
+  .command('api-key')
+  .description('Hantera API-nycklar');
+
+apiKey
+  .command('list')
+  .description('Lista alla API-nycklar')
+  .action(async () => {
+    try {
+      const apiKeyService = ApiKeyService.getInstance();
+      const keys = await apiKeyService.listApiKeys();
+      
+      console.log('ID                       NAME                  PREFIX     CREATED             LAST USED');
+      keys.forEach((key) => {
+        const lastUsed = key.lastUsed ? key.lastUsed : 'Never';
+        console.log(`${key.id.padEnd(24)} ${key.name.padEnd(22)} ${key.prefix.padEnd(10)} ${key.created.substring(0, 10).padEnd(19)} ${lastUsed.substring(0, 10)}`);
+      });
+    } catch (error) {
+      console.error('Failed to list API keys:', error);
+    }
+  });
+
+apiKey
+  .command('create')
+  .description('Skapa en ny API-nyckel')
+  .option('--name <name>', 'Namn på API-nyckeln')
+  .option('--description <description>', 'Beskrivning av API-nyckeln')
+  .action(async (options) => {
+    try {
+      if (!options.name) {
+        console.error('Error: --name är obligatoriskt');
+        return;
+      }
+      
+      const apiKeyService = ApiKeyService.getInstance();
+      const result = await apiKeyService.createApiKey({
+        name: options.name,
+        description: options.description
+      });
+      
+      console.log('API-nyckel skapad:');
+      console.log(`ID: ${result.id}`);
+      console.log(`Namn: ${result.name}`);
+      console.log(`Nyckel: ${result.key}`);
+      console.log('');
+      console.log('VIKTIGT: Spara denna nyckel på ett säkert ställe. Den kommer inte att visas igen.');
+    } catch (error) {
+      console.error('Failed to create API key:', error);
+    }
+  });
+
+apiKey
+  .command('delete')
+  .description('Ta bort en API-nyckel')
+  .argument('<id>', 'ID för API-nyckeln som ska tas bort')
+  .action(async (id) => {
+    try {
+      const apiKeyService = ApiKeyService.getInstance();
+      await apiKeyService.deleteApiKey(id);
+      console.log(`API-nyckel ${id} har tagits bort`);
+    } catch (error) {
+      console.error('Failed to delete API key:', error);
+    }
+  });
+
+apiKey
+  .command('rotate')
+  .description('Rotera en API-nyckel (skapar en ny och inaktiverar den gamla)')
+  .argument('<id>', 'ID för API-nyckeln som ska roteras')
+  .action(async (id) => {
+    try {
+      const apiKeyService = ApiKeyService.getInstance();
+      const result = await apiKeyService.rotateApiKey(id);
+      
+      console.log('API-nyckel roterad:');
+      console.log(`ID: ${result.id}`);
+      console.log(`Namn: ${result.name}`);
+      console.log(`Ny nyckel: ${result.key}`);
+      console.log('');
+      console.log('VIKTIGT: Spara denna nyckel på ett säkert ställe. Den kommer inte att visas igen.');
+    } catch (error) {
+      console.error('Failed to rotate API key:', error);
+    }
   });
 
 // Cluster commands

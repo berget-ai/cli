@@ -8,9 +8,12 @@ import * as os from 'os';
 const CONFIG_DIR = path.join(os.homedir(), '.berget');
 const TOKEN_FILE = path.join(CONFIG_DIR, 'token.json');
 
+// API Base URL
+const API_BASE_URL = process.env.BERGET_API_URL || 'https://api.berget.ai';
+
 // Create a typed client for the Berget API
 export const apiClient = createClient<paths>({
-  baseUrl: 'https://api.berget.ai',
+  baseUrl: API_BASE_URL,
 });
 
 // Authentication functions
@@ -37,11 +40,26 @@ export const saveAuthToken = (token: string): void => {
   }
 };
 
+export const clearAuthToken = (): void => {
+  try {
+    if (fs.existsSync(TOKEN_FILE)) {
+      fs.unlinkSync(TOKEN_FILE);
+    }
+  } catch (error) {
+    console.error('Error clearing auth token:', error);
+  }
+};
+
 // Create an authenticated client
 export const createAuthenticatedClient = () => {
   const token = getAuthToken();
+  
+  if (!token) {
+    console.warn('No authentication token found. Please run `berget login` first.');
+  }
+  
   return createClient<paths>({
-    baseUrl: 'https://api.berget.ai',
+    baseUrl: API_BASE_URL,
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 };
