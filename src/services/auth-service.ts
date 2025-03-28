@@ -1,5 +1,5 @@
 import { createAuthenticatedClient, saveAuthToken, apiClient } from '../client'
-import * as open from 'open'
+import open from 'open'
 import * as readline from 'readline'
 import * as http from 'http'
 import * as url from 'url'

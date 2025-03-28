@@ -50,7 +50,7 @@ export class ApiKeyService {
   public async createApiKey(options: CreateApiKeyOptions): Promise<ApiKeyResponse> {
     try {
       const { data, error } = await this.client.POST('/v1/api-keys', {
-        json: options
+        body: options
       })
       if (error) throw new Error(JSON.stringify(error))
       return data!
@@ -62,7 +62,7 @@ export class ApiKeyService {
 
   public async deleteApiKey(id: string): Promise<boolean> {
     try {
-      const { error } = await this.client.DELETE(`/v1/api-keys/${id}`)
+      const { error } = await this.client.DELETE(`/v1/api-keys/${id}`, {})
       if (error) throw new Error(JSON.stringify(error))
       return true
     } catch (error) {
@@ -73,7 +73,7 @@ export class ApiKeyService {
 
   public async rotateApiKey(id: string): Promise<ApiKeyResponse> {
     try {
-      const { data, error } = await this.client.PUT(`/v1/api-keys/${id}/rotate`)
+      const { data, error } = await this.client.PUT(`/v1/api-keys/${id}/rotate`, {})
       if (error) throw new Error(JSON.stringify(error))
       return data!
     } catch (error) {
@@ -84,7 +84,9 @@ export class ApiKeyService {
 
   public async getApiKeyUsage(id: string): Promise<any> {
     try {
-      const { data, error } = await this.client.GET(`/v1/api-keys/${id}/usage`)
+      const { data, error } = await this.client.GET(`/v1/api-keys/${id}/usage`, {
+        params: { path: { id } }
+      })
       if (error) throw new Error(JSON.stringify(error))
       return data
     } catch (error) {
