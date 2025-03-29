@@ -76,9 +76,10 @@ export class AuthService {
             : tokenError;
           
           const status = errorObj.status || 0;
+          const errorCode = errorObj.code || '';
           
-          if (status === 401) {
-            // Still waiting
+          if (status === 401 || errorCode === 'AUTHORIZATION_PENDING') {
+            // Still waiting for user to complete authorization
             continue
           } else if (status === 429) {
             // Slow down
@@ -86,18 +87,27 @@ export class AuthService {
             continue
           } else if (status === 400) {
             // Error or expired
-            const errorCode = errorObj.code || '';
             if (errorCode === 'EXPIRED_TOKEN') {
               console.log(chalk.red('\n\nAuthentication timed out. Please try again.'))
-            } else {
+            } else if (errorCode !== 'AUTHORIZATION_PENDING') {
+              // Only show error if it's not the expected "still waiting" error
               const errorMessage = errorObj.message || JSON.stringify(errorObj);
               console.log(chalk.red(`\n\nError: ${errorMessage}`))
+              return false
+            } else {
+              // If it's AUTHORIZATION_PENDING, continue polling
+              continue
             }
             return false
           } else {
-            // Unknown error
-            console.log(chalk.red(`\n\nUnexpected error: ${JSON.stringify(errorObj)}`))
-            return false
+            // For any other error, log it but continue polling
+            // This makes the flow more resilient to temporary issues
+            if (process.env.DEBUG) {
+              console.log(chalk.yellow(`\n\nReceived error: ${JSON.stringify(errorObj)}`))
+              console.log(chalk.yellow('Continuing to wait for authentication...'))
+              process.stdout.write(`\r${chalk.blue(spinner[spinnerIdx])} Waiting for authentication...`)
+            }
+            continue
           }
         } else if (tokenData && tokenData.token) {
           // Success!
