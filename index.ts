@@ -250,7 +250,7 @@ apiKey
         console.log(chalk.bold('Daily Breakdown:'));
         console.log(chalk.dim('DATE'.padEnd(12) + 'REQUESTS'));
         
-        usage.requests.daily.forEach(day => {
+        usage.requests.daily.forEach((day: { date: string; count: number }) => {
           console.log(`${day.date.padEnd(12)}${day.count.toLocaleString()}`);
         });
       }
@@ -267,7 +267,15 @@ apiKey
           chalk.dim('TOTAL TOKENS')
         );
         
-        usage.models.forEach(model => {
+        usage.models.forEach((model: { 
+          name: string; 
+          requests: number; 
+          tokens: { 
+            input: number; 
+            output: number; 
+            total: number 
+          } 
+        }) => {
           console.log(
             model.name.padEnd(20) + 
             model.requests.toString().padEnd(10) + 
