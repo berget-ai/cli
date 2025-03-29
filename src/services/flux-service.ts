@@ -25,41 +25,13 @@ export class FluxService {
     return FluxService.instance
   }
 
+  // This endpoint is not available in the API
   public async installFlux(options: FluxInstallOptions): Promise<boolean> {
-    try {
-      // In a real implementation, this would call the API to install Flux
-      // For demo purposes, we'll simulate a successful installation
-
-      // const { data, error } = await this.client.POST(`/v1/clusters/${options.cluster}/flux`, {
-      //   json: { /* flux configuration */ }
-      // });
-
-      // if (error) throw new Error(error.message);
-      // return true;
-
-      return true
-    } catch (error) {
-      console.error('Failed to install Flux:', error)
-      throw error
-    }
+    throw new Error('This functionality is not available in the API')
   }
 
+  // This endpoint is not available in the API
   public async bootstrapFlux(options: FluxBootstrapOptions): Promise<boolean> {
-    try {
-      // In a real implementation, this would call the API to bootstrap Flux
-      // For demo purposes, we'll simulate a successful bootstrap
-
-      // const { data, error } = await this.client.POST(`/v1/flux/bootstrap`, {
-      //   json: options
-      // });
-
-      // if (error) throw new Error(error.message);
-      // return true;
-
-      return true
-    } catch (error) {
-      console.error('Failed to bootstrap Flux:', error)
-      throw error
-    }
+    throw new Error('This functionality is not available in the API')
   }
 }

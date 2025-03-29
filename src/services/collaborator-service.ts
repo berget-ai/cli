@@ -19,47 +19,16 @@ export class CollaboratorService {
     return CollaboratorService.instance
   }
 
+  // This endpoint is not available in the API
   public async addCollaborator(
     clusterId: string,
     githubUsername: string
   ): Promise<Collaborator[]> {
-    try {
-      // In a real implementation, this would call the API to add a collaborator
-      // For demo purposes, we'll return mock data
-
-      // const { data, error } = await this.client.POST(`/v1/clusters/${clusterId}/collaborators`, {
-      //   json: { username: githubUsername, role: 'Editor' }
-      // });
-
-      // if (error) throw new Error(error.message);
-      // return data;
-
-      return [
-        { username: 'you', role: 'Owner', status: 'Active' },
-        { username: githubUsername, role: 'Editor', status: 'Pending' },
-      ]
-    } catch (error) {
-      console.error('Failed to add collaborator:', error)
-      throw error
-    }
+    throw new Error('This functionality is not available in the API')
   }
 
+  // This endpoint is not available in the API
   public async listCollaborators(clusterId: string): Promise<Collaborator[]> {
-    try {
-      // In a real implementation, this would call the API to list collaborators
-      // For demo purposes, we'll return mock data
-
-      // const { data, error } = await this.client.GET(`/v1/clusters/${clusterId}/collaborators`);
-      // if (error) throw new Error(error.message);
-      // return data;
-
-      return [
-        { username: 'you', role: 'Owner', status: 'Active' },
-        { username: 'kollega123', role: 'Editor', status: 'Pending' },
-      ]
-    } catch (error) {
-      console.error('Failed to list collaborators:', error)
-      throw error
-    }
+    throw new Error('This functionality is not available in the API')
   }
 }

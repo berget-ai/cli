@@ -91,7 +91,7 @@ export class AuthService {
   
   public async getUserProfile() {
     try {
-      const { data, error } = await this.client.GET('/users/me')
+      const { data, error } = await this.client.GET('/v1/users/me')
       if (error) throw new Error(JSON.stringify(error))
       return data
     } catch (error) {
