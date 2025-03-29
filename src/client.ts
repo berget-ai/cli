@@ -66,6 +66,8 @@ export const saveAuthToken = (token: string): void => {
       fs.mkdirSync(CONFIG_DIR, { recursive: true });
     }
     fs.writeFileSync(TOKEN_FILE, JSON.stringify({ accessToken: token }), 'utf8');
+    // Set file permissions to be readable only by the owner
+    fs.chmodSync(TOKEN_FILE, 0o600);
   } catch (error) {
     console.error('Error saving auth token:', error);
   }
