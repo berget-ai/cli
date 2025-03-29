@@ -21,6 +21,7 @@ program
                 |___/   AI on European terms`
   )
   .version(process.env.npm_package_version || '0.0.1', '-v, --version')
+  .option('--local', 'Use local API endpoint (hidden)', false)
 
 // Import services
 import { AuthService } from './src/services/auth-service'

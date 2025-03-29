@@ -10,7 +10,14 @@ const CONFIG_DIR = path.join(os.homedir(), '.berget');
 const TOKEN_FILE = path.join(CONFIG_DIR, 'token.json');
 
 // API Base URL
-const API_BASE_URL = process.env.BERGET_API_URL || 'https://api.berget.ai';
+// Use --local flag to test against local API
+const isLocalMode = process.argv.includes('--local');
+const API_BASE_URL = process.env.BERGET_API_URL || 
+                    (isLocalMode ? 'http://localhost:3000' : 'https://api.berget.ai');
+
+if (isLocalMode && !process.env.BERGET_API_URL) {
+  console.log(chalk.yellow('Using local API endpoint: http://localhost:3000'));
+}
 
 // Create a typed client for the Berget API
 export const apiClient = createClient<paths>({
