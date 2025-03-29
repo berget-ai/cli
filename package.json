@@ -22,6 +22,7 @@
     "chalk": "^4.1.2",
     "commander": "^12.0.0",
     "fs-extra": "^11.3.0",
+    "node-fetch": "^2.6.9",
     "open": "^9.1.0",
     "openapi-fetch": "^0.9.1",
     "openapi-typescript": "^6.7.4"

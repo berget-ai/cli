@@ -2,6 +2,10 @@ import { createAuthenticatedClient, saveAuthToken, apiClient } from '../client'
 import open from 'open'
 import chalk from 'chalk'
 import { handleError } from '../utils/error-handler'
+import fetch from 'node-fetch'
+
+// API Base URL
+const API_BASE_URL = process.env.BERGET_API_URL || 'https://api.berget.ai'
 
 export class AuthService {
   private static instance: AuthService
@@ -21,13 +25,19 @@ export class AuthService {
       console.log(chalk.blue('Initiating login process...'))
 
       // Step 1: Initiate device authorization
-      const deviceResponse = await apiClient.POST('/v1/auth/device')
+      const deviceResponse = await fetch(`${API_BASE_URL}/v1/auth/device`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
       
-      if (deviceResponse.error) {
-        throw new Error(JSON.stringify(deviceResponse.error))
+      if (!deviceResponse.ok) {
+        const errorText = await deviceResponse.text()
+        throw new Error(`Failed to initiate device authorization: ${errorText}`)
       }
       
-      const deviceData = deviceResponse.data
+      const deviceData = await deviceResponse.json()
       
       if (!deviceData) {
         throw new Error('Failed to get device authorization data')
@@ -65,35 +75,43 @@ export class AuthService {
         spinnerIdx = (spinnerIdx + 1) % spinner.length
         
         // Check if authentication is complete
-        const tokenResponse = await apiClient.POST('/v1/auth/device/token', {
-          body: {
+        const tokenResponse = await fetch(`${API_BASE_URL}/v1/auth/device/token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
             device_code: deviceData.device_code
-          }
+          })
         })
         
-        if (tokenResponse.error) {
-          if (tokenResponse.error.status === 401) {
+        if (!tokenResponse.ok) {
+          const status = tokenResponse.status
+          
+          if (status === 401) {
             // Still waiting
             continue
-          } else if (tokenResponse.error.status === 429) {
+          } else if (status === 429) {
             // Slow down
             pollInterval *= 2
             continue
-          } else if (tokenResponse.error.status === 400) {
+          } else if (status === 400) {
             // Error or expired
-            const errorData = tokenResponse.error
-            if (errorData.code === 'EXPIRED_TOKEN') {
-              console.log(chalk.red('\n\nAuthentication timed out. Please try again.'))
-            } else {
-              console.log(chalk.red(`\n\nError: ${errorData.message || JSON.stringify(errorData)}`))
+            try {
+              const errorData = await tokenResponse.json()
+              if (errorData.code === 'EXPIRED_TOKEN') {
+                console.log(chalk.red('\n\nAuthentication timed out. Please try again.'))
+              } else {
+                console.log(chalk.red(`\n\nError: ${errorData.message || JSON.stringify(errorData)}`))
+              }
+            } catch (e) {
+              console.log(chalk.red('\n\nAuthentication failed with an unknown error.'))
             }
             return false
           }
-        }
-        
-        if (tokenResponse.data) {
+        } else {
           // Success!
-          const tokenData = tokenResponse.data
+          const tokenData = await tokenResponse.json()
           
           // Step 3: Store the token
           saveAuthToken(tokenData.token)
