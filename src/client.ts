@@ -15,6 +15,10 @@ const API_BASE_URL = process.env.BERGET_API_URL || 'https://api.berget.ai';
 // Create a typed client for the Berget API
 export const apiClient = createClient<paths>({
   baseUrl: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
 });
 
 // Authentication functions

@@ -21,21 +21,15 @@ export class AuthService {
       console.log(chalk.blue('Initiating login process...'))
 
       // Step 1: Initiate device authorization
-      const deviceResponse = await apiClient.POST('/v1/auth/device', {})
+      const { data: deviceData, error: deviceError } = await apiClient.POST('/v1/auth/device', {})
       
-      if (deviceResponse.error) {
-        throw new Error(JSON.stringify(deviceResponse.error))
-      }
-      
-      const deviceData = deviceResponse.data
-      
-      if (!deviceData) {
-        throw new Error('Failed to get device authorization data')
+      if (deviceError || !deviceData) {
+        throw new Error(deviceError ? JSON.stringify(deviceError) : 'Failed to get device authorization data')
       }
       
       // Display information to user
       console.log(chalk.cyan('\nTo complete login:'))
-      console.log(chalk.cyan(`1. Open this URL: ${chalk.bold(deviceData.verification_url || '')}`))
+      console.log(chalk.cyan(`1. Open this URL: ${chalk.bold(deviceData.verification_url || 'https://auth.berget.ai/device')}`))
       console.log(chalk.cyan(`2. Enter this code: ${chalk.bold(deviceData.user_code || '')}\n`))
       
       // Try to open browser automatically
@@ -52,7 +46,8 @@ export class AuthService {
       
       // Step 2: Poll for completion
       const startTime = Date.now()
-      const expiresAt = startTime + ((deviceData.expires_in || 900) * 1000)
+      const expiresIn = deviceData.expires_in !== undefined ? deviceData.expires_in : 900
+      const expiresAt = startTime + (expiresIn * 1000)
       let pollInterval = (deviceData.interval || 5) * 1000
       
       const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
@@ -67,14 +62,15 @@ export class AuthService {
         spinnerIdx = (spinnerIdx + 1) % spinner.length
         
         // Check if authentication is complete
-        const tokenResponse = await apiClient.POST('/v1/auth/device/token', {
+        const deviceCode = deviceData.device_code || ''
+        const { data: tokenData, error: tokenError } = await apiClient.POST('/v1/auth/device/token', {
           body: {
-            device_code: deviceData.device_code
+            device_code: deviceCode
           }
         })
         
-        if (tokenResponse.error) {
-          const status = tokenResponse.error.status
+        if (tokenError) {
+          const status = tokenError.status
           
           if (status === 401) {
             // Still waiting
@@ -85,32 +81,26 @@ export class AuthService {
             continue
           } else if (status === 400) {
             // Error or expired
-            const errorData = tokenResponse.error
-            if (errorData.code === 'EXPIRED_TOKEN') {
+            if (tokenError.code === 'EXPIRED_TOKEN') {
               console.log(chalk.red('\n\nAuthentication timed out. Please try again.'))
             } else {
-              console.log(chalk.red(`\n\nError: ${errorData.message || JSON.stringify(errorData)}`))
+              console.log(chalk.red(`\n\nError: ${tokenError.message || JSON.stringify(tokenError)}`))
             }
             return false
           }
-        } else if (tokenResponse.data) {
+        } else if (tokenData && tokenData.token) {
           // Success!
-          const tokenData = tokenResponse.data
+          saveAuthToken(tokenData.token)
           
-          // Step 3: Store the token
-          if (tokenData.token) {
-            saveAuthToken(tokenData.token)
-            
-            process.stdout.write('\r' + ' '.repeat(50) + '\r') // Clear the spinner line
-            console.log(chalk.green('✓ Successfully logged in to Berget'))
-            
-            if (tokenData.user) {
-              const user = tokenData.user as any
-              console.log(chalk.green(`Logged in as ${user.name || user.email || 'User'}`))
-            }
-            
-            return true
+          process.stdout.write('\r' + ' '.repeat(50) + '\r') // Clear the spinner line
+          console.log(chalk.green('✓ Successfully logged in to Berget'))
+          
+          if (tokenData.user) {
+            const user = tokenData.user as any
+            console.log(chalk.green(`Logged in as ${user.name || user.email || 'User'}`))
           }
+          
+          return true
         }
       }
       
