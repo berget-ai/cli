@@ -70,7 +70,12 @@ export class AuthService {
         })
         
         if (tokenError) {
-          const status = tokenError.status
+          // Parse the error to get status and other details
+          const errorObj = typeof tokenError === 'string' 
+            ? JSON.parse(tokenError) 
+            : tokenError;
+          
+          const status = errorObj.status || 0;
           
           if (status === 401) {
             // Still waiting
@@ -81,11 +86,17 @@ export class AuthService {
             continue
           } else if (status === 400) {
             // Error or expired
-            if (tokenError.code === 'EXPIRED_TOKEN') {
+            const errorCode = errorObj.code || '';
+            if (errorCode === 'EXPIRED_TOKEN') {
               console.log(chalk.red('\n\nAuthentication timed out. Please try again.'))
             } else {
-              console.log(chalk.red(`\n\nError: ${tokenError.message || JSON.stringify(tokenError)}`))
+              const errorMessage = errorObj.message || JSON.stringify(errorObj);
+              console.log(chalk.red(`\n\nError: ${errorMessage}`))
             }
+            return false
+          } else {
+            // Unknown error
+            console.log(chalk.red(`\n\nUnexpected error: ${JSON.stringify(errorObj)}`))
             return false
           }
         } else if (tokenData && tokenData.token) {
