@@ -22,6 +22,7 @@ export class AuthService {
 
   public async login(): Promise<boolean> {
     try {
+      // Note: Using direct fetch calls for device flow auth until API types are updated
       console.log(chalk.blue('Initiating login process...'))
 
       // Step 1: Initiate device authorization
@@ -151,7 +152,7 @@ export class AuthService {
       if (error) throw new Error(JSON.stringify(error))
       return data
     } catch (error) {
-      console.error('Failed to get user profile:', error)
+      handleError('Failed to get user profile', error)
       throw error
     }
   }
