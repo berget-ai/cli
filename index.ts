@@ -4,6 +4,8 @@ import { program } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createAuthenticatedClient } from './src/client';
+import { handleError } from './src/utils/error-handler';
+import chalk from 'chalk';
 
 // Set version and description
 program
@@ -35,7 +37,7 @@ program
   .action(() => {
     const { clearAuthToken } = require('./src/client');
     clearAuthToken();
-    console.log('Du har loggats ut från Berget');
+    console.log(chalk.green('Du har loggats ut från Berget'));
   });
 
 program
@@ -47,19 +49,18 @@ program
       const profile = await authService.getUserProfile();
       
       if (profile) {
-        console.log(`Inloggad som: ${profile.name || profile.login}`);
-        console.log(`Email: ${profile.email || 'Inte tillgänglig'}`);
-        console.log(`Roll: ${profile.role || 'Inte tillgänglig'}`);
+        console.log(chalk.bold(`Inloggad som: ${profile.name || profile.login}`));
+        console.log(`Email: ${chalk.cyan(profile.email || 'Inte tillgänglig')}`);
+        console.log(`Roll: ${chalk.cyan(profile.role || 'Inte tillgänglig')}`);
         
         if (profile.company) {
-          console.log(`Företag: ${profile.company.name}`);
+          console.log(`Företag: ${chalk.cyan(profile.company.name)}`);
         }
       } else {
-        console.log('Du är inte inloggad. Använd `berget login` för att logga in.');
+        console.log(chalk.yellow('Du är inte inloggad. Använd `berget login` för att logga in.'));
       }
     } catch (error) {
-      console.error('Du är inte inloggad eller så uppstod ett fel:', error);
-      console.log('Använd `berget login` för att logga in.');
+      handleError('Du är inte inloggad eller så uppstod ett fel', error);
     }
   });
 
@@ -82,7 +83,7 @@ apiKey
         console.log(`${String(key.id).padEnd(24)} ${key.name.padEnd(22)} ${key.prefix.padEnd(10)} ${key.created.substring(0, 10).padEnd(19)} ${lastUsed.substring(0, 10)}`);
       });
     } catch (error) {
-      console.error('Failed to list API keys:', error);
+      handleError('Failed to list API keys', error);
     }
   });
 
@@ -111,7 +112,7 @@ apiKey
       console.log('');
       console.log('VIKTIGT: Spara denna nyckel på ett säkert ställe. Den kommer inte att visas igen.');
     } catch (error) {
-      console.error('Failed to create API key:', error);
+      handleError('Failed to create API key', error);
     }
   });
 
@@ -125,7 +126,7 @@ apiKey
       await apiKeyService.deleteApiKey(id);
       console.log(`API-nyckel ${id} har tagits bort`);
     } catch (error) {
-      console.error('Failed to delete API key:', error);
+      handleError('Failed to delete API key', error);
     }
   });
 
@@ -145,7 +146,7 @@ apiKey
       console.log('');
       console.log('VIKTIGT: Spara denna nyckel på ett säkert ställe. Den kommer inte att visas igen.');
     } catch (error) {
-      console.error('Failed to rotate API key:', error);
+      handleError('Failed to rotate API key', error);
     }
   });
 
@@ -169,7 +170,7 @@ cluster
         console.log(`${cluster.name.padEnd(22)} ${cluster.status.padEnd(9)} ${String(cluster.nodes).padEnd(8)} ${cluster.created}`);
       });
     } catch (error) {
-      console.error('Failed to list clusters:', error);
+      handleError('Failed to list clusters', error);
     }
   });
 
@@ -185,7 +186,7 @@ cluster
       console.log('Cluster Usage:');
       console.log(JSON.stringify(usage, null, 2));
     } catch (error) {
-      console.error('Failed to get cluster usage:', error);
+      handleError('Failed to get cluster usage', error);
     }
   });
 
@@ -195,8 +196,8 @@ program
   .command('install')
   .description('Install shell autocompletion')
   .action(() => {
-    console.log('✓ Berget autocomplete installed in your shell');
-    console.log('✓ Shell completion for kubectl also installed');
+    console.log(chalk.green('✓ Berget autocomplete installed in your shell'));
+    console.log(chalk.green('✓ Shell completion for kubectl also installed'));
     console.log('');
     console.log('Restart your shell or run:');
     console.log('  source ~/.bashrc');
@@ -235,7 +236,7 @@ program
       console.log('Token Usage:');
       console.log(JSON.stringify(response, null, 2));
     } catch (error) {
-      console.error('Failed to get token usage:', error);
+      handleError('Failed to get token usage', error);
     }
   });
 
@@ -275,7 +276,7 @@ program
         });
       }
     } catch (error) {
-      console.error('Failed to get models:', error);
+      handleError('Failed to get models', error);
     }
   });
 
@@ -295,7 +296,7 @@ program
         console.log(`${user.name.padEnd(24)} ${user.email.padEnd(30)} ${user.role}`);
       });
     } catch (error) {
-      console.error('Failed to list team members:', error);
+      handleError('Failed to list team members', error);
     }
   });
 

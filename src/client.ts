@@ -3,6 +3,7 @@ import type { paths } from './types/api';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import chalk from 'chalk';
 
 // Configuration directory
 const CONFIG_DIR = path.join(os.homedir(), '.berget');
@@ -55,7 +56,7 @@ export const createAuthenticatedClient = () => {
   const token = getAuthToken();
   
   if (!token) {
-    console.warn('No authentication token found. Please run `berget login` first.');
+    console.warn(chalk.yellow('No authentication token found. Please run `berget login` first.'));
   }
   
   return createClient<paths>({
