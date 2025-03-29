@@ -11,29 +11,21 @@ import chalk from 'chalk'
 program
   .name('berget')
   .description(
-    `
- ______                     _      ___  _____ 
+    `______                     _      ___  _____ 
 | ___ \\                   | |    / _ \\|_   _|
 | |_/ / ___ _ __ __ _  ___| |_  / /_\\ \\ | |  
 | ___ \\/ _ \\ '__/ _\` |/ _ \\ __| |  _  | | |  
 | |_/ /  __/ | | (_| |  __/ |_  | | | |_| |_ 
 \\____/ \\___|_|  \\__, |\\___|\\_\\_ \\_| |_/\\___/ 
-                 __/ |                       
-                |___/                        `
+                 __/ |                      
+                |___/   AI on European terms`
   )
-  .version('0.0.3')
+  .version(process.env.npm_package_version || '0.0.1', '-v, --version')
 
 // Import services
 import { AuthService } from './src/services/auth-service'
 import { ApiKeyService, ApiKey } from './src/services/api-key-service'
 import { ClusterService, Cluster } from './src/services/cluster-service'
-import {
-  CollaboratorService,
-  Collaborator,
-} from './src/services/collaborator-service'
-import { FluxService } from './src/services/flux-service'
-import { HelmService } from './src/services/helm-service'
-import { KubectlService } from './src/services/kubectl-service'
 
 // Auth commands
 program
