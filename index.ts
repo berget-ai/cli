@@ -79,7 +79,7 @@ apiKey
       console.log('ID                       NAME                  PREFIX     CREATED             LAST USED');
       keys.forEach((key: ApiKey) => {
         const lastUsed = key.lastUsed ? key.lastUsed : 'Never';
-        console.log(`${key.id.padEnd(24)} ${key.name.padEnd(22)} ${key.prefix.padEnd(10)} ${key.created.substring(0, 10).padEnd(19)} ${lastUsed.substring(0, 10)}`);
+        console.log(`${String(key.id).padEnd(24)} ${key.name.padEnd(22)} ${key.prefix.padEnd(10)} ${key.created.substring(0, 10).padEnd(19)} ${lastUsed.substring(0, 10)}`);
       });
     } catch (error) {
       console.error('Failed to list API keys:', error);
