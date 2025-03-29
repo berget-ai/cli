@@ -40,10 +40,20 @@ export class ApiKeyService {
   public async listApiKeys(): Promise<ApiKey[]> {
     try {
       const { data, error } = await this.client.GET('/v1/api-keys')
-      if (error) throw new Error(JSON.stringify(error))
+      if (error) {
+        // Check if this is an authentication error
+        if (error.status === 401) {
+          throw new Error(JSON.stringify({
+            error: "Authentication failed. Your session may have expired.",
+            code: "AUTH_FAILED",
+            details: "Please run 'berget login' to authenticate again."
+          }))
+        }
+        throw new Error(JSON.stringify(error))
+      }
       return data || []
     } catch (error) {
-      console.error('Failed to list API keys:', error)
+      handleError('Failed to list API keys', error)
       throw error
     }
   }

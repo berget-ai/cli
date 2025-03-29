@@ -34,6 +34,32 @@ export const getAuthToken = (): string | null => {
   return null;
 };
 
+// Check if token is expired (JWT tokens have an exp claim)
+export const isTokenExpired = (token: string): boolean => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    
+    // Check if token has expired
+    if (payload.exp) {
+      return payload.exp * 1000 < Date.now();
+    }
+  } catch (error) {
+    // If we can't decode the token, assume it's expired
+    return true;
+  }
+  
+  // If there's no exp claim, assume it's valid
+  return false;
+};
+
 export const saveAuthToken = (token: string): void => {
   try {
     if (!fs.existsSync(CONFIG_DIR)) {
@@ -61,10 +87,28 @@ export const createAuthenticatedClient = () => {
   
   if (!token) {
     console.warn(chalk.yellow('No authentication token found. Please run `berget login` first.'));
+  } else if (isTokenExpired(token)) {
+    console.warn(chalk.yellow('Your authentication token has expired. Please run `berget login` to get a new token.'));
+    // Optionally clear the expired token
+    clearAuthToken();
+    return createClient<paths>({
+      baseUrl: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
   }
   
   return createClient<paths>({
     baseUrl: API_BASE_URL,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: token ? { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    } : {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
   });
 };

@@ -1,4 +1,4 @@
-import { createAuthenticatedClient, saveAuthToken, apiClient } from '../client'
+import { createAuthenticatedClient, saveAuthToken, clearAuthToken, apiClient } from '../client'
 import open from 'open'
 import chalk from 'chalk'
 import { handleError } from '../utils/error-handler'
@@ -18,6 +18,9 @@ export class AuthService {
 
   public async login(): Promise<boolean> {
     try {
+      // Clear any existing token to ensure a fresh login
+      clearAuthToken()
+      
       console.log(chalk.blue('Initiating login process...'))
 
       // Step 1: Initiate device authorization
