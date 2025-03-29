@@ -11,9 +11,9 @@
     "prepublishOnly": "npm run build",
     "generate-types": "openapi-typescript https://api.berget.ai/openapi.json -o src/types/api.d.ts"
   },
-  "author": "Iteam Solutions AB",
+  "author": "Berget AI AB",
   "license": "MIT",
-  "description": "This is a cli command for interacting with the swedish cloud provider Berget",
+  "description": "This is a cli command for interacting with the AI infrastructure provider Berget",
   "devDependencies": {
     "@types/node": "^20.11.20",
     "typescript": "^5.3.3"
