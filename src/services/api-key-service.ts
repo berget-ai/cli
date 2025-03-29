@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from '../client'
+import { handleError } from '../utils/error-handler'
 
 export interface ApiKey {
   id: number
@@ -42,7 +43,8 @@ export class ApiKeyService {
       const { data, error } = await this.client.GET('/v1/api-keys')
       if (error) {
         // Check if this is an authentication error
-        if (error.status === 401) {
+        const errorObj = typeof error === 'string' ? JSON.parse(error) : error;
+        if (errorObj.status === 401) {
           throw new Error(JSON.stringify({
             error: "Authentication failed. Your session may have expired.",
             code: "AUTH_FAILED",
