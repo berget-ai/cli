@@ -11,13 +11,13 @@ program
   .version('0.0.3');
 
 // Import services
-import { AuthService } from './services/auth-service';
-import { ApiKeyService, ApiKey } from './services/api-key-service';
-import { ClusterService, Cluster } from './services/cluster-service';
-import { CollaboratorService, Collaborator } from './services/collaborator-service';
-import { FluxService } from './services/flux-service';
-import { HelmService } from './services/helm-service';
-import { KubectlService } from './services/kubectl-service';
+import { AuthService } from './src/services/auth-service';
+import { ApiKeyService, ApiKey } from './src/services/api-key-service';
+import { ClusterService, Cluster } from './src/services/cluster-service';
+import { CollaboratorService, Collaborator } from './src/services/collaborator-service';
+import { FluxService } from './src/services/flux-service';
+import { HelmService } from './src/services/helm-service';
+import { KubectlService } from './src/services/kubectl-service';
 
 // Auth commands
 program
@@ -32,7 +32,7 @@ program
   .command('logout')
   .description('Loggar ut från Berget')
   .action(() => {
-    const { clearAuthToken } = require('./client');
+    const { clearAuthToken } = require('./src/client');
     clearAuthToken();
     console.log('Du har loggats ut från Berget');
   });
