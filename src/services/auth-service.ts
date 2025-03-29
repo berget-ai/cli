@@ -82,7 +82,7 @@ export class AuthService {
   public async isAuthenticated(): Promise<boolean> {
     try {
       // Call an API endpoint that requires authentication
-      const { data, error } = await this.client.GET('/users/me')
+      const { data, error } = await this.client.GET('/v1/users/me')
       return !!data && !error
     } catch {
       return false

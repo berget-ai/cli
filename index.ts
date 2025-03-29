@@ -3,6 +3,7 @@
 import { program } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createAuthenticatedClient } from './src/client';
 
 // Set version and description
 program

@@ -1,13 +1,14 @@
 import { createAuthenticatedClient } from '../client'
 
 export interface ApiKey {
-  id: string
+  id: number
   name: string
   description: string | null
   created: string
   lastUsed: string | null
   prefix: string
   active: boolean
+  modified: string
 }
 
 export interface CreateApiKeyOptions {
@@ -16,7 +17,7 @@ export interface CreateApiKeyOptions {
 }
 
 export interface ApiKeyResponse {
-  id: string
+  id: number
   name: string
   description: string | null
   key: string

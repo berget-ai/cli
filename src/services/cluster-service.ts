@@ -47,21 +47,4 @@ export class ClusterService {
       throw error
     }
   }
-
-  public async getClusterUsage(clusterId: string): Promise<any> {
-    try {
-      // Using a valid path from the API spec
-      const { data, error } = await this.client.GET(
-        '/v1/clusters/{clusterId}/usage',
-        {
-          params: { path: { clusterId } },
-        }
-      )
-      if (error) throw new Error(JSON.stringify(error))
-      return data
-    } catch (error) {
-      console.error('Failed to get cluster usage:', error)
-      throw error
-    }
-  }
 }
