@@ -30,7 +30,9 @@ export class ChatService {
   
   // Subcommands for this service
   public static readonly COMMANDS = {
-    COMPLETION: 'completion'
+    RUN: 'run',
+    LIST: 'list',
+    PULL: 'pull'
   }
 
   private constructor() {}
@@ -73,14 +75,30 @@ export class ChatService {
         return data
       }
     } catch (error) {
-      console.error('Failed to create chat completion:', error)
-      throw error
+      // Improved error handling
+      let errorMessage = 'Failed to create chat completion';
+      
+      if (error instanceof Error) {
+        try {
+          // Try to parse the error message as JSON
+          const parsedError = JSON.parse(error.message);
+          if (parsedError.error && parsedError.error.message) {
+            errorMessage = `Chat error: ${parsedError.error.message}`;
+          }
+        } catch (e) {
+          // If parsing fails, use the original error message
+          errorMessage = `Chat error: ${error.message}`;
+        }
+      }
+      
+      console.error(chalk.red(errorMessage));
+      throw new Error(errorMessage);
     }
   }
   
   /**
    * List available models
-   * Command: berget chat models
+   * Command: berget chat list
    */
   public async listModels(apiKey?: string): Promise<any> {
     try {
@@ -98,7 +116,55 @@ export class ChatService {
         return data
       }
     } catch (error) {
-      console.error('Failed to list models:', error)
+      // Improved error handling
+      let errorMessage = 'Failed to list models';
+      
+      if (error instanceof Error) {
+        try {
+          // Try to parse the error message as JSON
+          const parsedError = JSON.parse(error.message);
+          if (parsedError.error) {
+            errorMessage = `Models error: ${typeof parsedError.error === 'string' ? 
+              parsedError.error : 
+              (parsedError.error.message || JSON.stringify(parsedError.error))}`;
+          }
+        } catch (e) {
+          // If parsing fails, use the original error message
+          errorMessage = `Models error: ${error.message}`;
+        }
+      }
+      
+      console.error(chalk.red(errorMessage));
+      throw new Error(errorMessage);
+    }
+  }
+  
+  /**
+   * Pull a model for use with chat
+   * Command: berget chat pull <model>
+   */
+  public async pullModel(model: string, apiKey?: string): Promise<any> {
+    try {
+      if (apiKey) {
+        const headers = {
+          'Authorization': `Bearer ${apiKey}`
+        }
+        
+        const { data, error } = await this.client.POST('/v1/models/pull', { 
+          body: { model },
+          headers
+        })
+        if (error) throw new Error(JSON.stringify(error))
+        return data
+      } else {
+        const { data, error } = await this.client.POST('/v1/models/pull', {
+          body: { model }
+        })
+        if (error) throw new Error(JSON.stringify(error))
+        return data
+      }
+    } catch (error) {
+      console.error('Failed to pull model:', error)
       throw error
     }
   }

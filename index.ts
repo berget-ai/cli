@@ -589,13 +589,13 @@ const chat = program
   .description('Interact with AI chat models')
 
 chat
-  .command(SUBCOMMANDS.CHAT.COMPLETION)
-  .description('Create a chat completion')
-  .option('--model <model>', 'Model to use (default: berget-70b-instruct)')
-  .option('--system <message>', 'System message')
-  .option('--temperature <temp>', 'Temperature (0-1)', parseFloat)
-  .option('--max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
-  .option('--api-key <key>', 'API key to use for this chat session')
+  .command(SUBCOMMANDS.CHAT.RUN)
+  .description('Run a chat session with a specified model')
+  .argument('[model]', 'Model to use (default: berget-70b-instruct)')
+  .option('-s, --system <message>', 'System message')
+  .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
+  .option('-m, --max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
+  .option('-k, --api-key <key>', 'API key to use for this chat session')
   .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
   .action(async (options) => {
     try {
@@ -669,7 +669,7 @@ chat
           try {
             // Call the API
             const response = await chatService.createCompletion({
-              model: options.model || 'berget-70b-instruct',
+              model: options.args[0] || 'berget-70b-instruct',
               messages: messages,
               temperature: options.temperature !== undefined ? options.temperature : 0.7,
               max_tokens: options.maxTokens || 4096,
@@ -710,9 +710,9 @@ chat
   })
 
 chat
-  .command(SUBCOMMANDS.CHAT.MODELS)
+  .command(SUBCOMMANDS.CHAT.LIST)
   .description('List available chat models')
-  .option('--api-key <key>', 'API key to use for this request')
+  .option('-k, --api-key <key>', 'API key to use for this request')
   .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
   .action(async (options) => {
     try {
@@ -771,6 +771,55 @@ chat
       })
     } catch (error) {
       handleError('Failed to list chat models', error)
+    }
+  })
+
+chat
+  .command(SUBCOMMANDS.CHAT.PULL)
+  .description('Pull a model for use with chat')
+  .argument('<model>', 'Model to pull')
+  .option('-k, --api-key <key>', 'API key to use for this request')
+  .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
+  .action(async (model, options) => {
+    try {
+      console.log(chalk.blue(`Pulling model ${model}...`))
+      console.log(chalk.yellow('This operation may take some time depending on the model size.'))
+      
+      // If API key ID is provided, fetch the actual key
+      let apiKey = options.apiKey;
+      if (options.apiKeyId && !options.apiKey) {
+        try {
+          const apiKeyService = ApiKeyService.getInstance();
+          const keys = await apiKeyService.list();
+          const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
+          
+          if (!selectedKey) {
+            console.log(chalk.yellow(`API key with ID ${options.apiKeyId} not found. Using default authentication.`));
+          } else {
+            console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
+            
+            // We need to rotate the key to get the actual key value
+            if (await confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
+              const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
+              apiKey = rotatedKey.key;
+              console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
+            } else {
+              console.log(chalk.yellow('Using default authentication instead.'));
+            }
+          }
+        } catch (error) {
+          console.error(chalk.red('Error fetching API key:'));
+          console.error(error);
+          console.log(chalk.yellow('Using default authentication instead.'));
+        }
+      }
+      
+      const chatService = ChatService.getInstance();
+      await chatService.pullModel(model, apiKey);
+      
+      console.log(chalk.green(`✓ Model ${model} pulled successfully`));
+    } catch (error) {
+      handleError('Failed to pull model', error);
     }
   })
 

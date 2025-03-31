@@ -29,8 +29,9 @@ export const SUBCOMMANDS = {
   
   // Chat commands
   CHAT: {
-    COMPLETION: 'completion',
-    MODELS: 'models',
+    RUN: 'run',
+    LIST: 'list',
+    PULL: 'pull',
   },
   
   // API Keys commands
@@ -175,6 +176,7 @@ export const COMMAND_DESCRIPTIONS = {
   
   // Chat group
   [COMMAND_GROUPS.CHAT]: 'Interact with AI chat models',
-  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.COMPLETION}`]: 'Create a chat completion',
-  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.MODELS}`]: 'List available chat models',
+  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.RUN}`]: 'Run a chat session with a specified model',
+  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.LIST}`]: 'List available chat models',
+  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.PULL}`]: 'Pull a model for use with chat',
 }
