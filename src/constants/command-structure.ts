@@ -15,6 +15,7 @@ export const COMMAND_GROUPS = {
   FLUX: 'flux',
   USERS: 'users',
   BILLING: 'billing',
+  CHAT: 'chat',
 }
 
 // Subcommands for each group
@@ -24,6 +25,12 @@ export const SUBCOMMANDS = {
     LOGIN: 'login',
     LOGOUT: 'logout',
     WHOAMI: 'whoami',
+  },
+  
+  // Chat commands
+  CHAT: {
+    COMPLETION: 'completion',
+    MODELS: 'models',
   },
   
   // API Keys commands
@@ -165,4 +172,9 @@ export const COMMAND_DESCRIPTIONS = {
   [`${COMMAND_GROUPS.BILLING} ${SUBCOMMANDS.BILLING.ADD_PAYMENT_METHOD}`]: 'Add a new payment method',
   [`${COMMAND_GROUPS.BILLING} ${SUBCOMMANDS.BILLING.REMOVE_PAYMENT_METHOD}`]: 'Remove a payment method',
   [`${COMMAND_GROUPS.BILLING} ${SUBCOMMANDS.BILLING.UPDATE_SUBSCRIPTION}`]: 'Update subscription plan',
+  
+  // Chat group
+  [COMMAND_GROUPS.CHAT]: 'Interact with AI chat models',
+  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.COMPLETION}`]: 'Create a chat completion',
+  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.MODELS}`]: 'List available chat models',
 }

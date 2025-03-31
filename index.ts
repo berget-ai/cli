@@ -7,6 +7,7 @@ import { createAuthenticatedClient } from './src/client'
 import { handleError } from './src/utils/error-handler'
 import chalk from 'chalk'
 import { COMMAND_GROUPS, SUBCOMMANDS } from './src/constants/command-structure'
+import readline from 'readline'
 
 // Set version and description
 program
@@ -28,6 +29,7 @@ program
 import { AuthService } from './src/services/auth-service'
 import { ApiKeyService, ApiKey } from './src/services/api-key-service'
 import { ClusterService, Cluster } from './src/services/cluster-service'
+import { ChatService, ChatMessage } from './src/services/chat-service'
 
 // Auth commands
 const auth = program
@@ -563,6 +565,134 @@ users
       })
     } catch (error) {
       handleError('Failed to list team members', error)
+    }
+  })
+
+// Add chat commands
+const chat = program
+  .command(COMMAND_GROUPS.CHAT)
+  .description('Interact with AI chat models')
+
+chat
+  .command(SUBCOMMANDS.CHAT.COMPLETION)
+  .description('Create a chat completion')
+  .option('--model <model>', 'Model to use (default: berget-70b-instruct)')
+  .option('--system <message>', 'System message')
+  .option('--temperature <temp>', 'Temperature (0-1)', parseFloat)
+  .option('--max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
+  .action(async (options) => {
+    try {
+      const chatService = ChatService.getInstance()
+      
+      // Set up readline interface for user input
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      })
+      
+      // Prepare messages array
+      const messages: ChatMessage[] = []
+      
+      // Add system message if provided
+      if (options.system) {
+        messages.push({
+          role: 'system',
+          content: options.system
+        })
+      }
+      
+      console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
+      console.log(chalk.cyan('----------------------------------------'))
+      
+      // Start the conversation loop
+      const askQuestion = () => {
+        rl.question(chalk.green('You: '), async (input) => {
+          // Check if user wants to exit
+          if (input.toLowerCase() === 'exit') {
+            console.log(chalk.cyan('Goodbye!'))
+            rl.close()
+            return
+          }
+          
+          // Add user message
+          messages.push({
+            role: 'user',
+            content: input
+          })
+          
+          try {
+            // Call the API
+            const response = await chatService.createCompletion({
+              model: options.model || 'berget-70b-instruct',
+              messages: messages,
+              temperature: options.temperature !== undefined ? options.temperature : 0.7,
+              max_tokens: options.maxTokens || 4096
+            })
+            
+            // Get assistant's response
+            const assistantMessage = response.choices[0].message.content
+            
+            // Add to messages array
+            messages.push({
+              role: 'assistant',
+              content: assistantMessage
+            })
+            
+            // Display the response
+            console.log(chalk.blue('Assistant: ') + assistantMessage)
+            console.log() // Empty line for better readability
+            
+            // Continue the conversation
+            askQuestion()
+          } catch (error) {
+            console.error(chalk.red('Error: Failed to get response'))
+            if (error instanceof Error) {
+              console.error(chalk.red(error.message))
+            }
+            // Continue despite error
+            askQuestion()
+          }
+        })
+      }
+      
+      // Start the conversation
+      askQuestion()
+    } catch (error) {
+      handleError('Failed to create chat completion', error)
+    }
+  })
+
+chat
+  .command(SUBCOMMANDS.CHAT.MODELS)
+  .description('List available chat models')
+  .action(async () => {
+    try {
+      const chatService = ChatService.getInstance()
+      const models = await chatService.listModels()
+      
+      console.log(chalk.bold('Available Chat Models:'))
+      console.log(chalk.dim('─'.repeat(70)))
+      console.log(
+        chalk.dim('MODEL ID'.padEnd(30)) +
+        chalk.dim('OWNER'.padEnd(25)) +
+        chalk.dim('CAPABILITIES')
+      )
+      console.log(chalk.dim('─'.repeat(70)))
+      
+      models.data.forEach((model: any) => {
+        const capabilities = []
+        if (model.capabilities.vision) capabilities.push('vision')
+        if (model.capabilities.function_calling) capabilities.push('function_calling')
+        if (model.capabilities.json_mode) capabilities.push('json_mode')
+        
+        console.log(
+          model.id.padEnd(30) +
+          model.owned_by.padEnd(25) +
+          capabilities.join(', ')
+        )
+      })
+    } catch (error) {
+      handleError('Failed to list chat models', error)
     }
   })
 
