@@ -6,6 +6,7 @@ import * as path from 'path'
 import { createAuthenticatedClient } from './src/client'
 import { handleError } from './src/utils/error-handler'
 import chalk from 'chalk'
+import { COMMAND_GROUPS, SUBCOMMANDS } from './src/constants/command-structure'
 
 // Set version and description
 program
