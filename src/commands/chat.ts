@@ -260,6 +260,12 @@ export function registerChatCommands(program: Command): void {
         const chatService = ChatService.getInstance()
         const models = await chatService.listModels(apiKey)
         
+        // Debug output
+        if (program.opts().debug) {
+          console.log(chalk.yellow('DEBUG: Models response:'))
+          console.log(chalk.yellow(JSON.stringify(models, null, 2)))
+        }
+        
         console.log(chalk.bold('Available Chat Models:'))
         console.log(chalk.dim('─'.repeat(70)))
         console.log(

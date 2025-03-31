@@ -102,7 +102,9 @@ export const createAuthenticatedClient = () => {
             if (isAuthError && tokenManager.getRefreshToken()) {
               if (process.argv.includes('--debug')) {
                 console.log(chalk.yellow('DEBUG: Auth error detected, attempting token refresh'));
-                console.log(chalk.yellow(`DEBUG: Error details: ${JSON.stringify(result.error)}`));
+                console.log(chalk.yellow(`DEBUG: Error details: ${JSON.stringify(result.error, null, 2)}`));
+                console.log(chalk.yellow('DEBUG: Complete response:'));
+                console.log(chalk.yellow(JSON.stringify(result, null, 2)));
               }
               
               const refreshed = await refreshAccessToken(tokenManager)

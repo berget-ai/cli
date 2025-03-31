@@ -79,6 +79,10 @@ export class ChatService {
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: API response:'))
           console.log(chalk.yellow(JSON.stringify({ data, error }, null, 2)))
+          
+          // Output the complete response data for debugging
+          console.log(chalk.yellow('DEBUG: Complete response data:'))
+          console.log(chalk.yellow(JSON.stringify(data, null, 2)))
         }
         
         if (error) throw new Error(JSON.stringify(error))
@@ -96,6 +100,10 @@ export class ChatService {
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: API response:'))
           console.log(chalk.yellow(JSON.stringify({ data, error }, null, 2)))
+          
+          // Output the complete response data for debugging
+          console.log(chalk.yellow('DEBUG: Complete response data:'))
+          console.log(chalk.yellow(JSON.stringify(data, null, 2)))
         }
         
         if (error) throw new Error(JSON.stringify(error))
