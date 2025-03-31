@@ -208,6 +208,7 @@ export class AuthService {
 
           return true
         }
+        }
       }
 
       console.log(chalk.red('\n\nAuthentication timed out. Please try again.'))

@@ -343,8 +343,8 @@ apiKey
 
         usage.requests.daily.forEach((day: { date: string; count: number }) => {
           console.log(`${day.date.padEnd(12)}${day.count.toLocaleString()}`)
-          })
-        }
+        })
+      }
       }
 
       // Model usage if available
@@ -542,21 +542,22 @@ models
         const modelData = response as { data?: any[] };
         if (modelData.data) {
           modelData.data.forEach((model: any) => {
-          const capabilities = []
-          if (model.capabilities.vision) capabilities.push('vision')
-          if (model.capabilities.function_calling)
-            capabilities.push('function_calling')
-          if (model.capabilities.json_mode) capabilities.push('json_mode')
+            const capabilities = []
+            if (model.capabilities.vision) capabilities.push('vision')
+            if (model.capabilities.function_calling)
+              capabilities.push('function_calling')
+            if (model.capabilities.json_mode) capabilities.push('json_mode')
 
-          console.log(
-            `${model.id.padEnd(24)} ${model.owned_by.padEnd(
-              25
-            )} ${capabilities.join(', ')}`
-          )
-        })
+            console.log(
+              `${model.id.padEnd(24)} ${model.owned_by.padEnd(
+                25
+              )} ${capabilities.join(', ')}`
+            )
+          })
+        }
+      } catch (error) {
+        handleError('Failed to get models', error)
       }
-    } catch (error) {
-      handleError('Failed to get models', error)
     }
   })
 
