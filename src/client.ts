@@ -92,13 +92,25 @@ export const createAuthenticatedClient = () => {
           const result = await (target[prop as keyof typeof target] as Function)(...args)
           
           // If we get a 401 error, try to refresh the token and retry
-          if (result.error && typeof result.error === 'object' && 
-              (result.error.status === 401 || 
-               (result.error.error && result.error.error.code === 'invalid_token'))) {
+          if (result.error && typeof result.error === 'object') {
+            const isAuthError = result.error.status === 401 || 
+                               (result.error.error && 
+                                (result.error.error.code === 'invalid_token' || 
+                                 result.error.error.code === 'token_expired' ||
+                                 result.error.error.message === 'Invalid API key'));
             
-            if (tokenManager.getRefreshToken()) {
+            if (isAuthError && tokenManager.getRefreshToken()) {
+              if (process.argv.includes('--debug')) {
+                console.log(chalk.yellow('DEBUG: Auth error detected, attempting token refresh'));
+                console.log(chalk.yellow(`DEBUG: Error details: ${JSON.stringify(result.error)}`));
+              }
+              
               const refreshed = await refreshAccessToken(tokenManager)
               if (refreshed) {
+                if (process.argv.includes('--debug')) {
+                  console.log(chalk.green('DEBUG: Token refreshed successfully, retrying request'));
+                }
+                
                 // Update the Authorization header with the new token
                 if (!args[1]) args[1] = {}
                 if (!args[1].headers) args[1].headers = {}
@@ -106,6 +118,8 @@ export const createAuthenticatedClient = () => {
                 
                 // Retry the request
                 return await (target[prop as keyof typeof target] as Function)(...args)
+              } else if (process.argv.includes('--debug')) {
+                console.log(chalk.red('DEBUG: Token refresh failed'));
               }
             }
           }
@@ -136,18 +150,27 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
     })
     
     // Make the refresh token request
-    const { data, error } = await client.POST('/v1/auth/refresh' as any, {
-      body: { refresh_token: refreshToken }
-    })
+    const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
     
-    if (error || !data) {
-      console.warn(chalk.yellow('Failed to refresh authentication token. Please run `berget auth login` again.'))
-      return false
+    if (!response.ok) {
+      console.warn(chalk.yellow(`Failed to refresh token: ${response.status} ${response.statusText}`));
+      if (response.status === 401) {
+        // Clear tokens if unauthorized - they're invalid
+        tokenManager.clearTokens();
+      }
+      return false;
     }
     
-    // Update the token with proper type assertion
-    const tokenData = data as { access_token: string, expires_in?: number };
-    if (!tokenData.access_token) {
+    const tokenData = await response.json();
+    
+    if (!tokenData || !tokenData.access_token) {
       console.warn(chalk.yellow('Invalid token response. Please run `berget auth login` again.'))
       return false
     }
@@ -156,7 +179,7 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
     tokenManager.updateAccessToken(tokenData.access_token, tokenData.expires_in || 3600)
     return true
   } catch (error) {
-    console.warn(chalk.yellow('Failed to refresh authentication token. Please run `berget auth login` again.'))
+    console.warn(chalk.yellow(`Failed to refresh authentication token: ${error instanceof Error ? error.message : String(error)}`))
     return false
   }
 }

@@ -14,8 +14,8 @@ import { registerAutocompleteCommands } from './autocomplete'
 export function registerCommands(program: Command): void {
   registerAuthCommands(program)
   registerApiKeyCommands(program)
-  //registerClusterCommands(program)
-  //registerBillingCommands(program)
+  registerClusterCommands(program)
+  registerBillingCommands(program)
   registerModelCommands(program)
   registerUserCommands(program)
   registerChatCommands(program)
