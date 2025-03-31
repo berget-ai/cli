@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import { ApiKeyService, ApiKey } from '../services/api-key-service'
 import { handleError } from '../utils/error-handler'
+import { DefaultApiKeyManager } from '../utils/default-api-key'
 
 /**
  * Register API key commands
@@ -297,6 +298,67 @@ export function registerApiKeyCommands(program: Command): void {
         )
       } catch (error) {
         handleError('Failed to get API key usage', error)
+      }
+    })
+    
+  apiKey
+    .command(ApiKeyService.COMMANDS.SET_DEFAULT)
+    .description('Set an API key as the default for chat commands')
+    .argument('<id>', 'ID of the API key to set as default')
+    .action(async (id) => {
+      try {
+        const apiKeyService = ApiKeyService.getInstance()
+        const keys = await apiKeyService.list()
+        const selectedKey = keys.find(key => key.id.toString() === id)
+        
+        if (!selectedKey) {
+          console.error(chalk.red(`Error: API key with ID ${id} not found`))
+          return
+        }
+        
+        // Save the default API key
+        const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+        defaultApiKeyManager.setDefaultApiKey(
+          id, 
+          selectedKey.name, 
+          selectedKey.prefix
+        )
+        
+        console.log(chalk.green(`✓ API key "${selectedKey.name}" set as default for chat commands`))
+        console.log('')
+        console.log(chalk.dim('This API key will be used by default when running chat commands'))
+        console.log(chalk.dim('You can override it with --api-key or --api-key-id options'))
+      } catch (error) {
+        handleError('Failed to set default API key', error)
+      }
+    })
+    
+  apiKey
+    .command(ApiKeyService.COMMANDS.GET_DEFAULT)
+    .description('Show the current default API key')
+    .action(() => {
+      try {
+        const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+        const defaultApiKey = defaultApiKeyManager.getDefaultApiKey()
+        
+        if (!defaultApiKey) {
+          console.log(chalk.yellow('No default API key set'))
+          console.log('')
+          console.log('To set a default API key, run:')
+          console.log(chalk.cyan('  berget api-keys set-default <id>'))
+          return
+        }
+        
+        console.log(chalk.bold('Default API key:'))
+        console.log('')
+        console.log(`${chalk.dim('ID:')}     ${defaultApiKey.id}`)
+        console.log(`${chalk.dim('Name:')}   ${defaultApiKey.name}`)
+        console.log(`${chalk.dim('Prefix:')} ${defaultApiKey.prefix}`)
+        console.log('')
+        console.log(chalk.dim('This API key will be used by default when running chat commands'))
+        console.log(chalk.dim('You can override it with --api-key or --api-key-id options'))
+      } catch (error) {
+        handleError('Failed to get default API key', error)
       }
     })
 }

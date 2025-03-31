@@ -40,6 +40,8 @@ export const SUBCOMMANDS = {
     DELETE: 'delete',
     ROTATE: 'rotate',
     DESCRIBE: 'describe',
+    SET_DEFAULT: 'set-default',
+    GET_DEFAULT: 'get-default',
   },
   
   // Clusters commands
@@ -119,6 +121,8 @@ export const COMMAND_DESCRIPTIONS = {
   [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.DELETE}`]: 'Delete an API key',
   [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.ROTATE}`]: 'Rotate an API key',
   [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.DESCRIBE}`]: 'Get usage statistics for an API key',
+  [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.SET_DEFAULT}`]: 'Set an API key as the default for chat commands',
+  [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.GET_DEFAULT}`]: 'Show the current default API key',
   
   // Clusters group
   [COMMAND_GROUPS.CLUSTERS]: 'Manage Kubernetes clusters',

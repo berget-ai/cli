@@ -6,6 +6,7 @@ import { ChatService, ChatMessage } from '../services/chat-service'
 import { ApiKeyService } from '../services/api-key-service'
 import { AuthService } from '../services/auth-service'
 import { handleError } from '../utils/error-handler'
+import { DefaultApiKeyManager } from '../utils/default-api-key'
 
 /**
  * Helper function to get user confirmation
@@ -47,9 +48,21 @@ export function registerChatCommands(program: Command): void {
         
         // Check if we have an API key or need to get one
         let apiKey = options.apiKey;
+        let apiKeyId = options.apiKeyId;
+        
+        // If no API key or API key ID provided, check for default API key
+        if (!apiKey && !apiKeyId) {
+          const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
+          const defaultApiKey = defaultApiKeyManager.getDefaultApiKey();
+          
+          if (defaultApiKey) {
+            apiKeyId = defaultApiKey.id;
+            console.log(chalk.dim(`Using default API key: ${defaultApiKey.name}`));
+          }
+        }
         
         // If no direct API key, try to get one from API key ID
-        if (!apiKey && options.apiKeyId) {
+        if (!apiKey && apiKeyId) {
           try {
             const apiKeyService = ApiKeyService.getInstance();
             const keys = await apiKeyService.list();
@@ -89,6 +102,7 @@ export function registerChatCommands(program: Command): void {
               console.log(chalk.yellow('1. Log in with `berget auth login`'));
               console.log(chalk.yellow('2. Provide an API key with `--api-key`'));
               console.log(chalk.yellow('3. Provide an API key ID with `--api-key-id`'));
+              console.log(chalk.yellow('4. Set a default API key with `berget api-keys set-default <id>`'));
               return;
             }
           } catch (error) {
@@ -97,6 +111,7 @@ export function registerChatCommands(program: Command): void {
             console.log(chalk.yellow('1. Log in with `berget auth login`'));
             console.log(chalk.yellow('2. Provide an API key with `--api-key`'));
             console.log(chalk.yellow('3. Provide an API key ID with `--api-key-id`'));
+            console.log(chalk.yellow('4. Set a default API key with `berget api-keys set-default <id>`'));
             return;
           }
         }
@@ -202,7 +217,20 @@ export function registerChatCommands(program: Command): void {
       try {
         // If API key ID is provided, fetch the actual key
         let apiKey = options.apiKey;
-        if (options.apiKeyId && !options.apiKey) {
+        let apiKeyId = options.apiKeyId;
+        
+        // If no API key or API key ID provided, check for default API key
+        if (!apiKey && !apiKeyId) {
+          const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
+          const defaultApiKey = defaultApiKeyManager.getDefaultApiKey();
+          
+          if (defaultApiKey) {
+            apiKeyId = defaultApiKey.id;
+            console.log(chalk.dim(`Using default API key: ${defaultApiKey.name}`));
+          }
+        }
+        
+        if (apiKeyId && !apiKey) {
           try {
             const apiKeyService = ApiKeyService.getInstance();
             const keys = await apiKeyService.list();
