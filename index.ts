@@ -10,7 +10,7 @@ import { COMMAND_GROUPS, SUBCOMMANDS } from './src/constants/command-structure'
 import readline from 'readline'
 
 // Helper function to get user confirmation
-function confirm(question: string): boolean {
+async function confirm(question: string): Promise<boolean> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -635,7 +635,7 @@ chat
             console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
             
             // We need to rotate the key to get the actual key value
-            if (confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
+            if (await confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
               const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
               apiKey = rotatedKey.key;
               console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
@@ -730,7 +730,7 @@ chat
             console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
             
             // We need to rotate the key to get the actual key value
-            if (confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
+            if (await confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
               const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
               apiKey = rotatedKey.key;
               console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
