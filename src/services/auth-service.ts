@@ -4,7 +4,7 @@ import {
   clearAuthToken,
   apiClient,
 } from '../client'
-import open from 'open'
+// We'll use dynamic import for 'open' to support ESM modules in CommonJS
 import chalk from 'chalk'
 import { handleError } from '../utils/error-handler'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
@@ -71,7 +71,9 @@ export class AuthService {
       // Try to open browser automatically
       try {
         if (deviceData.verification_url) {
-          await open(deviceData.verification_url)
+          // Use dynamic import for the 'open' package
+          const open = await import('open').then(m => m.default);
+          await open(deviceData.verification_url);
           console.log(
             chalk.dim(
               "Browser opened automatically. If it didn't open, please use the URL above."
