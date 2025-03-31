@@ -9,6 +9,21 @@ import chalk from 'chalk'
 import { COMMAND_GROUPS, SUBCOMMANDS } from './src/constants/command-structure'
 import readline from 'readline'
 
+// Helper function to get user confirmation
+function confirm(question: string): boolean {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  return new Promise<boolean>((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+    });
+  });
+}
+
 // Set version and description
 program
   .name('berget')
@@ -581,6 +596,7 @@ chat
   .option('--temperature <temp>', 'Temperature (0-1)', parseFloat)
   .option('--max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
   .option('--api-key <key>', 'API key to use for this chat session')
+  .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
   .action(async (options) => {
     try {
       const chatService = ChatService.getInstance()
@@ -605,6 +621,35 @@ chat
       console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
       console.log(chalk.cyan('----------------------------------------'))
       
+      // If API key ID is provided, fetch the actual key
+      let apiKey = options.apiKey;
+      if (options.apiKeyId && !options.apiKey) {
+        try {
+          const apiKeyService = ApiKeyService.getInstance();
+          const keys = await apiKeyService.list();
+          const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
+          
+          if (!selectedKey) {
+            console.log(chalk.yellow(`API key with ID ${options.apiKeyId} not found. Using default authentication.`));
+          } else {
+            console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
+            
+            // We need to rotate the key to get the actual key value
+            if (confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
+              const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
+              apiKey = rotatedKey.key;
+              console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
+            } else {
+              console.log(chalk.yellow('Using default authentication instead.'));
+            }
+          }
+        } catch (error) {
+          console.error(chalk.red('Error fetching API key:'));
+          console.error(error);
+          console.log(chalk.yellow('Using default authentication instead.'));
+        }
+      }
+      
       // Start the conversation loop
       const askQuestion = () => {
         rl.question(chalk.green('You: '), async (input) => {
@@ -628,7 +673,7 @@ chat
               messages: messages,
               temperature: options.temperature !== undefined ? options.temperature : 0.7,
               max_tokens: options.maxTokens || 4096,
-              apiKey: options.apiKey
+              apiKey: apiKey
             })
             
             // Get assistant's response
@@ -668,10 +713,40 @@ chat
   .command(SUBCOMMANDS.CHAT.MODELS)
   .description('List available chat models')
   .option('--api-key <key>', 'API key to use for this request')
+  .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
   .action(async (options) => {
     try {
+      // If API key ID is provided, fetch the actual key
+      let apiKey = options.apiKey;
+      if (options.apiKeyId && !options.apiKey) {
+        try {
+          const apiKeyService = ApiKeyService.getInstance();
+          const keys = await apiKeyService.list();
+          const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
+          
+          if (!selectedKey) {
+            console.log(chalk.yellow(`API key with ID ${options.apiKeyId} not found. Using default authentication.`));
+          } else {
+            console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
+            
+            // We need to rotate the key to get the actual key value
+            if (confirm(chalk.yellow(`To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`))) {
+              const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
+              apiKey = rotatedKey.key;
+              console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
+            } else {
+              console.log(chalk.yellow('Using default authentication instead.'));
+            }
+          }
+        } catch (error) {
+          console.error(chalk.red('Error fetching API key:'));
+          console.error(error);
+          console.log(chalk.yellow('Using default authentication instead.'));
+        }
+      }
+      
       const chatService = ChatService.getInstance()
-      const models = await chatService.listModels(options.apiKey)
+      const models = await chatService.listModels(apiKey)
       
       console.log(chalk.bold('Available Chat Models:'))
       console.log(chalk.dim('─'.repeat(70)))
