@@ -602,29 +602,11 @@ chat
     try {
       const chatService = ChatService.getInstance()
       
-      // Set up readline interface for user input
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-      })
-      
-      // Prepare messages array
-      const messages: ChatMessage[] = []
-      
-      // Add system message if provided
-      if (options.system) {
-        messages.push({
-          role: 'system',
-          content: options.system
-        })
-      }
-      
-      console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
-      console.log(chalk.cyan('----------------------------------------'))
-      
-      // If API key ID is provided, fetch the actual key
+      // Check if we have an API key or need to get one
       let apiKey = options.apiKey;
-      if (options.apiKeyId && !options.apiKey) {
+      
+      // If no direct API key, try to get one from API key ID
+      if (!apiKey && options.apiKeyId) {
         try {
           const apiKeyService = ApiKeyService.getInstance();
           const keys = await apiKeyService.list();
@@ -650,6 +632,51 @@ chat
           console.log(chalk.yellow('Using default authentication instead.'));
         }
       }
+      
+      // Verify we have authentication before starting chat
+      if (!apiKey) {
+        // Try to check if user is authenticated
+        try {
+          const authService = AuthService.getInstance();
+          const isAuthenticated = await authService.isAuthenticated();
+          
+          if (!isAuthenticated) {
+            console.log(chalk.red('Error: Authentication required for chat'));
+            console.log(chalk.yellow('Please either:'));
+            console.log(chalk.yellow('1. Log in with `berget auth login`'));
+            console.log(chalk.yellow('2. Provide an API key with `--api-key`'));
+            console.log(chalk.yellow('3. Provide an API key ID with `--api-key-id`'));
+            return;
+          }
+        } catch (error) {
+          console.log(chalk.red('Error: Authentication required for chat'));
+          console.log(chalk.yellow('Please either:'));
+          console.log(chalk.yellow('1. Log in with `berget auth login`'));
+          console.log(chalk.yellow('2. Provide an API key with `--api-key`'));
+          console.log(chalk.yellow('3. Provide an API key ID with `--api-key-id`'));
+          return;
+        }
+      }
+      
+      // Set up readline interface for user input
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      })
+      
+      // Prepare messages array
+      const messages: ChatMessage[] = []
+      
+      // Add system message if provided
+      if (options.system) {
+        messages.push({
+          role: 'system',
+          content: options.system
+        })
+      }
+      
+      console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
+      console.log(chalk.cyan('----------------------------------------'))
       
       // Start the conversation loop
       const askQuestion = () => {
