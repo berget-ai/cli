@@ -245,7 +245,14 @@ export class AuthService {
   public async whoami() {
     try {
       const { data, error } = await this.client.GET('/v1/users/me')
-      if (error) throw new Error(JSON.stringify(error))
+      
+      if (error) {
+        // Check if the error is HTML (which would indicate a network issue or proxy problem)
+        if (typeof error === 'string' && error.includes('<!DOCTYPE html>')) {
+          throw new Error('Received HTML instead of JSON. This may indicate a network issue or proxy problem.');
+        }
+        throw new Error(JSON.stringify(error))
+      }
       return data
     } catch (error) {
       handleError('Failed to get user profile', error)

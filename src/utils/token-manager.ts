@@ -94,16 +94,22 @@ export class TokenManager {
   public isTokenExpired(): boolean {
     if (!this.tokenData || !this.tokenData.expires_at) return true
     
-    // Consider token expired if it's within 10 minutes of expiration
-    // Using a larger buffer to be more proactive about refreshing
-    const expirationBuffer = 10 * 60 * 1000 // 10 minutes in milliseconds
-    const isExpired = Date.now() + expirationBuffer >= this.tokenData.expires_at;
-    
-    if (isExpired && process.argv.includes('--debug')) {
-      console.log(chalk.yellow(`DEBUG: Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`));
+    try {
+      // Consider token expired if it's within 10 minutes of expiration
+      // Using a larger buffer to be more proactive about refreshing
+      const expirationBuffer = 10 * 60 * 1000 // 10 minutes in milliseconds
+      const isExpired = Date.now() + expirationBuffer >= this.tokenData.expires_at;
+      
+      if (isExpired && process.argv.includes('--debug')) {
+        console.log(chalk.yellow(`DEBUG: Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`));
+      }
+      
+      return isExpired;
+    } catch (error) {
+      // If there's any error checking expiration, assume token is expired
+      console.error(chalk.dim(`Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`));
+      return true;
     }
-    
-    return isExpired;
   }
   
   /**

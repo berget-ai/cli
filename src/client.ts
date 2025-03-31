@@ -89,15 +89,30 @@ export const createAuthenticatedClient = () => {
           }
           
           // Make the original request
-          const result = await (target[prop as keyof typeof target] as Function)(...args)
+          let result;
+          try {
+            result = await (target[prop as keyof typeof target] as Function)(...args);
+          } catch (requestError) {
+            if (process.argv.includes('--debug')) {
+              console.log(chalk.red(`DEBUG: Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`));
+            }
+            return { error: { message: `Request failed: ${requestError instanceof Error ? requestError.message : String(requestError)}` } };
+          }
           
           // If we get a 401 error, try to refresh the token and retry
-          if (result.error && typeof result.error === 'object') {
-            const isAuthError = result.error.status === 401 || 
-                               (result.error.error && 
-                                (result.error.error.code === 'invalid_token' || 
-                                 result.error.error.code === 'token_expired' ||
-                                 result.error.error.message === 'Invalid API key'));
+          if (result.error) {
+            // Check for HTML response which indicates a network or proxy issue
+            if (typeof result.error === 'string' && result.error.includes('<!DOCTYPE html>')) {
+              console.warn(chalk.yellow('Received HTML instead of JSON. This may indicate a network issue or proxy problem.'));
+              return { error: { message: 'Received HTML instead of JSON. This may indicate a network issue or proxy problem.' } };
+            }
+            
+            const isAuthError = 
+              (typeof result.error === 'object' && result.error.status === 401) || 
+              (result.error.error && 
+               (result.error.error.code === 'invalid_token' || 
+                result.error.error.code === 'token_expired' ||
+                result.error.error.message === 'Invalid API key'));
             
             if (isAuthError && tokenManager.getRefreshToken()) {
               if (process.argv.includes('--debug')) {
@@ -170,12 +185,24 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
       return false;
     }
     
-    if (process.argv.includes('--debug')) {
-      console.log(chalk.yellow('DEBUG: Token refresh response:'));
-      console.log(chalk.yellow(JSON.stringify(await response.clone().json(), null, 2)));
+    // Check content type to avoid parsing HTML as JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.warn(chalk.yellow(`Unexpected content type in response: ${contentType}`));
+      return false;
     }
     
-    const tokenData = await response.json();
+    let responseText;
+    try {
+      responseText = await response.text();
+      
+      if (process.argv.includes('--debug')) {
+        console.log(chalk.yellow('DEBUG: Token refresh response:'));
+        console.log(chalk.yellow(responseText));
+      }
+      
+      // Try to parse as JSON
+      const tokenData = JSON.parse(responseText);
     
     if (!tokenData || !tokenData.token) {
       console.warn(chalk.yellow('Invalid token response. Please run `berget auth login` again.'))
