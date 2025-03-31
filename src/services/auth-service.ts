@@ -53,27 +53,36 @@ export class AuthService {
         )
       }
 
+      // Type assertion for deviceData
+      const typedDeviceData = deviceData as {
+        verification_url?: string;
+        user_code?: string;
+        device_code?: string;
+        expires_in?: number;
+        interval?: number;
+      };
+
       // Display information to user
       console.log(chalk.cyan('\nTo complete login:'))
       console.log(
         chalk.cyan(
           `1. Open this URL: ${chalk.bold(
-            deviceData.verification_url || 'https://auth.berget.ai/device'
+            typedDeviceData.verification_url || 'https://auth.berget.ai/device'
           )}`
         )
       )
       console.log(
         chalk.cyan(
-          `2. Enter this code: ${chalk.bold(deviceData.user_code || '')}\n`
+          `2. Enter this code: ${chalk.bold(typedDeviceData.user_code || '')}\n`
         )
       )
 
       // Try to open browser automatically
       try {
-        if (deviceData.verification_url) {
+        if (typedDeviceData.verification_url) {
           // Use dynamic import for the 'open' package
           const open = await import('open').then(m => m.default);
-          await open(deviceData.verification_url);
+          await open(typedDeviceData.verification_url);
           console.log(
             chalk.dim(
               "Browser opened automatically. If it didn't open, please use the URL above."
@@ -93,9 +102,9 @@ export class AuthService {
       // Step 2: Poll for completion
       const startTime = Date.now()
       const expiresIn =
-        deviceData.expires_in !== undefined ? deviceData.expires_in : 900
+        typedDeviceData.expires_in !== undefined ? typedDeviceData.expires_in : 900
       const expiresAt = startTime + expiresIn * 1000
-      let pollInterval = (deviceData.interval || 5) * 1000
+      let pollInterval = (typedDeviceData.interval || 5) * 1000
 
       const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
       let spinnerIdx = 0
@@ -111,7 +120,7 @@ export class AuthService {
         spinnerIdx = (spinnerIdx + 1) % spinner.length
 
         // Check if authentication is complete
-        const deviceCode = deviceData.device_code || ''
+        const deviceCode = typedDeviceData.device_code || ''
         const { data: tokenData, error: tokenError } = await apiClient.POST(
           '/v1/auth/device/token',
           {
@@ -170,19 +179,28 @@ export class AuthService {
             }
             continue
           }
-        } else if (tokenData && tokenData.token) {
-          // Success!
-          saveAuthToken(
-            tokenData.token, 
-            tokenData.refresh_token || '', 
-            tokenData.expires_in || 3600
-          )
+        } else if (tokenData) {
+          // Type assertion for tokenData
+          const typedTokenData = tokenData as {
+            token?: string;
+            refresh_token?: string;
+            expires_in?: number;
+            user?: any;
+          };
+          
+          if (typedTokenData.token) {
+            // Success!
+            saveAuthToken(
+              typedTokenData.token, 
+              typedTokenData.refresh_token || '', 
+              typedTokenData.expires_in || 3600
+            )
 
-          process.stdout.write('\r' + ' '.repeat(50) + '\r') // Clear the spinner line
-          console.log(chalk.green('✓ Successfully logged in to Berget'))
+            process.stdout.write('\r' + ' '.repeat(50) + '\r') // Clear the spinner line
+            console.log(chalk.green('✓ Successfully logged in to Berget'))
 
-          if (tokenData.user) {
-            const user = tokenData.user as any
+            if (typedTokenData.user) {
+              const user = typedTokenData.user
             console.log(
               chalk.green(`Logged in as ${user.name || user.email || 'User'}`)
             )

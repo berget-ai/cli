@@ -71,10 +71,11 @@ export const createAuthenticatedClient = () => {
 
   // Wrap the client to handle token refresh
   return new Proxy(client, {
-    get(target, prop) {
+    get(target, prop: string | symbol) {
       // For HTTP methods (GET, POST, etc.), add token refresh logic
-      if (typeof target[prop] === 'function' && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(prop.toString())) {
-        return async (...args) => {
+      if (typeof target[prop as keyof typeof target] === 'function' && 
+          ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(String(prop))) {
+        return async (...args: any[]) => {
           // Check if token is expired before making the request
           if (tokenManager.isTokenExpired() && tokenManager.getRefreshToken()) {
             await refreshAccessToken(tokenManager)
@@ -88,7 +89,7 @@ export const createAuthenticatedClient = () => {
           }
           
           // Make the original request
-          const result = await target[prop](...args)
+          const result = await (target[prop as keyof typeof target] as Function)(...args)
           
           // If we get a 401 error, try to refresh the token and retry
           if (result.error && typeof result.error === 'object' && 
@@ -104,7 +105,7 @@ export const createAuthenticatedClient = () => {
                 args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
                 
                 // Retry the request
-                return await target[prop](...args)
+                return await (target[prop as keyof typeof target] as Function)(...args)
               }
             }
           }
@@ -114,7 +115,7 @@ export const createAuthenticatedClient = () => {
       }
       
       // For other properties, just return the original
-      return target[prop]
+      return target[prop as keyof typeof target]
     }
   })
 }
@@ -135,17 +136,24 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
     })
     
     // Make the refresh token request
-    const { data, error } = await client.POST('/v1/auth/refresh', {
+    const { data, error } = await client.POST('/v1/auth/refresh' as any, {
       body: { refresh_token: refreshToken }
     })
     
-    if (error || !data || !data.access_token) {
+    if (error || !data) {
       console.warn(chalk.yellow('Failed to refresh authentication token. Please run `berget auth login` again.'))
       return false
     }
     
+    // Update the token with proper type assertion
+    const tokenData = data as { access_token: string, expires_in?: number };
+    if (!tokenData.access_token) {
+      console.warn(chalk.yellow('Invalid token response. Please run `berget auth login` again.'))
+      return false
+    }
+    
     // Update the token
-    tokenManager.updateAccessToken(data.access_token, data.expires_in || 3600)
+    tokenManager.updateAccessToken(tokenData.access_token, tokenData.expires_in || 3600)
     return true
   } catch (error) {
     console.warn(chalk.yellow('Failed to refresh authentication token. Please run `berget auth login` again.'))

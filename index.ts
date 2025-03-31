@@ -343,7 +343,8 @@ apiKey
 
         usage.requests.daily.forEach((day: { date: string; count: number }) => {
           console.log(`${day.date.padEnd(12)}${day.count.toLocaleString()}`)
-        })
+          })
+        }
       }
 
       // Model usage if available
@@ -537,7 +538,10 @@ models
         console.log(
           'ID                      OWNED BY                  CAPABILITIES'
         )
-        response.data.forEach((model: any) => {
+        // Ensure response has the expected structure
+        const modelData = response as { data?: any[] };
+        if (modelData.data) {
+          modelData.data.forEach((model: any) => {
           const capabilities = []
           if (model.capabilities.vision) capabilities.push('vision')
           if (model.capabilities.function_calling)
