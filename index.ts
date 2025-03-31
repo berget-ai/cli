@@ -345,7 +345,6 @@ apiKey
           console.log(`${day.date.padEnd(12)}${day.count.toLocaleString()}`)
         })
       }
-      }
 
       // Model usage if available
       if (usage.models && usage.models.length > 0) {
