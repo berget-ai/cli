@@ -1,5 +1,6 @@
 import { createAuthenticatedClient } from '../client'
 import { handleError } from '../utils/error-handler'
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 
 export interface ApiKey {
   id: number
@@ -25,9 +26,19 @@ export interface ApiKeyResponse {
   created: string
 }
 
+/**
+ * Service for managing API keys
+ * Command group: api-keys
+ */
 export class ApiKeyService {
   private static instance: ApiKeyService
   private client = createAuthenticatedClient()
+  
+  // Command group name for this service
+  public static readonly COMMAND_GROUP = COMMAND_GROUPS.API_KEYS
+  
+  // Subcommands for this service
+  public static readonly COMMANDS = SUBCOMMANDS.API_KEYS
 
   private constructor() {}
 
@@ -38,7 +49,11 @@ export class ApiKeyService {
     return ApiKeyService.instance
   }
 
-  public async listApiKeys(): Promise<ApiKey[]> {
+  /**
+   * List all API keys
+   * Command: berget api-keys list
+   */
+  public async list(): Promise<ApiKey[]> {
     try {
       const { data, error } = await this.client.GET('/v1/api-keys')
       if (error) {
@@ -60,7 +75,11 @@ export class ApiKeyService {
     }
   }
 
-  public async createApiKey(options: CreateApiKeyOptions): Promise<ApiKeyResponse> {
+  /**
+   * Create a new API key
+   * Command: berget api-keys create
+   */
+  public async create(options: CreateApiKeyOptions): Promise<ApiKeyResponse> {
     try {
       const { data, error } = await this.client.POST('/v1/api-keys', {
         body: options
@@ -73,7 +92,11 @@ export class ApiKeyService {
     }
   }
 
-  public async deleteApiKey(id: string): Promise<boolean> {
+  /**
+   * Delete an API key
+   * Command: berget api-keys delete
+   */
+  public async delete(id: string): Promise<boolean> {
     try {
       const { error } = await this.client.DELETE('/v1/api-keys/{id}', {
         params: { path: { id } }
@@ -86,7 +109,11 @@ export class ApiKeyService {
     }
   }
 
-  public async rotateApiKey(id: string): Promise<ApiKeyResponse> {
+  /**
+   * Rotate an API key
+   * Command: berget api-keys rotate
+   */
+  public async rotate(id: string): Promise<ApiKeyResponse> {
     try {
       const { data, error } = await this.client.PUT('/v1/api-keys/{id}/rotate', {
         params: { path: { id } }
@@ -99,7 +126,11 @@ export class ApiKeyService {
     }
   }
 
-  public async getApiKeyUsage(id: string): Promise<any> {
+  /**
+   * Get usage statistics for an API key
+   * Command: berget api-keys describe
+   */
+  public async describe(id: string): Promise<any> {
     try {
       const { data, error } = await this.client.GET('/v1/api-keys/{id}/usage', {
         params: { path: { id } }

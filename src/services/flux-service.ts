@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from '../client'
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 
 export interface FluxInstallOptions {
   cluster: string
@@ -12,9 +13,19 @@ export interface FluxBootstrapOptions {
   personal?: boolean
 }
 
+/**
+ * Service for managing Flux CD
+ * Command group: flux
+ */
 export class FluxService {
   private static instance: FluxService
   private client = createAuthenticatedClient()
+  
+  // Command group name for this service
+  public static readonly COMMAND_GROUP = COMMAND_GROUPS.FLUX
+  
+  // Subcommands for this service
+  public static readonly COMMANDS = SUBCOMMANDS.FLUX
 
   private constructor() {}
 
@@ -25,13 +36,21 @@ export class FluxService {
     return FluxService.instance
   }
 
-  // This endpoint is not available in the API
-  public async installFlux(options: FluxInstallOptions): Promise<boolean> {
+  /**
+   * Install Flux CD
+   * Command: berget flux install
+   * This endpoint is not available in the API
+   */
+  public async install(options: FluxInstallOptions): Promise<boolean> {
     throw new Error('This functionality is not available in the API')
   }
 
-  // This endpoint is not available in the API
-  public async bootstrapFlux(options: FluxBootstrapOptions): Promise<boolean> {
+  /**
+   * Bootstrap Flux CD
+   * Command: berget flux bootstrap
+   * This endpoint is not available in the API
+   */
+  public async bootstrap(options: FluxBootstrapOptions): Promise<boolean> {
     throw new Error('This functionality is not available in the API')
   }
 }

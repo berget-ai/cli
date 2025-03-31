@@ -7,10 +7,21 @@ import {
 import open from 'open'
 import chalk from 'chalk'
 import { handleError } from '../utils/error-handler'
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 
+/**
+ * Service for authentication operations
+ * Command group: auth
+ */
 export class AuthService {
   private static instance: AuthService
   private client = createAuthenticatedClient()
+  
+  // Command group name for this service
+  public static readonly COMMAND_GROUP = COMMAND_GROUPS.AUTH
+  
+  // Subcommands for this service
+  public static readonly COMMANDS = SUBCOMMANDS.AUTH
 
   private constructor() {}
 
@@ -193,7 +204,11 @@ export class AuthService {
     }
   }
 
-  public async getUserProfile() {
+  /**
+   * Get current user profile
+   * Command: berget auth whoami
+   */
+  public async whoami() {
     try {
       const { data, error } = await this.client.GET('/v1/users/me')
       if (error) throw new Error(JSON.stringify(error))
