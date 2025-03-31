@@ -51,24 +51,52 @@ export class ChatService {
     try {
       const headers: Record<string, string> = {}
       
+      // Check if debug is enabled
+      const isDebug = process.argv.includes('--debug')
+      
+      if (isDebug) {
+        console.log(chalk.yellow('DEBUG: Chat completion options:'))
+        console.log(chalk.yellow(JSON.stringify(options, null, 2)))
+      }
+      
       // If an API key is provided, use it for this request
       if (options.apiKey) {
         headers['Authorization'] = `Bearer ${options.apiKey}`
         // Remove apiKey from options before sending to API
         const { apiKey, ...requestOptions } = options
         
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: Using provided API key'))
+          console.log(chalk.yellow('DEBUG: Request options:'))
+          console.log(chalk.yellow(JSON.stringify(requestOptions, null, 2)))
+        }
+        
         const { data, error } = await this.client.POST('/v1/chat/completions', {
           body: requestOptions,
           headers
         })
         
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: API response:'))
+          console.log(chalk.yellow(JSON.stringify({ data, error }, null, 2)))
+        }
+        
         if (error) throw new Error(JSON.stringify(error))
         return data
       } else {
         // Use the default authenticated client
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: Using default authentication'))
+        }
+        
         const { data, error } = await this.client.POST('/v1/chat/completions', {
           body: options
         })
+        
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: API response:'))
+          console.log(chalk.yellow(JSON.stringify({ data, error }, null, 2)))
+        }
         
         if (error) throw new Error(JSON.stringify(error))
         return data

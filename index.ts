@@ -39,6 +39,7 @@ program
   )
   .version(process.env.npm_package_version || '0.0.1', '-v, --version')
   .option('--local', 'Use local API endpoint (hidden)', false)
+  .option('--debug', 'Enable debug output', false)
 
 // Import services
 import { AuthService } from './src/services/auth-service'
@@ -669,12 +670,25 @@ chat
           try {
             // Call the API
             const response = await chatService.createCompletion({
-              model: options.args[0] || 'berget-70b-instruct',
+              model: options.args?.[0] || 'berget-70b-instruct',
               messages: messages,
               temperature: options.temperature !== undefined ? options.temperature : 0.7,
               max_tokens: options.maxTokens || 4096,
               apiKey: apiKey
             })
+            
+            // Debug output
+            if (program.opts().debug) {
+              console.log(chalk.yellow('DEBUG: Full response:'))
+              console.log(chalk.yellow(JSON.stringify(response, null, 2)))
+            }
+            
+            // Check if response has the expected structure
+            if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+              console.error(chalk.red('Error: Unexpected response format from API'))
+              console.error(chalk.red('Response:', JSON.stringify(response, null, 2)))
+              throw new Error('Unexpected response format from API')
+            }
             
             // Get assistant's response
             const assistantMessage = response.choices[0].message.content
