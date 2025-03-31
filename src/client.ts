@@ -170,15 +170,20 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
       return false;
     }
     
+    if (process.argv.includes('--debug')) {
+      console.log(chalk.yellow('DEBUG: Token refresh response:'));
+      console.log(chalk.yellow(JSON.stringify(await response.clone().json(), null, 2)));
+    }
+    
     const tokenData = await response.json();
     
-    if (!tokenData || !tokenData.access_token) {
+    if (!tokenData || !tokenData.token) {
       console.warn(chalk.yellow('Invalid token response. Please run `berget auth login` again.'))
       return false
     }
     
     // Update the token
-    tokenManager.updateAccessToken(tokenData.access_token, tokenData.expires_in || 3600)
+    tokenManager.updateAccessToken(tokenData.token, tokenData.expires_in || 3600)
     return true
   } catch (error) {
     console.warn(chalk.yellow(`Failed to refresh authentication token: ${error instanceof Error ? error.message : String(error)}`))

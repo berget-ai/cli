@@ -195,6 +195,15 @@ export class AuthService {
               typedTokenData.refresh_token || '', 
               typedTokenData.expires_in || 3600
             )
+            
+            if (process.argv.includes('--debug')) {
+              console.log(chalk.yellow('DEBUG: Token data received:'));
+              console.log(chalk.yellow(JSON.stringify({
+                token_type: typedTokenData.token_type,
+                expires_in: typedTokenData.expires_in,
+                refresh_expires_in: typedTokenData.refresh_expires_in
+              }, null, 2)));
+            }
 
             process.stdout.write('\r' + ' '.repeat(50) + '\r') // Clear the spinner line
             console.log(chalk.green('✓ Successfully logged in to Berget'))
