@@ -4,10 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import chalk from 'chalk'
-
-// Configuration directory
-const CONFIG_DIR = path.join(os.homedir(), '.berget')
-const TOKEN_FILE = path.join(CONFIG_DIR, 'token.json')
+import { TokenManager } from './utils/token-manager'
 
 // API Base URL
 // Use --local flag to test against local API
@@ -31,97 +28,38 @@ export const apiClient = createClient<paths>({
 
 // Authentication functions
 export const getAuthToken = (): string | null => {
-  try {
-    if (fs.existsSync(TOKEN_FILE)) {
-      const tokenData = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'))
-      return tokenData.accessToken
-    }
-  } catch (error) {
-    console.error('Error reading auth token:', error)
-  }
-  return null
+  const tokenManager = TokenManager.getInstance()
+  return tokenManager.getAccessToken()
 }
 
-// Check if token is expired (JWT tokens have an exp claim)
-export const isTokenExpired = (token: string): boolean => {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    )
-    const payload = JSON.parse(jsonPayload)
-
-    // Check if token has expired
-    if (payload.exp) {
-      return payload.exp * 1000 < Date.now()
-    }
-  } catch (error) {
-    // If we can't decode the token, assume it's expired
-    return true
-  }
-
-  // If there's no exp claim, assume it's valid
-  return false
-}
-
-export const saveAuthToken = (token: string): void => {
-  try {
-    if (!fs.existsSync(CONFIG_DIR)) {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true })
-    }
-    fs.writeFileSync(TOKEN_FILE, JSON.stringify({ accessToken: token }), 'utf8')
-    // Set file permissions to be readable only by the owner
-    fs.chmodSync(TOKEN_FILE, 0o600)
-  } catch (error) {
-    console.error('Error saving auth token:', error)
-  }
+export const saveAuthToken = (accessToken: string, refreshToken: string, expiresIn: number = 3600): void => {
+  const tokenManager = TokenManager.getInstance()
+  tokenManager.setTokens(accessToken, refreshToken, expiresIn)
 }
 
 export const clearAuthToken = (): void => {
-  try {
-    if (fs.existsSync(TOKEN_FILE)) {
-      fs.unlinkSync(TOKEN_FILE)
-    }
-  } catch (error) {
-    console.error('Error clearing auth token:', error)
-  }
+  const tokenManager = TokenManager.getInstance()
+  tokenManager.clearTokens()
 }
 
-// Create an authenticated client
+// Create an authenticated client with refresh token support
 export const createAuthenticatedClient = () => {
-  const token = getAuthToken()
-  if (!token) {
+  const tokenManager = TokenManager.getInstance()
+  
+  if (!tokenManager.getAccessToken()) {
     console.warn(
       chalk.yellow(
-        'No authentication token found. Please run `berget login` first.'
+        'No authentication token found. Please run `berget auth login` first.'
       )
     )
-  } else if (isTokenExpired(token)) {
-    console.warn(
-      chalk.yellow(
-        'Your authentication token has expired. Please run `berget login` to get a new token.'
-      )
-    )
-    // Optionally clear the expired token
-    clearAuthToken()
-    return createClient<paths>({
-      baseUrl: API_BASE_URL,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    })
   }
 
-  return createClient<paths>({
+  // Create the base client
+  const client = createClient<paths>({
     baseUrl: API_BASE_URL,
-    headers: token
+    headers: tokenManager.getAccessToken()
       ? {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenManager.getAccessToken()}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
         }
@@ -130,4 +68,87 @@ export const createAuthenticatedClient = () => {
           Accept: 'application/json',
         },
   })
+
+  // Wrap the client to handle token refresh
+  return new Proxy(client, {
+    get(target, prop) {
+      // For HTTP methods (GET, POST, etc.), add token refresh logic
+      if (typeof target[prop] === 'function' && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(prop.toString())) {
+        return async (...args) => {
+          // Check if token is expired before making the request
+          if (tokenManager.isTokenExpired() && tokenManager.getRefreshToken()) {
+            await refreshAccessToken(tokenManager)
+          }
+          
+          // Update the Authorization header with the current token
+          if (tokenManager.getAccessToken()) {
+            if (!args[1]) args[1] = {}
+            if (!args[1].headers) args[1].headers = {}
+            args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
+          }
+          
+          // Make the original request
+          const result = await target[prop](...args)
+          
+          // If we get a 401 error, try to refresh the token and retry
+          if (result.error && typeof result.error === 'object' && 
+              (result.error.status === 401 || 
+               (result.error.error && result.error.error.code === 'invalid_token'))) {
+            
+            if (tokenManager.getRefreshToken()) {
+              const refreshed = await refreshAccessToken(tokenManager)
+              if (refreshed) {
+                // Update the Authorization header with the new token
+                if (!args[1]) args[1] = {}
+                if (!args[1].headers) args[1].headers = {}
+                args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
+                
+                // Retry the request
+                return await target[prop](...args)
+              }
+            }
+          }
+          
+          return result
+        }
+      }
+      
+      // For other properties, just return the original
+      return target[prop]
+    }
+  })
+}
+
+// Helper function to refresh the access token
+async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> {
+  try {
+    const refreshToken = tokenManager.getRefreshToken()
+    if (!refreshToken) return false
+    
+    // Create a basic client for the refresh request
+    const client = createClient<paths>({
+      baseUrl: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    })
+    
+    // Make the refresh token request
+    const { data, error } = await client.POST('/v1/auth/refresh', {
+      body: { refresh_token: refreshToken }
+    })
+    
+    if (error || !data || !data.access_token) {
+      console.warn(chalk.yellow('Failed to refresh authentication token. Please run `berget auth login` again.'))
+      return false
+    }
+    
+    // Update the token
+    tokenManager.updateAccessToken(data.access_token, data.expires_in || 3600)
+    return true
+  } catch (error) {
+    console.warn(chalk.yellow('Failed to refresh authentication token. Please run `berget auth login` again.'))
+    return false
+  }
 }

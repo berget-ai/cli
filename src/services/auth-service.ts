@@ -172,7 +172,11 @@ export class AuthService {
           }
         } else if (tokenData && tokenData.token) {
           // Success!
-          saveAuthToken(tokenData.token)
+          saveAuthToken(
+            tokenData.token, 
+            tokenData.refresh_token || '', 
+            tokenData.expires_in || 3600
+          )
 
           process.stdout.write('\r' + ' '.repeat(50) + '\r') // Clear the spinner line
           console.log(chalk.green('✓ Successfully logged in to Berget'))
