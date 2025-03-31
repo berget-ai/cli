@@ -14,6 +14,7 @@ export interface ChatCompletionOptions {
   max_tokens?: number
   stream?: boolean
   top_p?: number
+  apiKey?: string
 }
 
 /**
@@ -47,12 +48,30 @@ export class ChatService {
    */
   public async createCompletion(options: ChatCompletionOptions): Promise<any> {
     try {
-      const { data, error } = await this.client.POST('/v1/chat/completions', {
-        body: options
-      })
+      const headers: Record<string, string> = {}
       
-      if (error) throw new Error(JSON.stringify(error))
-      return data
+      // If an API key is provided, use it for this request
+      if (options.apiKey) {
+        headers['Authorization'] = `Bearer ${options.apiKey}`
+        // Remove apiKey from options before sending to API
+        const { apiKey, ...requestOptions } = options
+        
+        const { data, error } = await this.client.POST('/v1/chat/completions', {
+          body: requestOptions,
+          headers
+        })
+        
+        if (error) throw new Error(JSON.stringify(error))
+        return data
+      } else {
+        // Use the default authenticated client
+        const { data, error } = await this.client.POST('/v1/chat/completions', {
+          body: options
+        })
+        
+        if (error) throw new Error(JSON.stringify(error))
+        return data
+      }
     } catch (error) {
       console.error('Failed to create chat completion:', error)
       throw error
@@ -63,11 +82,21 @@ export class ChatService {
    * List available models
    * Command: berget chat models
    */
-  public async listModels(): Promise<any> {
+  public async listModels(apiKey?: string): Promise<any> {
     try {
-      const { data, error } = await this.client.GET('/v1/models')
-      if (error) throw new Error(JSON.stringify(error))
-      return data
+      if (apiKey) {
+        const headers = {
+          'Authorization': `Bearer ${apiKey}`
+        }
+        
+        const { data, error } = await this.client.GET('/v1/models', { headers })
+        if (error) throw new Error(JSON.stringify(error))
+        return data
+      } else {
+        const { data, error } = await this.client.GET('/v1/models')
+        if (error) throw new Error(JSON.stringify(error))
+        return data
+      }
     } catch (error) {
       console.error('Failed to list models:', error)
       throw error

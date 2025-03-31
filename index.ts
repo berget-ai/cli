@@ -580,6 +580,7 @@ chat
   .option('--system <message>', 'System message')
   .option('--temperature <temp>', 'Temperature (0-1)', parseFloat)
   .option('--max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
+  .option('--api-key <key>', 'API key to use for this chat session')
   .action(async (options) => {
     try {
       const chatService = ChatService.getInstance()
@@ -626,7 +627,8 @@ chat
               model: options.model || 'berget-70b-instruct',
               messages: messages,
               temperature: options.temperature !== undefined ? options.temperature : 0.7,
-              max_tokens: options.maxTokens || 4096
+              max_tokens: options.maxTokens || 4096,
+              apiKey: options.apiKey
             })
             
             // Get assistant's response
@@ -665,10 +667,11 @@ chat
 chat
   .command(SUBCOMMANDS.CHAT.MODELS)
   .description('List available chat models')
-  .action(async () => {
+  .option('--api-key <key>', 'API key to use for this request')
+  .action(async (options) => {
     try {
       const chatService = ChatService.getInstance()
-      const models = await chatService.listModels()
+      const models = await chatService.listModels(options.apiKey)
       
       console.log(chalk.bold('Available Chat Models:'))
       console.log(chalk.dim('─'.repeat(70)))
