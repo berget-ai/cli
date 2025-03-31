@@ -29,16 +29,20 @@ import { ApiKeyService, ApiKey } from './src/services/api-key-service'
 import { ClusterService, Cluster } from './src/services/cluster-service'
 
 // Auth commands
-program
-  .command('login')
+const auth = program
+  .command(AuthService.COMMAND_GROUP)
+  .description('Manage authentication and authorization')
+
+auth
+  .command(AuthService.COMMANDS.LOGIN)
   .description('Log in to Berget')
   .action(async () => {
     const authService = AuthService.getInstance()
     await authService.login()
   })
 
-program
-  .command('logout')
+auth
+  .command(AuthService.COMMANDS.LOGOUT)
   .description('Log out from Berget')
   .action(() => {
     const { clearAuthToken } = require('./src/client')
@@ -46,8 +50,8 @@ program
     console.log(chalk.green('You have been logged out from Berget'))
   })
 
-program
-  .command('whoami')
+auth
+  .command(AuthService.COMMANDS.WHOAMI)
   .description('Show information about the logged in user')
   .action(async () => {
     try {
@@ -75,10 +79,12 @@ program
   })
 
 // API Key commands
-const apiKey = program.command('api-key').description('Manage API keys')
+const apiKey = program
+  .command(ApiKeyService.COMMAND_GROUP)
+  .description('Manage API keys')
 
 apiKey
-  .command('list')
+  .command(ApiKeyService.COMMANDS.LIST)
   .description('List all API keys')
   .action(async () => {
     try {
@@ -143,7 +149,7 @@ apiKey
   })
 
 apiKey
-  .command('create')
+  .command(ApiKeyService.COMMANDS.CREATE)
   .description('Create a new API key')
   .option('--name <name>', 'Name of the API key')
   .option('--description <description>', 'Description of the API key')
@@ -202,7 +208,7 @@ apiKey
   })
 
 apiKey
-  .command('delete')
+  .command(ApiKeyService.COMMANDS.DELETE)
   .description('Delete an API key')
   .argument('<id>', 'ID of the API key to delete')
   .action(async (id) => {
@@ -228,7 +234,7 @@ apiKey
   })
 
 apiKey
-  .command('rotate')
+  .command(ApiKeyService.COMMANDS.ROTATE)
   .description(
     'Rotate an API key (creates a new one and invalidates the old one)'
   )
@@ -279,7 +285,7 @@ apiKey
   })
 
 apiKey
-  .command('usage')
+  .command(ApiKeyService.COMMANDS.DESCRIBE)
   .description('Show usage statistics for an API key')
   .argument('<id>', 'ID of the API key')
   .option('--start <date>', 'Start date (YYYY-MM-DD)')
@@ -367,12 +373,14 @@ apiKey
   })
 
 // Cluster commands
-const cluster = program.command('cluster').description('Manage Berget clusters')
+const cluster = program
+  .command(ClusterService.COMMAND_GROUP)
+  .description('Manage Berget clusters')
 
 // Removed cluster create command as it's not available in the API
 
 cluster
-  .command('list')
+  .command(ClusterService.COMMANDS.LIST)
   .description('List all Berget clusters')
   .action(async () => {
     try {
@@ -393,7 +401,7 @@ cluster
   })
 
 cluster
-  .command('usage')
+  .command(ClusterService.COMMANDS.GET_USAGE)
   .description('Get usage metrics for a specific cluster')
   .argument('<clusterId>', 'Cluster ID')
   .action(async (clusterId) => {
@@ -405,6 +413,22 @@ cluster
       console.log(JSON.stringify(usage, null, 2))
     } catch (error) {
       handleError('Failed to get cluster usage', error)
+    }
+  })
+
+cluster
+  .command(ClusterService.COMMANDS.DESCRIBE)
+  .description('Get detailed information about a cluster')
+  .argument('<clusterId>', 'Cluster ID')
+  .action(async (clusterId) => {
+    try {
+      const clusterService = ClusterService.getInstance()
+      const clusterInfo = await clusterService.describe(clusterId)
+
+      console.log('Cluster Details:')
+      console.log(JSON.stringify(clusterInfo, null, 2))
+    } catch (error) {
+      handleError('Failed to describe cluster', error)
     }
   })
 
@@ -430,8 +454,12 @@ program
 // Removed kubernetes-like commands as they're not available in the API
 
 // Add token usage command
-program
-  .command('token-usage')
+const billing = program
+  .command(COMMAND_GROUPS.BILLING)
+  .description('Manage billing and usage')
+
+billing
+  .command(SUBCOMMANDS.BILLING.GET_USAGE)
   .description('Get token usage statistics')
   .option('--model <modelId>', 'Get usage for a specific model')
   .action(async (options) => {
@@ -459,8 +487,12 @@ program
   })
 
 // Add models command
-program
-  .command('models')
+const models = program
+  .command(COMMAND_GROUPS.MODELS)
+  .description('Manage AI models')
+
+models
+  .command(SUBCOMMANDS.MODELS.LIST)
   .description('List available AI models')
   .option('--id <modelId>', 'Get details for a specific model')
   .action(async (options) => {
@@ -506,9 +538,13 @@ program
   })
 
 // Add team command
-program
-  .command('team')
-  .description('Manage team members')
+const users = program
+  .command(COMMAND_GROUPS.USERS)
+  .description('Manage users')
+
+users
+  .command(SUBCOMMANDS.USERS.LIST)
+  .description('List team members')
   .action(async () => {
     try {
       const client = createAuthenticatedClient()
