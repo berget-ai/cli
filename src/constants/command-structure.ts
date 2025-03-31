@@ -31,7 +31,6 @@ export const SUBCOMMANDS = {
   CHAT: {
     RUN: 'run',
     LIST: 'list',
-    PULL: 'pull',
   },
   
   // API Keys commands
@@ -178,5 +177,4 @@ export const COMMAND_DESCRIPTIONS = {
   [COMMAND_GROUPS.CHAT]: 'Interact with AI chat models',
   [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.RUN}`]: 'Run a chat session with a specified model',
   [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.LIST}`]: 'List available chat models',
-  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.PULL}`]: 'Pull a model for use with chat',
 }

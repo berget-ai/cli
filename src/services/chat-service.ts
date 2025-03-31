@@ -31,8 +31,7 @@ export class ChatService {
   // Subcommands for this service
   public static readonly COMMANDS = {
     RUN: 'run',
-    LIST: 'list',
-    PULL: 'pull'
+    LIST: 'list'
   }
 
   private constructor() {}
@@ -139,33 +138,4 @@ export class ChatService {
     }
   }
   
-  /**
-   * Pull a model for use with chat
-   * Command: berget chat pull <model>
-   */
-  public async pullModel(model: string, apiKey?: string): Promise<any> {
-    try {
-      if (apiKey) {
-        const headers = {
-          'Authorization': `Bearer ${apiKey}`
-        }
-        
-        const { data, error } = await this.client.POST('/v1/models/pull', { 
-          body: { model },
-          headers
-        })
-        if (error) throw new Error(JSON.stringify(error))
-        return data
-      } else {
-        const { data, error } = await this.client.POST('/v1/models/pull', {
-          body: { model }
-        })
-        if (error) throw new Error(JSON.stringify(error))
-        return data
-      }
-    } catch (error) {
-      console.error('Failed to pull model:', error)
-      throw error
-    }
-  }
 }
