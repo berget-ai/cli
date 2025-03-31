@@ -52,7 +52,7 @@ program
   .action(async () => {
     try {
       const authService = AuthService.getInstance()
-      const profile = await authService.getUserProfile()
+      const profile = await authService.whoami()
 
       if (profile) {
         console.log(
@@ -83,7 +83,7 @@ apiKey
   .action(async () => {
     try {
       const apiKeyService = ApiKeyService.getInstance()
-      const keys = await apiKeyService.listApiKeys()
+      const keys = await apiKeyService.list()
 
       if (keys.length === 0) {
         console.log(
@@ -161,7 +161,7 @@ apiKey
       console.log(chalk.blue('Creating API key...'))
 
       const apiKeyService = ApiKeyService.getInstance()
-      const result = await apiKeyService.createApiKey({
+      const result = await apiKeyService.create({
         name: options.name,
         description: options.description,
       })
@@ -210,7 +210,7 @@ apiKey
       console.log(chalk.blue(`Deleting API key ${id}...`))
 
       const apiKeyService = ApiKeyService.getInstance()
-      await apiKeyService.deleteApiKey(id)
+      await apiKeyService.delete(id)
 
       console.log(chalk.green(`✓ API key ${id} has been deleted`))
       console.log('')
@@ -241,7 +241,7 @@ apiKey
       )
 
       const apiKeyService = ApiKeyService.getInstance()
-      const result = await apiKeyService.rotateApiKey(id)
+      const result = await apiKeyService.rotate(id)
 
       console.log('')
       console.log(chalk.green('✓ API key rotated'))
@@ -289,7 +289,7 @@ apiKey
       console.log(chalk.blue(`Fetching usage statistics for API key ${id}...`))
 
       const apiKeyService = ApiKeyService.getInstance()
-      const usage = await apiKeyService.getApiKeyUsage(id)
+      const usage = await apiKeyService.describe(id)
 
       console.log('')
       console.log(
@@ -377,7 +377,7 @@ cluster
   .action(async () => {
     try {
       const clusterService = ClusterService.getInstance()
-      const clusters = await clusterService.listClusters()
+      const clusters = await clusterService.list()
 
       console.log('NAME                   STATUS    NODES    CREATED')
       clusters.forEach((cluster: Cluster) => {
@@ -399,7 +399,7 @@ cluster
   .action(async (clusterId) => {
     try {
       const clusterService = ClusterService.getInstance()
-      const usage = await clusterService.getClusterUsage(clusterId)
+      const usage = await clusterService.getUsage(clusterId)
 
       console.log('Cluster Usage:')
       console.log(JSON.stringify(usage, null, 2))
