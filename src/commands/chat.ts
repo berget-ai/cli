@@ -194,7 +194,7 @@ export function registerChatCommands(program: Command): void {
 
             try {
               // Call the API
-              const completionOptions: ChatCompletionOptions = {
+              const completionOptions: any = {
                 model: options.args?.[0] || 'berget-70b-instruct',
                 messages: messages,
                 temperature:

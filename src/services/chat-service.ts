@@ -109,7 +109,8 @@ export class ChatService {
             headers
           })
           
-          if (response.error) throw new Error(JSON.stringify(response.error))
+          if (response && 'error' in response && response.error) 
+            throw new Error(JSON.stringify(response.error))
           
           if (isDebug) {
             console.log(chalk.yellow('DEBUG: API response:'))
