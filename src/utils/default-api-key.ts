@@ -119,9 +119,10 @@ export class DefaultApiKeyManager {
 
       const apiKeyService = ApiKeyService.getInstance()
       
+      // Get all API keys
+      let apiKeys;
       try {
-        // Get all API keys
-        const apiKeys = await apiKeyService.list()
+        apiKeys = await apiKeyService.list()
         
         if (!apiKeys || apiKeys.length === 0) {
           console.log(chalk.yellow('No API keys found. Create one with:'))
