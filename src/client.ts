@@ -13,7 +13,7 @@ const API_BASE_URL =
   process.env.BERGET_API_URL ||
   (isLocalMode ? 'http://localhost:3000' : 'https://api.berget.ai')
 
-if (isLocalMode && !process.env.BERGET_API_URL) {
+if (isLocalMode && !process.env.BERGET_API_URL && process.argv.includes('--debug')) {
   console.log(chalk.yellow('Using local API endpoint: http://localhost:3000'))
 }
 
@@ -50,7 +50,7 @@ export const clearAuthToken = (): void => {
 export const createAuthenticatedClient = () => {
   const tokenManager = TokenManager.getInstance()
 
-  if (!tokenManager.getAccessToken()) {
+  if (!tokenManager.getAccessToken() && process.argv.includes('--debug')) {
     console.warn(
       chalk.yellow(
         'No authentication token found. Please run `berget auth login` first.'
