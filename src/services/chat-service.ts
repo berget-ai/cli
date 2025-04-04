@@ -60,19 +60,24 @@ export class ChatService {
       // If no API key is provided, try to get the default one
       if (!optionsCopy.apiKey) {
         try {
-          const { DefaultApiKeyManager } = await import('../utils/default-api-key')
-          const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-          const apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
+          // Import the DefaultApiKeyManager
+          const defaultApiKeyManagerModule = await import('../utils/default-api-key');
+          const DefaultApiKeyManager = defaultApiKeyManagerModule.DefaultApiKeyManager;
+          const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
+          
+          // Try to get the default API key
+          const apiKey = await defaultApiKeyManager.promptForDefaultApiKey();
           
           if (!apiKey) {
-            console.log(chalk.yellow('No API key available. You need to either:'))
-            console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'))
-            console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'))
-            console.log(chalk.yellow('3. Provide an API key with the --api-key option'))
-            throw new Error('No API key provided and no default API key set')
+            console.log(chalk.yellow('No API key available. You need to either:'));
+            console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'));
+            console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
+            console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
+            throw new Error('No API key provided and no default API key set');
           }
           
-          optionsCopy.apiKey = apiKey
+          // Set the API key in the options
+          optionsCopy.apiKey = apiKey;
         } catch (error) {
           console.log(chalk.red('Error getting API key:'))
           if (error instanceof Error) {
@@ -109,8 +114,10 @@ export class ChatService {
             headers
           })
           
-          if (response && 'error' in response && response.error) 
-            throw new Error(JSON.stringify(response.error))
+          // Check if response has an error property
+          const responseAny = response as any;
+          if (responseAny && responseAny.error) 
+            throw new Error(JSON.stringify(responseAny.error))
           
           if (isDebug) {
             console.log(chalk.yellow('DEBUG: API response:'))
