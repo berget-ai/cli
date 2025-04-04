@@ -54,8 +54,11 @@ export class ChatService {
       // Check if debug is enabled
       const isDebug = process.argv.includes('--debug')
       
+      // Create a copy of options to avoid modifying the original
+      const optionsCopy = { ...options }
+      
       // If no API key is provided, try to get the default one
-      if (!options.apiKey) {
+      if (!optionsCopy.apiKey) {
         const { DefaultApiKeyManager } = await import('../utils/default-api-key')
         const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
         const apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
@@ -64,22 +67,22 @@ export class ChatService {
           throw new Error('No API key provided and no default API key set')
         }
         
-        options.apiKey = apiKey
+        optionsCopy.apiKey = apiKey
       }
       
       if (isDebug) {
         console.log(chalk.yellow('DEBUG: Chat completion options:'))
         console.log(chalk.yellow(JSON.stringify({
-          ...options,
-          apiKey: options.apiKey ? '***' : undefined // Hide the actual API key in debug output
+          ...optionsCopy,
+          apiKey: optionsCopy.apiKey ? '***' : undefined // Hide the actual API key in debug output
         }, null, 2)))
       }
       
       // If an API key is provided, use it for this request
-      if (options.apiKey) {
-        headers['Authorization'] = `Bearer ${options.apiKey}`
+      if (optionsCopy.apiKey) {
+        headers['Authorization'] = `Bearer ${optionsCopy.apiKey}`
         // Remove apiKey from options before sending to API
-        const { apiKey, ...requestOptions } = options
+        const { apiKey, ...requestOptions } = optionsCopy
         
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: Using provided API key'))
