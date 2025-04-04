@@ -40,7 +40,7 @@ if (process.argv.length <= 2) {
 }
 
 // Add helpful suggestions for common command mistakes
-const commonMistakes = {
+const commonMistakes: Record<string, string> = {
   'login': 'auth login',
   'logout': 'auth logout',
   'whoami': 'auth whoami',
@@ -53,11 +53,11 @@ const commonMistakes = {
 
 // Add error handler for unknown commands
 program.on('command:*', (operands) => {
-  const unknownCommand = operands[0];
+  const unknownCommand = operands[0] as string;
   console.error(chalk.red(`Error: unknown command '${unknownCommand}'`));
   
   // Check if this is a known mistake and suggest the correct command
-  if (commonMistakes[unknownCommand]) {
+  if (unknownCommand in commonMistakes) {
     console.log(chalk.yellow(`Did you mean? ${chalk.bold(`berget ${commonMistakes[unknownCommand]}`)}`));
   } else {
     // Try to find similar commands
