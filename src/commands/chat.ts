@@ -61,6 +61,7 @@ export function registerChatCommands(program: Command): void {
 
             if (defaultApiKeyData) {
               apiKeyId = defaultApiKeyData.id
+              apiKey = defaultApiKeyData.key // Lägg till denna rad för att använda nyckeln direkt
               console.log(
                 chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
               )
@@ -180,14 +181,20 @@ export function registerChatCommands(program: Command): void {
 
             try {
               // Call the API
-              const response = await chatService.createCompletion({
+              const completionOptions = {
                 model: options.args?.[0] || 'berget-70b-instruct',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
-                max_tokens: options.maxTokens || 4096,
-                apiKey: apiKey,
-              })
+                max_tokens: options.maxTokens || 4096
+              };
+              
+              // Lägg bara till apiKey om den faktiskt finns
+              if (apiKey) {
+                completionOptions.apiKey = apiKey;
+              }
+              
+              const response = await chatService.createCompletion(completionOptions)
 
               // Debug output
               if (program.opts().debug) {

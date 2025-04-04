@@ -103,10 +103,20 @@ export class ChatService {
           console.log(chalk.yellow(JSON.stringify(requestOptions, null, 2)))
         }
         
-        const { data, error } = await this.client.POST('/v1/chat/completions', {
-          body: requestOptions,
-          headers
-        })
+        try {
+          const { data, error } = await this.client.POST('/v1/chat/completions', {
+            body: requestOptions,
+            headers
+          })
+                
+          if (error) throw new Error(JSON.stringify(error))
+          return data
+        } catch (requestError) {
+          if (process.argv.includes('--debug')) {
+            console.log(chalk.red(`DEBUG: Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`))
+          }
+          throw requestError
+        }
         
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: API response:'))
