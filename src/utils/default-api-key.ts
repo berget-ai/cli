@@ -2,11 +2,14 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import chalk from 'chalk'
+import { ApiKeyService } from '../services/api-key-service'
+import readline from 'readline'
 
 interface DefaultApiKeyData {
   id: string
   name: string
   prefix: string
+  key: string
 }
 
 /**
@@ -44,7 +47,9 @@ export class DefaultApiKeyManager {
         this.defaultApiKey = JSON.parse(data)
       }
     } catch (error) {
-      console.error(chalk.dim('Failed to load default API key configuration'))
+      if (process.argv.includes('--debug')) {
+        console.error(chalk.dim('Failed to load default API key configuration'))
+      }
       this.defaultApiKey = null
     }
   }
@@ -65,22 +70,31 @@ export class DefaultApiKeyManager {
         }
       }
     } catch (error) {
-      console.error(chalk.dim('Failed to save default API key configuration'))
+      if (process.argv.includes('--debug')) {
+        console.error(chalk.dim('Failed to save default API key configuration'))
+      }
     }
   }
   
   /**
    * Set the default API key
    */
-  public setDefaultApiKey(id: string, name: string, prefix: string): void {
-    this.defaultApiKey = { id, name, prefix }
+  public setDefaultApiKey(id: string, name: string, prefix: string, key: string): void {
+    this.defaultApiKey = { id, name, prefix, key }
     this.saveConfig()
   }
   
   /**
    * Get the default API key
    */
-  public getDefaultApiKey(): DefaultApiKeyData | null {
+  public getDefaultApiKey(): string | null {
+    return this.defaultApiKey?.key || null
+  }
+  
+  /**
+   * Get the default API key data
+   */
+  public getDefaultApiKeyData(): DefaultApiKeyData | null {
     return this.defaultApiKey
   }
   
@@ -90,5 +104,82 @@ export class DefaultApiKeyManager {
   public clearDefaultApiKey(): void {
     this.defaultApiKey = null
     this.saveConfig()
+  }
+
+  /**
+   * Prompts the user to select a default API key if none is set
+   * @returns The selected API key or null if none was selected
+   */
+  public async promptForDefaultApiKey(): Promise<string | null> {
+    try {
+      // If we already have a default API key, return it
+      if (this.defaultApiKey) {
+        return this.defaultApiKey.key
+      }
+
+      const apiKeyService = ApiKeyService.getInstance()
+      
+      // Get all API keys
+      const apiKeys = await apiKeyService.list()
+      
+      if (!apiKeys || apiKeys.length === 0) {
+        console.log(chalk.yellow('No API keys found. Create one with:'))
+        console.log(chalk.blue('  berget api-keys create'))
+        return null
+      }
+      
+      console.log(chalk.blue('Select an API key to use as default:'))
+      
+      // Display available API keys
+      apiKeys.forEach((key, index) => {
+        console.log(`  ${index + 1}. ${key.name} (${key.prefix}...)`)
+      })
+      
+      // Create readline interface for user input
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      })
+      
+      // Prompt for selection
+      const selection = await new Promise<number>((resolve) => {
+        rl.question('Enter number (or press Enter to cancel): ', (answer) => {
+          rl.close()
+          const num = parseInt(answer.trim(), 10)
+          if (isNaN(num) || num < 1 || num > apiKeys.length) {
+            resolve(-1) // Invalid selection
+          } else {
+            resolve(num - 1) // Convert to zero-based index
+          }
+        })
+      })
+      
+      if (selection === -1) {
+        console.log(chalk.yellow('No API key selected'))
+        return null
+      }
+      
+      const selectedKey = apiKeys[selection]
+      
+      // Create a new API key with the selected name
+      const newKey = await apiKeyService.create({
+        name: `CLI Default (copy of ${selectedKey.name})`,
+        description: 'Created automatically by the Berget CLI for default use'
+      })
+      
+      // Save the new key as default
+      this.setDefaultApiKey(
+        newKey.id.toString(), 
+        newKey.name, 
+        newKey.key.substring(0, 8), // Use first 8 chars as prefix
+        newKey.key
+      )
+      
+      console.log(chalk.green(`✓ Default API key set to: ${newKey.name}`))
+      return newKey.key
+    } catch (error) {
+      console.error(chalk.red('Failed to set default API key:'), error)
+      return null
+    }
   }
 }

@@ -54,9 +54,23 @@ export class ChatService {
       // Check if debug is enabled
       const isDebug = process.argv.includes('--debug')
       
+      // If no API key is provided, try to get the default one
+      if (!options.apiKey) {
+        const { DefaultApiKeyManager } = await import('../utils/default-api-key')
+        const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+        options.apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
+        
+        if (!options.apiKey) {
+          throw new Error('No API key provided and no default API key set')
+        }
+      }
+      
       if (isDebug) {
         console.log(chalk.yellow('DEBUG: Chat completion options:'))
-        console.log(chalk.yellow(JSON.stringify(options, null, 2)))
+        console.log(chalk.yellow(JSON.stringify({
+          ...options,
+          apiKey: options.apiKey ? '***' : undefined // Hide the actual API key in debug output
+        }, null, 2)))
       }
       
       // If an API key is provided, use it for this request
