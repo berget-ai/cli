@@ -123,16 +123,24 @@ export const createAuthenticatedClient = () => {
             }
           }
 
-          // If we get a 401 error, try to refresh the token and retry
+          // If we get an auth error, try to refresh the token and retry
           if (result.error) {
-            // Check for HTML response which indicates a network or proxy issue
+            // Detect various forms of authentication errors
             const isAuthError =
-              (typeof result.error === 'object' &&
-                result.error.status === 401) ||
+              // Standard 401 Unauthorized
+              (typeof result.error === 'object' && result.error.status === 401) ||
+              // OAuth specific errors
               (result.error.error &&
                 (result.error.error.code === 'invalid_token' ||
-                  result.error.error.code === 'token_expired' ||
-                  result.error.error.message === 'Invalid API key'))
+                 result.error.error.code === 'token_expired' ||
+                 result.error.error.message === 'Invalid API key' ||
+                 result.error.error.message?.toLowerCase().includes('token') ||
+                 result.error.error.message?.toLowerCase().includes('unauthorized'))) ||
+              // Message-based detection as fallback
+              (typeof result.error === 'string' && 
+                (result.error.toLowerCase().includes('unauthorized') ||
+                 result.error.toLowerCase().includes('token') ||
+                 result.error.toLowerCase().includes('auth')))
 
             if (isAuthError && tokenManager.getRefreshToken()) {
               if (process.argv.includes('--debug')) {
@@ -150,8 +158,6 @@ export const createAuthenticatedClient = () => {
                     )}`
                   )
                 )
-                console.log(chalk.yellow('DEBUG: Complete response:'))
-                console.log(chalk.yellow(JSON.stringify(result, null, 2)))
               }
 
               const refreshed = await refreshAccessToken(tokenManager)
@@ -173,8 +179,15 @@ export const createAuthenticatedClient = () => {
                 return await (target[prop as keyof typeof target] as Function)(
                   ...args
                 )
-              } else if (process.argv.includes('--debug')) {
-                console.log(chalk.red('DEBUG: Token refresh failed'))
+              } else {
+                if (process.argv.includes('--debug')) {
+                  console.log(chalk.red('DEBUG: Token refresh failed'))
+                }
+                
+                // Add a more helpful error message for users
+                if (typeof result.error === 'object') {
+                  result.error.userMessage = 'Your session has expired. Please run `berget auth login` to log in again.'
+                }
               }
             }
           }
@@ -197,84 +210,74 @@ async function refreshAccessToken(
     const refreshToken = tokenManager.getRefreshToken()
     if (!refreshToken) return false
 
-    // Create a basic client for the refresh request
-    const client = createClient<paths>({
-      baseUrl: API_BASE_URL,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    })
-
-    // Make the refresh token request
-    const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-
-    if (!response.ok) {
-      console.warn(
-        chalk.yellow(
-          `Failed to refresh token: ${response.status} ${response.statusText}`
-        )
-      )
-      if (response.status === 401) {
-        // Clear tokens if unauthorized - they're invalid
-        tokenManager.clearTokens()
-      }
-      return false
+    if (process.argv.includes('--debug')) {
+      console.log(chalk.yellow('DEBUG: Attempting to refresh access token'))
     }
 
-    // Check content type to avoid parsing HTML as JSON
-    const contentType = response.headers.get('content-type')
-    if (!contentType || !contentType.includes('application/json')) {
-      console.warn(
-        chalk.yellow(`Unexpected content type in response: ${contentType}`)
-      )
-      return false
-    }
+    // Use the apiClient directly for the refresh request
+    const { data, error } = await apiClient.POST('/v1/auth/refresh', {
+      body: { refresh_token: refreshToken },
+    })
 
-    let responseText
-    try {
-      responseText = await response.text()
-
+    // Handle errors from the refresh request
+    if (error) {
       if (process.argv.includes('--debug')) {
-        console.log(chalk.yellow('DEBUG: Token refresh response:'))
-        console.log(chalk.yellow(responseText))
+        console.log(
+          chalk.yellow(`DEBUG: Token refresh error: ${JSON.stringify(error)}`)
+        )
       }
 
-      // Try to parse as JSON
-      const tokenData = JSON.parse(responseText)
-
-      if (!tokenData || !tokenData.token) {
+      // Check if the refresh token itself is expired or invalid
+      const errorObj = typeof error === 'object' ? error : {}
+      if (errorObj.status === 401 || errorObj.status === 403) {
         console.warn(
           chalk.yellow(
-            'Invalid token response. Please run `berget auth login` again.'
+            'Your refresh token has expired. Please run `berget auth login` again.'
           )
         )
-        return false
+        // Clear tokens if unauthorized - they're invalid
+        tokenManager.clearTokens()
+      } else {
+        console.warn(
+          chalk.yellow(
+            `Failed to refresh token: ${
+              errorObj.status ? `${errorObj.status} ${errorObj.statusText || ''}` : 'Unknown error'
+            }`
+          )
+        )
       }
+      return false
+    }
 
-      // Update the token
-      tokenManager.updateAccessToken(
-        tokenData.token,
-        tokenData.expires_in || 3600
-      )
-      return true
-    } catch (error) {
+    // Validate the response data
+    if (!data || !data.token) {
       console.warn(
         chalk.yellow(
-          `Failed to refresh authentication token: ${
-            error instanceof Error ? error.message : String(error)
-          }`
+          'Invalid token response. Please run `berget auth login` again.'
         )
       )
       return false
     }
+
+    if (process.argv.includes('--debug')) {
+      console.log(chalk.green('DEBUG: Token refreshed successfully'))
+    }
+
+    // Update the token
+    tokenManager.updateAccessToken(
+      data.token,
+      data.expires_in || 3600
+    )
+    
+    // If a new refresh token was provided, update that too
+    if (data.refresh_token) {
+      tokenManager.setTokens(data.token, data.refresh_token, data.expires_in || 3600)
+      if (process.argv.includes('--debug')) {
+        console.log(chalk.green('DEBUG: Refresh token also updated'))
+      }
+    }
+    
+    return true
   } catch (error) {
     console.warn(
       chalk.yellow(
