@@ -128,26 +128,9 @@ export class ChatService {
           throw requestError
         }
       } else {
-        // Use the default authenticated client
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: Using default authentication'))
-        }
-        
-        const { data, error } = await this.client.POST('/v1/chat/completions', {
-          body: options
-        })
-        
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: API response:'))
-          console.log(chalk.yellow(JSON.stringify({ data, error }, null, 2)))
-          
-          // Output the complete response data for debugging
-          console.log(chalk.yellow('DEBUG: Complete response data:'))
-          console.log(chalk.yellow(JSON.stringify(data, null, 2)))
-        }
-        
-        if (error) throw new Error(JSON.stringify(error))
-        return data
+        // We should never reach this point because we should have an API key by now
+        // But just in case, throw a clear error
+        throw new Error('No API key available. Please provide an API key or set a default API key.')
       }
     } catch (error) {
       // Improved error handling

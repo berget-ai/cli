@@ -61,12 +61,25 @@ export function registerChatCommands(program: Command): void {
 
             if (defaultApiKeyData) {
               apiKeyId = defaultApiKeyData.id
-              apiKey = defaultApiKeyData.key // Lägg till denna rad för att använda nyckeln direkt
+              apiKey = defaultApiKeyData.key
               console.log(
                 chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
               )
             } else {
-              console.log(chalk.dim('No default API key set. Will prompt for one if needed.'))
+              // No default API key, prompt the user to create one
+              console.log(chalk.yellow('No default API key set.'))
+              
+              // Try to prompt for a default API key
+              apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
+              
+              if (!apiKey) {
+                console.log(chalk.red('Error: An API key is required to use the chat command.'))
+                console.log(chalk.yellow('You can:'))
+                console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'))
+                console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'))
+                console.log(chalk.yellow('3. Provide an API key with the --api-key option'))
+                return
+              }
             }
           } catch (error) {
             if (process.argv.includes('--debug')) {
