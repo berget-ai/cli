@@ -7,6 +7,7 @@
   },
   "private": false,
   "scripts": {
+    "start": "node --import tsx ./index.ts --local",
     "login": "node --import tsx ./index.ts --local auth login",
     "logout": "node --import tsx ./index.ts --local auth logout",
     "whoami": "node --import tsx ./index.ts --local auth whoami",
