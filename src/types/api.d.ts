@@ -351,16 +351,17 @@ export interface paths {
   "/v1/auth/login": {
     /**
      * OAuth login
-     * @description Initiates OAuth flow for user authentication.
-     *
-     * If you don't have an account yet, you can create one during the login process
-     * by clicking on the "Register" link on the login page.
-     *
-     * This is the recommended way to authenticate with the Berget AI API.
+     * @description Initiates OAuth login flow via Keycloak
      */
     get: {
+      parameters: {
+        query?: {
+          /** @description URL to redirect to after successful login */
+          redirect_uri?: string;
+        };
+      };
       responses: {
-        /** @description Redirects to authentication provider */
+        /** @description Redirects to Keycloak for login */
         302: {
           content: never;
         };
@@ -370,98 +371,60 @@ export interface paths {
   "/v1/auth/callback": {
     /**
      * OAuth callback
-     * @description Handles the callback from OAuth authentication. After successful authentication, you'll receive an access token to use for API requests.
+     * @description Handles Keycloak login callback and exchanges token
      */
     get: {
       parameters: {
-        query?: {
-          /** @description Authorization code */
-          code?: string;
-          /** @description State parameter for CSRF protection */
-          state?: string;
+        query: {
+          code: string;
+          state: string;
         };
       };
       responses: {
-        /** @description Redirects to frontend with token */
+        /** @description Redirects to frontend */
         302: {
-          content: never;
-        };
-        /** @description Invalid request */
-        400: {
-          content: never;
-        };
-        /** @description Authentication failed */
-        401: {
           content: never;
         };
       };
     };
   };
-  "/v1/auth/keycloak": {
-    /**
-     * Authenticate with OAuth tokens
-     * @description Exchange OAuth tokens for our system token
-     */
+  "/v1/auth/device": {
+    /** Initiate device authorization flow */
+    post: {
+      responses: {
+        /** @description Device authorization initiated */
+        200: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/v1/auth/device/token": {
+    /** Poll for device token */
     post: {
       requestBody: {
         content: {
           "application/json": {
-            /** @description Subject identifier from authentication provider */
-            sub: string;
-            /**
-             * Format: email
-             * @description User's email address
-             */
-            email: string;
-            /** @description User's full name */
-            name?: string;
-            /** @description User's preferred username */
-            preferred_username?: string;
-            /** @description OAuth access token */
-            access_token: string;
-            /** @description OAuth refresh token */
-            refresh_token?: string;
-            /** @description OAuth ID token */
-            id_token?: string;
+            device_code?: string;
           };
         };
       };
       responses: {
-        /** @description Authentication successful */
+        /** @description Token returned or pending status */
         200: {
-          content: {
-            "application/json": {
-              /** @description JWT token for our system */
-              token?: string;
-              /** @description User information */
-              user?: Record<string, never>;
-            };
-          };
-        };
-        /** @description Invalid request */
-        400: {
-          content: never;
-        };
-        /** @description Authentication failed */
-        401: {
           content: never;
         };
       };
     };
   };
   "/v1/auth/register-url": {
-    /**
-     * Get registration URL
-     * @description Returns the URL where users can register a new account.
-     * This is the recommended way for new users to create accounts.
-     */
+    /** Get Keycloak registration URL */
     get: {
       responses: {
-        /** @description Registration URL */
+        /** @description Registration URL returned */
         200: {
           content: {
             "application/json": {
-              /** @description URL to registration page */
               url?: string;
             };
           };
@@ -469,82 +432,14 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/device": {
-    /**
-     * Initiate device authorization flow
-     * @description Initiates a device authorization flow for CLI tools.
-     * Returns a verification URL and device code for the user to complete authentication.
-     */
-    post: {
-      responses: {
-        /** @description Device authorization initiated */
-        200: {
-          content: {
-            "application/json": {
-              /** @description URL where the user should go to authenticate */
-              verification_url?: string;
-              /** @description Code the user should enter on the verification page */
-              user_code?: string;
-              /** @description Code used by the device to poll for authentication status */
-              device_code?: string;
-              /** @description Seconds until the device code expires */
-              expires_in?: number;
-              /** @description Polling interval in seconds */
-              interval?: number;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/v1/auth/device/token": {
-    /**
-     * Poll for device authorization token
-     * @description Polls for the completion of a device authorization flow.
-     * The CLI tool should call this endpoint repeatedly until authentication is complete.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Device code received from the /device endpoint */
-            device_code: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Authentication successful */
-        200: {
-          content: {
-            "application/json": {
-              /** @description JWT token for API access */
-              token?: string;
-              /** @description User information */
-              user?: Record<string, never>;
-            };
-          };
-        };
-        /** @description Invalid request */
-        400: {
-          content: never;
-        };
-        /** @description Authentication pending or failed */
-        401: {
-          content: never;
-        };
-      };
-    };
-  };
   "/v1/auth/logout": {
     /**
      * Logout
-     * @description Redirects to logout endpoint to properly terminate the session.
-     * Optionally accepts a redirect_uri query parameter to specify where to redirect after logout.
+     * @description Clears cookies and redirects to Keycloak logout
      */
     get: {
       parameters: {
         query?: {
-          /** @description URL to redirect to after logout */
           redirect_uri?: string;
         };
       };
@@ -969,6 +864,28 @@ export interface paths {
       };
     };
   };
+  "/v1/users/me": {
+    /**
+     * Get current user profile
+     * @description Retrieves the profile of the currently authenticated user
+     */
+    get: {
+      responses: {
+        /** @description User profile */
+        200: {
+          content: {
+            "application/json": components["schemas"]["UserProfile"];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/v1/users/{id}": {
     /**
      * Get user details
@@ -1066,28 +983,6 @@ export interface paths {
         };
         /** @description Cannot delete other users */
         403: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/v1/users/me": {
-    /**
-     * Get current user profile
-     * @description Retrieves the profile of the currently authenticated user
-     */
-    get: {
-      responses: {
-        /** @description User profile */
-        200: {
-          content: {
-            "application/json": components["schemas"]["UserProfile"];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
           };
@@ -1797,46 +1692,17 @@ export interface components {
         };
       };
     };
-    /** @description Pricing information for the model */
-    ModelPricing: {
-      /** @description Cost per token for input in the specified currency */
-      input: number;
-      /** @description Cost per token for output in the specified currency */
-      output: number;
-      /** @description The unit of pricing (e.g., "token") */
-      unit: string;
-      /** @description The currency of the pricing (e.g., "USD") */
-      currency: string;
-    };
-    /** @description Model capabilities */
-    ModelCapabilities: {
-      /** @description Whether the model supports vision/image input */
-      vision: boolean;
-      /** @description Whether the model supports function calling */
-      function_calling: boolean;
-      /** @description Whether the model supports JSON mode */
-      json_mode: boolean;
-    };
     Model: {
       /** @description Unique identifier for the model */
       id: string;
-      /**
-       * @description Object type
-       * @enum {string}
-       */
-      object: "model";
-      /** @description Unix timestamp of when the model was created */
-      created: number;
-      /** @description Organization that owns the model */
-      owned_by: string;
-      pricing: components["schemas"]["ModelPricing"];
-      capabilities: components["schemas"]["ModelCapabilities"];
+      /** @description Name of the model */
+      name: string;
+      /** @description Description of the model */
+      description: string;
+      /** @description Whether the model is active */
+      active: boolean;
     };
-    ModelList: {
-      data: components["schemas"]["Model"][];
-      /** @enum {string} */
-      object: "list";
-    };
+    ModelList: components["schemas"]["Model"][];
     /** @description Cost information for this usage */
     TokenCost: {
       /** @description Cost amount */
