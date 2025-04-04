@@ -36,7 +36,7 @@ export function registerChatCommands(program: Command): void {
   chat
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
-    .argument('[model]', 'Model to use (default: berget-70b-instruct)')
+    .argument('[model]', 'Model to use (default: google/gemma-3-27b-it)')
     .option('-s, --system <message>', 'System message')
     .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
     .option('-m, --max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
@@ -57,7 +57,8 @@ export function registerChatCommands(program: Command): void {
         if (!apiKey && !apiKeyId) {
           try {
             const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-            const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
+            const defaultApiKeyData =
+              defaultApiKeyManager.getDefaultApiKeyData()
 
             if (defaultApiKeyData) {
               apiKeyId = defaultApiKeyData.id
@@ -68,22 +69,40 @@ export function registerChatCommands(program: Command): void {
             } else {
               // No default API key, prompt the user to create one
               console.log(chalk.yellow('No default API key set.'))
-              
+
               // Try to prompt for a default API key
               apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
-              
+
               if (!apiKey) {
-                console.log(chalk.red('Error: An API key is required to use the chat command.'))
+                console.log(
+                  chalk.red(
+                    'Error: An API key is required to use the chat command.'
+                  )
+                )
                 console.log(chalk.yellow('You can:'))
-                console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'))
-                console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'))
-                console.log(chalk.yellow('3. Provide an API key with the --api-key option'))
+                console.log(
+                  chalk.yellow(
+                    '1. Create an API key with: berget api-keys create --name "My Key"'
+                  )
+                )
+                console.log(
+                  chalk.yellow(
+                    '2. Set a default API key with: berget api-keys set-default <id>'
+                  )
+                )
+                console.log(
+                  chalk.yellow(
+                    '3. Provide an API key with the --api-key option'
+                  )
+                )
                 return
               }
             }
           } catch (error) {
             if (process.argv.includes('--debug')) {
-              console.log(chalk.yellow('DEBUG: Error checking default API key:'))
+              console.log(
+                chalk.yellow('DEBUG: Error checking default API key:')
+              )
               console.log(chalk.yellow(String(error)))
             }
           }
@@ -195,19 +214,21 @@ export function registerChatCommands(program: Command): void {
             try {
               // Call the API
               const completionOptions: any = {
-                model: options.args?.[0] || 'berget-70b-instruct',
+                model: options.args?.[0] || 'google/gemma-3-27b-it',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
-                max_tokens: options.maxTokens || 4096
-              };
-              
+                max_tokens: options.maxTokens || 4096,
+              }
+
               // Only add apiKey if it actually exists
               if (apiKey) {
-                completionOptions.apiKey = apiKey;
+                completionOptions.apiKey = apiKey
               }
-              
-              const response = await chatService.createCompletion(completionOptions)
+
+              const response = await chatService.createCompletion(
+                completionOptions
+              )
 
               // Debug output
               if (program.opts().debug) {
