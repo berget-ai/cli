@@ -104,31 +104,29 @@ export class ChatService {
         }
         
         try {
-          const { data, error } = await this.client.POST('/v1/chat/completions', {
+          const response = await this.client.POST('/v1/chat/completions', {
             body: requestOptions,
             headers
           })
-                
-          if (error) throw new Error(JSON.stringify(error))
-          return data
+          
+          if (response.error) throw new Error(JSON.stringify(response.error))
+          
+          if (isDebug) {
+            console.log(chalk.yellow('DEBUG: API response:'))
+            console.log(chalk.yellow(JSON.stringify(response, null, 2)))
+            
+            // Output the complete response data for debugging
+            console.log(chalk.yellow('DEBUG: Complete response data:'))
+            console.log(chalk.yellow(JSON.stringify(response.data, null, 2)))
+          }
+          
+          return response.data
         } catch (requestError) {
           if (process.argv.includes('--debug')) {
             console.log(chalk.red(`DEBUG: Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`))
           }
           throw requestError
         }
-        
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: API response:'))
-          console.log(chalk.yellow(JSON.stringify({ data, error }, null, 2)))
-          
-          // Output the complete response data for debugging
-          console.log(chalk.yellow('DEBUG: Complete response data:'))
-          console.log(chalk.yellow(JSON.stringify(data, null, 2)))
-        }
-        
-        if (error) throw new Error(JSON.stringify(error))
-        return data
       } else {
         // Use the default authenticated client
         if (isDebug) {
