@@ -56,12 +56,12 @@ export function registerChatCommands(program: Command): void {
         // If no API key or API key ID provided, check for default API key
         if (!apiKey && !apiKeyId) {
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-          const defaultApiKey = defaultApiKeyManager.getDefaultApiKey()
+          const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
 
-          if (defaultApiKey) {
-            apiKeyId = defaultApiKey.id
+          if (defaultApiKeyData) {
+            apiKeyId = defaultApiKeyData.id
             console.log(
-              chalk.dim(`Using default API key: ${defaultApiKey.name}`)
+              chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
             )
           }
         }
@@ -252,12 +252,12 @@ export function registerChatCommands(program: Command): void {
         // If no API key or API key ID provided, check for default API key
         if (!apiKey && !apiKeyId) {
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-          const defaultApiKey = defaultApiKeyManager.getDefaultApiKey()
+          const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
 
-          if (defaultApiKey) {
-            apiKeyId = defaultApiKey.id
+          if (defaultApiKeyData) {
+            apiKeyId = defaultApiKeyData.id
             console.log(
-              chalk.dim(`Using default API key: ${defaultApiKey.name}`)
+              chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
             )
           }
         }

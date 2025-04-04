@@ -318,10 +318,15 @@ export function registerApiKeyCommands(program: Command): void {
         
         // Save the default API key
         const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+        
+        // We need to rotate the key to get the actual key value
+        const rotatedKey = await apiKeyService.rotate(id)
+        
         defaultApiKeyManager.setDefaultApiKey(
           id, 
           selectedKey.name, 
-          selectedKey.prefix
+          selectedKey.prefix,
+          rotatedKey.key
         )
         
         console.log(chalk.green(`✓ API key "${selectedKey.name}" set as default for chat commands`))
@@ -339,9 +344,9 @@ export function registerApiKeyCommands(program: Command): void {
     .action(() => {
       try {
         const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-        const defaultApiKey = defaultApiKeyManager.getDefaultApiKey()
+        const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
         
-        if (!defaultApiKey) {
+        if (!defaultApiKeyData) {
           console.log(chalk.yellow('No default API key set'))
           console.log('')
           console.log('To set a default API key, run:')
@@ -351,9 +356,9 @@ export function registerApiKeyCommands(program: Command): void {
         
         console.log(chalk.bold('Default API key:'))
         console.log('')
-        console.log(`${chalk.dim('ID:')}     ${defaultApiKey.id}`)
-        console.log(`${chalk.dim('Name:')}   ${defaultApiKey.name}`)
-        console.log(`${chalk.dim('Prefix:')} ${defaultApiKey.prefix}`)
+        console.log(`${chalk.dim('ID:')}     ${defaultApiKeyData.id}`)
+        console.log(`${chalk.dim('Name:')}   ${defaultApiKeyData.name}`)
+        console.log(`${chalk.dim('Prefix:')} ${defaultApiKeyData.prefix}`)
         console.log('')
         console.log(chalk.dim('This API key will be used by default when running chat commands'))
         console.log(chalk.dim('You can override it with --api-key or --api-key-id options'))
