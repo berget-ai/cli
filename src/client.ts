@@ -32,7 +32,11 @@ export const getAuthToken = (): string | null => {
   return tokenManager.getAccessToken()
 }
 
-export const saveAuthToken = (accessToken: string, refreshToken: string, expiresIn: number = 3600): void => {
+export const saveAuthToken = (
+  accessToken: string,
+  refreshToken: string,
+  expiresIn: number = 3600
+): void => {
   const tokenManager = TokenManager.getInstance()
   tokenManager.setTokens(accessToken, refreshToken, expiresIn)
 }
@@ -45,7 +49,7 @@ export const clearAuthToken = (): void => {
 // Create an authenticated client with refresh token support
 export const createAuthenticatedClient = () => {
   const tokenManager = TokenManager.getInstance()
-  
+
   if (!tokenManager.getAccessToken()) {
     console.warn(
       chalk.yellow(
@@ -73,90 +77,126 @@ export const createAuthenticatedClient = () => {
   return new Proxy(client, {
     get(target, prop: string | symbol) {
       // For HTTP methods (GET, POST, etc.), add token refresh logic
-      if (typeof target[prop as keyof typeof target] === 'function' && 
-          ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(String(prop))) {
+      if (
+        typeof target[prop as keyof typeof target] === 'function' &&
+        ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(String(prop))
+      ) {
         return async (...args: any[]) => {
           // Check if token is expired before making the request
           if (tokenManager.isTokenExpired() && tokenManager.getRefreshToken()) {
             await refreshAccessToken(tokenManager)
           }
-          
+
           // Update the Authorization header with the current token
           if (tokenManager.getAccessToken()) {
             if (!args[1]) args[1] = {}
             if (!args[1].headers) args[1].headers = {}
             args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
           }
-          
+
           // Make the original request
-          let result;
+          let result
           try {
-            result = await (target[prop as keyof typeof target] as Function)(...args);
+            result = await (target[prop as keyof typeof target] as Function)(
+              ...args
+            )
           } catch (requestError) {
             if (process.argv.includes('--debug')) {
-              console.log(chalk.red(`DEBUG: Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`));
+              console.log(
+                chalk.red(
+                  `DEBUG: Request error: ${
+                    requestError instanceof Error
+                      ? requestError.message
+                      : String(requestError)
+                  }`
+                )
+              )
             }
-            return { error: { message: `Request failed: ${requestError instanceof Error ? requestError.message : String(requestError)}` } };
+            return {
+              error: {
+                message: `Request failed: ${
+                  requestError instanceof Error
+                    ? requestError.message
+                    : String(requestError)
+                }`,
+              },
+            }
           }
-          
+
           // If we get a 401 error, try to refresh the token and retry
           if (result.error) {
             // Check for HTML response which indicates a network or proxy issue
-            if (typeof result.error === 'string' && result.error.includes('<!DOCTYPE html>')) {
-              console.warn(chalk.yellow('Received HTML instead of JSON. This may indicate a network issue or proxy problem.'));
-              return { error: { message: 'Received HTML instead of JSON. This may indicate a network issue or proxy problem.' } };
-            }
-            
-            const isAuthError = 
-              (typeof result.error === 'object' && result.error.status === 401) || 
-              (result.error.error && 
-               (result.error.error.code === 'invalid_token' || 
-                result.error.error.code === 'token_expired' ||
-                result.error.error.message === 'Invalid API key'));
-            
+            const isAuthError =
+              (typeof result.error === 'object' &&
+                result.error.status === 401) ||
+              (result.error.error &&
+                (result.error.error.code === 'invalid_token' ||
+                  result.error.error.code === 'token_expired' ||
+                  result.error.error.message === 'Invalid API key'))
+
             if (isAuthError && tokenManager.getRefreshToken()) {
               if (process.argv.includes('--debug')) {
-                console.log(chalk.yellow('DEBUG: Auth error detected, attempting token refresh'));
-                console.log(chalk.yellow(`DEBUG: Error details: ${JSON.stringify(result.error, null, 2)}`));
-                console.log(chalk.yellow('DEBUG: Complete response:'));
-                console.log(chalk.yellow(JSON.stringify(result, null, 2)));
+                console.log(
+                  chalk.yellow(
+                    'DEBUG: Auth error detected, attempting token refresh'
+                  )
+                )
+                console.log(
+                  chalk.yellow(
+                    `DEBUG: Error details: ${JSON.stringify(
+                      result.error,
+                      null,
+                      2
+                    )}`
+                  )
+                )
+                console.log(chalk.yellow('DEBUG: Complete response:'))
+                console.log(chalk.yellow(JSON.stringify(result, null, 2)))
               }
-              
+
               const refreshed = await refreshAccessToken(tokenManager)
               if (refreshed) {
                 if (process.argv.includes('--debug')) {
-                  console.log(chalk.green('DEBUG: Token refreshed successfully, retrying request'));
+                  console.log(
+                    chalk.green(
+                      'DEBUG: Token refreshed successfully, retrying request'
+                    )
+                  )
                 }
-                
+
                 // Update the Authorization header with the new token
                 if (!args[1]) args[1] = {}
                 if (!args[1].headers) args[1].headers = {}
                 args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
-                
+
                 // Retry the request
-                return await (target[prop as keyof typeof target] as Function)(...args)
+                return await (target[prop as keyof typeof target] as Function)(
+                  ...args
+                )
               } else if (process.argv.includes('--debug')) {
-                console.log(chalk.red('DEBUG: Token refresh failed'));
+                console.log(chalk.red('DEBUG: Token refresh failed'))
               }
             }
           }
-          
+
           return result
         }
       }
-      
+
       // For other properties, just return the original
       return target[prop as keyof typeof target]
-    }
+    },
   })
 }
 
 // Helper function to refresh the access token
-async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> {
+async function refreshAccessToken(
+  tokenManager: TokenManager
+): Promise<boolean> {
   try {
     const refreshToken = tokenManager.getRefreshToken()
     if (!refreshToken) return false
-    
+
     // Create a basic client for the refresh request
     const client = createClient<paths>({
       baseUrl: API_BASE_URL,
@@ -165,55 +205,84 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
         Accept: 'application/json',
       },
     })
-    
+
     // Make the refresh token request
     const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        Accept: 'application/json',
       },
-      body: JSON.stringify({ refresh_token: refreshToken })
-    });
-    
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+
     if (!response.ok) {
-      console.warn(chalk.yellow(`Failed to refresh token: ${response.status} ${response.statusText}`));
+      console.warn(
+        chalk.yellow(
+          `Failed to refresh token: ${response.status} ${response.statusText}`
+        )
+      )
       if (response.status === 401) {
         // Clear tokens if unauthorized - they're invalid
-        tokenManager.clearTokens();
+        tokenManager.clearTokens()
       }
-      return false;
-    }
-    
-    // Check content type to avoid parsing HTML as JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      console.warn(chalk.yellow(`Unexpected content type in response: ${contentType}`));
-      return false;
-    }
-    
-    let responseText;
-    try {
-      responseText = await response.text();
-      
-      if (process.argv.includes('--debug')) {
-        console.log(chalk.yellow('DEBUG: Token refresh response:'));
-        console.log(chalk.yellow(responseText));
-      }
-      
-      // Try to parse as JSON
-      const tokenData = JSON.parse(responseText);
-    
-    if (!tokenData || !tokenData.token) {
-      console.warn(chalk.yellow('Invalid token response. Please run `berget auth login` again.'))
       return false
     }
-    
-    // Update the token
-    tokenManager.updateAccessToken(tokenData.token, tokenData.expires_in || 3600)
-    return true
+
+    // Check content type to avoid parsing HTML as JSON
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      console.warn(
+        chalk.yellow(`Unexpected content type in response: ${contentType}`)
+      )
+      return false
+    }
+
+    let responseText
+    try {
+      responseText = await response.text()
+
+      if (process.argv.includes('--debug')) {
+        console.log(chalk.yellow('DEBUG: Token refresh response:'))
+        console.log(chalk.yellow(responseText))
+      }
+
+      // Try to parse as JSON
+      const tokenData = JSON.parse(responseText)
+
+      if (!tokenData || !tokenData.token) {
+        console.warn(
+          chalk.yellow(
+            'Invalid token response. Please run `berget auth login` again.'
+          )
+        )
+        return false
+      }
+
+      // Update the token
+      tokenManager.updateAccessToken(
+        tokenData.token,
+        tokenData.expires_in || 3600
+      )
+      return true
+    } catch (error) {
+      console.warn(
+        chalk.yellow(
+          `Failed to refresh authentication token: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      )
+      return false
+    }
   } catch (error) {
-    console.warn(chalk.yellow(`Failed to refresh authentication token: ${error instanceof Error ? error.message : String(error)}`))
+    console.warn(
+      chalk.yellow(
+        `Failed to refresh authentication token: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    )
     return false
   }
 }
