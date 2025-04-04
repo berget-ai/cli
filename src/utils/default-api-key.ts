@@ -85,14 +85,14 @@ export class DefaultApiKeyManager {
   }
   
   /**
-   * Get the default API key
+   * Get the default API key string
    */
   public getDefaultApiKey(): string | null {
     return this.defaultApiKey?.key || null
   }
   
   /**
-   * Get the default API key data
+   * Get the default API key data object
    */
   public getDefaultApiKeyData(): DefaultApiKeyData | null {
     return this.defaultApiKey

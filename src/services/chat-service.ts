@@ -58,11 +58,13 @@ export class ChatService {
       if (!options.apiKey) {
         const { DefaultApiKeyManager } = await import('../utils/default-api-key')
         const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-        options.apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
+        const apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
         
-        if (!options.apiKey) {
+        if (!apiKey) {
           throw new Error('No API key provided and no default API key set')
         }
+        
+        options.apiKey = apiKey
       }
       
       if (isDebug) {

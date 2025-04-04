@@ -4,6 +4,7 @@ import { program } from 'commander'
 import { registerCommands } from './src/commands'
 import { checkBergetConfig } from './src/utils/config-checker'
 import chalk from 'chalk'
+import { version } from './package.json'
 
 // Set version and description
 program
@@ -18,7 +19,7 @@ program
                  __/ |                      
                 |___/   AI on European terms`
   )
-  .version(process.env.npm_package_version || '0.0.1', '-v, --version')
+  .version(version, '-v, --version')
   .option('--local', 'Use local API endpoint (hidden)', false)
   .option('--debug', 'Enable debug output', false)
 
