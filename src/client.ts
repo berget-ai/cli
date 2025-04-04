@@ -214,67 +214,91 @@ async function refreshAccessToken(
       console.log(chalk.yellow('DEBUG: Attempting to refresh access token'))
     }
 
-    // Use the apiClient directly for the refresh request
-    const { data, error } = await apiClient.POST('/v1/auth/refresh', {
-      body: { refresh_token: refreshToken },
-    })
+    // Use fetch directly since this endpoint might not be in the OpenAPI spec
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
 
-    // Handle errors from the refresh request
-    if (error) {
+      // Handle HTTP errors
+      if (!response.ok) {
+        if (process.argv.includes('--debug')) {
+          console.log(
+            chalk.yellow(`DEBUG: Token refresh error: HTTP ${response.status} ${response.statusText}`)
+          )
+        }
+
+        // Check if the refresh token itself is expired or invalid
+        if (response.status === 401 || response.status === 403) {
+          console.warn(
+            chalk.yellow(
+              'Your refresh token has expired. Please run `berget auth login` again.'
+            )
+          )
+          // Clear tokens if unauthorized - they're invalid
+          tokenManager.clearTokens()
+        } else {
+          console.warn(
+            chalk.yellow(
+              `Failed to refresh token: ${response.status} ${response.statusText}`
+            )
+          )
+        }
+        return false
+      }
+
+      // Parse the response
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn(
+          chalk.yellow(`Unexpected content type in response: ${contentType}`)
+        )
+        return false
+      }
+
+      const data = await response.json()
+
+      // Validate the response data
+      if (!data || !data.token) {
+        console.warn(
+          chalk.yellow(
+            'Invalid token response. Please run `berget auth login` again.'
+          )
+        )
+        return false
+      }
+
       if (process.argv.includes('--debug')) {
-        console.log(
-          chalk.yellow(`DEBUG: Token refresh error: ${JSON.stringify(error)}`)
-        )
+        console.log(chalk.green('DEBUG: Token refreshed successfully'))
       }
 
-      // Check if the refresh token itself is expired or invalid
-      const errorObj = typeof error === 'object' ? error : {}
-      if (errorObj.status === 401 || errorObj.status === 403) {
-        console.warn(
-          chalk.yellow(
-            'Your refresh token has expired. Please run `berget auth login` again.'
-          )
-        )
-        // Clear tokens if unauthorized - they're invalid
-        tokenManager.clearTokens()
-      } else {
-        console.warn(
-          chalk.yellow(
-            `Failed to refresh token: ${
-              errorObj.status ? `${errorObj.status} ${errorObj.statusText || ''}` : 'Unknown error'
-            }`
-          )
-        )
+      // Update the token
+      tokenManager.updateAccessToken(
+        data.token,
+        data.expires_in || 3600
+      )
+      
+      // If a new refresh token was provided, update that too
+      if (data.refresh_token) {
+        tokenManager.setTokens(data.token, data.refresh_token, data.expires_in || 3600)
+        if (process.argv.includes('--debug')) {
+          console.log(chalk.green('DEBUG: Refresh token also updated'))
+        }
       }
-      return false
-    }
-
-    // Validate the response data
-    if (!data || !data.token) {
+    } catch (fetchError) {
       console.warn(
         chalk.yellow(
-          'Invalid token response. Please run `berget auth login` again.'
+          `Failed to refresh token: ${
+            fetchError instanceof Error ? fetchError.message : String(fetchError)
+          }`
         )
       )
       return false
-    }
-
-    if (process.argv.includes('--debug')) {
-      console.log(chalk.green('DEBUG: Token refreshed successfully'))
-    }
-
-    // Update the token
-    tokenManager.updateAccessToken(
-      data.token,
-      data.expires_in || 3600
-    )
-    
-    // If a new refresh token was provided, update that too
-    if (data.refresh_token) {
-      tokenManager.setTokens(data.token, data.refresh_token, data.expires_in || 3600)
-      if (process.argv.includes('--debug')) {
-        console.log(chalk.green('DEBUG: Refresh token also updated'))
-      }
     }
     
     return true
