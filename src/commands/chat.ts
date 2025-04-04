@@ -55,14 +55,23 @@ export function registerChatCommands(program: Command): void {
 
         // If no API key or API key ID provided, check for default API key
         if (!apiKey && !apiKeyId) {
-          const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-          const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
+          try {
+            const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+            const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
 
-          if (defaultApiKeyData) {
-            apiKeyId = defaultApiKeyData.id
-            console.log(
-              chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
-            )
+            if (defaultApiKeyData) {
+              apiKeyId = defaultApiKeyData.id
+              console.log(
+                chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
+              )
+            } else {
+              console.log(chalk.dim('No default API key set. Will prompt for one if needed.'))
+            }
+          } catch (error) {
+            if (process.argv.includes('--debug')) {
+              console.log(chalk.yellow('DEBUG: Error checking default API key:'))
+              console.log(chalk.yellow(String(error)))
+            }
           }
         }
 

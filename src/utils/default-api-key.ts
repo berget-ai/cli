@@ -119,12 +119,21 @@ export class DefaultApiKeyManager {
 
       const apiKeyService = ApiKeyService.getInstance()
       
-      // Get all API keys
-      const apiKeys = await apiKeyService.list()
-      
-      if (!apiKeys || apiKeys.length === 0) {
-        console.log(chalk.yellow('No API keys found. Create one with:'))
-        console.log(chalk.blue('  berget api-keys create'))
+      try {
+        // Get all API keys
+        const apiKeys = await apiKeyService.list()
+        
+        if (!apiKeys || apiKeys.length === 0) {
+          console.log(chalk.yellow('No API keys found. Create one with:'))
+          console.log(chalk.blue('  berget api-keys create --name "My Key"'))
+          return null
+        }
+      } catch (error) {
+        console.log(chalk.red('Error fetching API keys:'))
+        if (error instanceof Error) {
+          console.log(chalk.red(error.message))
+        }
+        console.log(chalk.yellow('Please make sure you are logged in with: berget auth login'))
         return null
       }
       

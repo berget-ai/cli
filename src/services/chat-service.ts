@@ -59,15 +59,28 @@ export class ChatService {
       
       // If no API key is provided, try to get the default one
       if (!optionsCopy.apiKey) {
-        const { DefaultApiKeyManager } = await import('../utils/default-api-key')
-        const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-        const apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
-        
-        if (!apiKey) {
-          throw new Error('No API key provided and no default API key set')
+        try {
+          const { DefaultApiKeyManager } = await import('../utils/default-api-key')
+          const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+          const apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
+          
+          if (!apiKey) {
+            console.log(chalk.yellow('No API key available. You need to either:'))
+            console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'))
+            console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'))
+            console.log(chalk.yellow('3. Provide an API key with the --api-key option'))
+            throw new Error('No API key provided and no default API key set')
+          }
+          
+          optionsCopy.apiKey = apiKey
+        } catch (error) {
+          console.log(chalk.red('Error getting API key:'))
+          if (error instanceof Error) {
+            console.log(chalk.red(error.message))
+          }
+          console.log(chalk.yellow('Please create an API key with: berget api-keys create --name "My Key"'))
+          throw new Error('Failed to get API key')
         }
-        
-        optionsCopy.apiKey = apiKey
       }
       
       if (isDebug) {
