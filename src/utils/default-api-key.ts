@@ -112,17 +112,38 @@ export class DefaultApiKeyManager {
    */
   public async promptForDefaultApiKey(): Promise<string | null> {
     try {
+      const isDebug = process.argv.includes('--debug')
+      
+      if (isDebug) {
+        console.log(chalk.yellow('DEBUG: promptForDefaultApiKey called'))
+      }
+      
       // If we already have a default API key, return it
       if (this.defaultApiKey) {
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: Using existing default API key'))
+        }
         return this.defaultApiKey.key
       }
 
+      if (isDebug) {
+        console.log(chalk.yellow('DEBUG: No default API key found, getting ApiKeyService'))
+      }
+      
       const apiKeyService = ApiKeyService.getInstance()
       
       // Get all API keys
       let apiKeys;
       try {
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: Calling apiKeyService.list()'))
+        }
+        
         apiKeys = await apiKeyService.list()
+        
+        if (isDebug) {
+          console.log(chalk.yellow(`DEBUG: Got ${apiKeys ? apiKeys.length : 0} API keys`))
+        }
         
         if (!apiKeys || apiKeys.length === 0) {
           console.log(chalk.yellow('No API keys found. Create one with:'))
@@ -133,6 +154,10 @@ export class DefaultApiKeyManager {
         console.log(chalk.red('Error fetching API keys:'))
         if (error instanceof Error) {
           console.log(chalk.red(error.message))
+          if (isDebug) {
+            console.log(chalk.yellow(`DEBUG: API key list error: ${error.message}`))
+            console.log(chalk.yellow(`DEBUG: Stack: ${error.stack}`))
+          }
         }
         console.log(chalk.yellow('Please make sure you are logged in with: berget auth login'))
         return null

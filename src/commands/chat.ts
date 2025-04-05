@@ -224,6 +224,12 @@ export function registerChatCommands(program: Command): void {
               // Only add apiKey if it actually exists
               if (apiKey) {
                 completionOptions.apiKey = apiKey
+                
+                if (process.argv.includes('--debug')) {
+                  console.log(chalk.yellow('DEBUG: Using API key from command options or default'))
+                }
+              } else if (process.argv.includes('--debug')) {
+                console.log(chalk.yellow('DEBUG: No API key available in chat command'))
               }
 
               // Debug output
@@ -239,6 +245,10 @@ export function registerChatCommands(program: Command): void {
                 }, null, 2)))
               }
 
+              if (process.argv.includes('--debug')) {
+                console.log(chalk.yellow('DEBUG: Calling chatService.createCompletion'))
+              }
+              
               const response = await chatService.createCompletion(
                 completionOptions
               )

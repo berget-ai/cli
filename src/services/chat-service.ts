@@ -54,18 +54,52 @@ export class ChatService {
       // Check if debug is enabled
       const isDebug = process.argv.includes('--debug')
       
+      if (isDebug) {
+        console.log(chalk.yellow('DEBUG: Starting createCompletion with options:'))
+        console.log(chalk.yellow(JSON.stringify({
+          ...options,
+          apiKey: options.apiKey ? '***' : undefined,
+          messages: options.messages ? `${options.messages.length} messages` : undefined
+        }, null, 2)))
+      }
+      
       // Create a copy of options to avoid modifying the original
       const optionsCopy = { ...options }
       
+      if (isDebug) {
+        console.log(chalk.yellow('DEBUG: Checking for API key'))
+        console.log(chalk.yellow(`DEBUG: optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`))
+      }
+      
       // If no API key is provided, try to get the default one
       if (!optionsCopy.apiKey) {
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: No API key provided, trying to get default'))
+        }
+        
         try {
           // Import the DefaultApiKeyManager directly
+          if (isDebug) {
+            console.log(chalk.yellow('DEBUG: Importing DefaultApiKeyManager'))
+          }
+          
           const DefaultApiKeyManager = (await import('../utils/default-api-key')).DefaultApiKeyManager;
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
           
+          if (isDebug) {
+            console.log(chalk.yellow('DEBUG: Got DefaultApiKeyManager instance'))
+          }
+          
           // Try to get the default API key
+          if (isDebug) {
+            console.log(chalk.yellow('DEBUG: Calling promptForDefaultApiKey'))
+          }
+          
           const apiKey = await defaultApiKeyManager.promptForDefaultApiKey();
+          
+          if (isDebug) {
+            console.log(chalk.yellow(`DEBUG: promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`))
+          }
           
           if (!apiKey) {
             console.log(chalk.yellow('No API key available. You need to either:'));
@@ -76,6 +110,10 @@ export class ChatService {
           }
           
           // Set the API key in the options
+          if (isDebug) {
+            console.log(chalk.yellow('DEBUG: Setting API key in options'))
+          }
+          
           optionsCopy.apiKey = apiKey;
         } catch (error) {
           console.log(chalk.red('Error getting API key:'))
