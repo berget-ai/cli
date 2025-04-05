@@ -50,8 +50,13 @@ export function registerApiKeyCommands(program: Command): void {
             ? chalk.green('● Active')
             : chalk.red('● Inactive')
 
+          // Format the ID to ensure it's not too long
+          const idStr = String(key.id).length > 8 
+            ? String(key.id).substring(0, 8) + '...'
+            : String(key.id)
+
           console.log(
-            String(key.id).padEnd(10) +
+            idStr.padEnd(10) +
               key.name.padEnd(25) +
               key.prefix.padEnd(12) +
               status.padEnd(12) +
