@@ -60,9 +60,8 @@ export class ChatService {
       // If no API key is provided, try to get the default one
       if (!optionsCopy.apiKey) {
         try {
-          // Import the DefaultApiKeyManager
-          const defaultApiKeyManagerModule = await import('../utils/default-api-key');
-          const DefaultApiKeyManager = defaultApiKeyManagerModule.DefaultApiKeyManager;
+          // Import the DefaultApiKeyManager directly
+          const DefaultApiKeyManager = (await import('../utils/default-api-key')).DefaultApiKeyManager;
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
           
           // Try to get the default API key

@@ -224,8 +224,19 @@ export function registerChatCommands(program: Command): void {
               // Only add apiKey if it actually exists
               if (apiKey) {
                 completionOptions.apiKey = apiKey
-              } else {
-                console.log(chalk.yellow('Warning: No API key available. Attempting to use default authentication.'))
+              }
+
+              // Debug output
+              if (process.argv.includes('--debug')) {
+                console.log(chalk.yellow('DEBUG: Completion options:'))
+                console.log(chalk.yellow(JSON.stringify({
+                  ...completionOptions,
+                  apiKey: completionOptions.apiKey ? '***' : undefined,
+                  messages: completionOptions.messages.map((m: any) => ({
+                    role: m.role,
+                    content: m.content.length > 50 ? m.content.substring(0, 50) + '...' : m.content
+                  }))
+                }, null, 2)))
               }
 
               const response = await chatService.createCompletion(
