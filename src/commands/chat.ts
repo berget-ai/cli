@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import readline from 'readline'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
-import { ChatService, ChatMessage } from '../services/chat-service'
+import { ChatService, ChatMessage, ChatCompletionOptions } from '../services/chat-service'
 import { ApiKeyService } from '../services/api-key-service'
 import { AuthService } from '../services/auth-service'
 import { handleError } from '../utils/error-handler'
@@ -213,7 +213,9 @@ export function registerChatCommands(program: Command): void {
 
             try {
               // Call the API
-              const completionOptions: any = {
+              console.log(chalk.yellow('DEBUG: Preparing completion options'))
+              
+              const completionOptions: ChatCompletionOptions = {
                 model: options.args?.[0] || 'google/gemma-3-27b-it',
                 messages: messages,
                 temperature:
@@ -225,29 +227,23 @@ export function registerChatCommands(program: Command): void {
               if (apiKey) {
                 completionOptions.apiKey = apiKey
                 
-                if (process.argv.includes('--debug')) {
-                  console.log(chalk.yellow('DEBUG: Using API key from command options or default'))
-                }
-              } else if (process.argv.includes('--debug')) {
+                console.log(chalk.yellow('DEBUG: Using API key from command options or default'))
+              } else {
                 console.log(chalk.yellow('DEBUG: No API key available in chat command'))
               }
 
               // Debug output
-              if (process.argv.includes('--debug')) {
-                console.log(chalk.yellow('DEBUG: Completion options:'))
-                console.log(chalk.yellow(JSON.stringify({
-                  ...completionOptions,
-                  apiKey: completionOptions.apiKey ? '***' : undefined,
-                  messages: completionOptions.messages.map((m: any) => ({
-                    role: m.role,
-                    content: m.content.length > 50 ? m.content.substring(0, 50) + '...' : m.content
-                  }))
-                }, null, 2)))
-              }
+              console.log(chalk.yellow('DEBUG: Completion options:'))
+              console.log(chalk.yellow(JSON.stringify({
+                ...completionOptions,
+                apiKey: completionOptions.apiKey ? '***' : undefined,
+                messages: completionOptions.messages.map((m: any) => ({
+                  role: m.role,
+                  content: m.content.length > 50 ? m.content.substring(0, 50) + '...' : m.content
+                }))
+              }, null, 2)))
 
-              if (process.argv.includes('--debug')) {
-                console.log(chalk.yellow('DEBUG: Calling chatService.createCompletion'))
-              }
+              console.log(chalk.yellow('DEBUG: Calling chatService.createCompletion'))
               
               const response = await chatService.createCompletion(
                 completionOptions

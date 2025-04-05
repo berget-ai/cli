@@ -49,6 +49,17 @@ export class ChatService {
    */
   public async createCompletion(options: ChatCompletionOptions): Promise<any> {
     try {
+      console.log(chalk.yellow('DEBUG: Starting createCompletion method'))
+      
+      // Check if options is defined
+      if (!options) {
+        console.log(chalk.red('ERROR: options is undefined'))
+        throw new Error('Chat completion options are undefined')
+      }
+      
+      // Log the raw options object
+      console.log(chalk.yellow('DEBUG: Raw options:'), typeof options, options ? 'defined' : 'undefined')
+      
       const headers: Record<string, string> = {}
       
       // Check if debug is enabled
@@ -56,11 +67,15 @@ export class ChatService {
       
       if (isDebug) {
         console.log(chalk.yellow('DEBUG: Starting createCompletion with options:'))
-        console.log(chalk.yellow(JSON.stringify({
-          ...options,
-          apiKey: options.apiKey ? '***' : undefined,
-          messages: options.messages ? `${options.messages.length} messages` : undefined
-        }, null, 2)))
+        try {
+          console.log(chalk.yellow(JSON.stringify({
+            ...options,
+            apiKey: options.apiKey ? '***' : undefined,
+            messages: options.messages ? `${options.messages.length} messages` : undefined
+          }, null, 2)))
+        } catch (error) {
+          console.log(chalk.red('ERROR: Failed to stringify options:'), error)
+        }
       }
       
       // Create a copy of options to avoid modifying the original
