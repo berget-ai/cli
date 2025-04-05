@@ -221,11 +221,6 @@ export function registerChatCommands(program: Command): void {
                 max_tokens: options.maxTokens || 4096,
               }
 
-              // Only add apiKey if it actually exists
-              if (apiKey) {
-                completionOptions.apiKey = apiKey
-              }
-
               const response = await chatService.createCompletion(
                 completionOptions
               )
