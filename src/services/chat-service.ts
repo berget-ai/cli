@@ -86,8 +86,16 @@ export class ChatService {
         console.log(chalk.yellow(`DEBUG: optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`))
       }
       
-      // If no API key is provided, try to get the default one
-      if (!optionsCopy.apiKey) {
+      // Check for environment variables first
+      const envApiKey = process.env.BERGET_API_KEY;
+      if (envApiKey) {
+        if (isDebug) {
+          console.log(chalk.yellow('DEBUG: Using API key from BERGET_API_KEY environment variable'));
+        }
+        optionsCopy.apiKey = envApiKey;
+      }
+      // If still no API key, try to get the default one
+      else if (!optionsCopy.apiKey) {
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: No API key provided, trying to get default'))
         }
@@ -116,7 +124,7 @@ export class ChatService {
             console.log(chalk.yellow(`DEBUG: promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`))
           }
           
-          // Check for environment variables
+          // Check for environment variables first
           const envApiKey = process.env.BERGET_API_KEY;
           
           if (envApiKey) {
@@ -204,54 +212,17 @@ export class ChatService {
           throw requestError
         }
       } else {
-        // Check for environment variables before giving up
-        const envApiKey = process.env.BERGET_API_KEY;
-        
-        if (envApiKey) {
-          if (isDebug) {
-            console.log(chalk.yellow('DEBUG: Using API key from BERGET_API_KEY environment variable'));
-          }
-          
-          headers['Authorization'] = `Bearer ${envApiKey}`;
-          
-          try {
-            const response = await this.client.POST('/v1/chat/completions', {
-              body: optionsCopy,
-              headers
-            });
-            
-            // Check if response has an error property
-            const responseAny = response as any;
-            if (responseAny && responseAny.error) 
-              throw new Error(JSON.stringify(responseAny.error));
-            
-            if (isDebug) {
-              console.log(chalk.yellow('DEBUG: API response:'));
-              console.log(chalk.yellow(JSON.stringify(response, null, 2)));
-              console.log(chalk.yellow('DEBUG: Complete response data:'));
-              console.log(chalk.yellow(JSON.stringify(response.data, null, 2)));
-            }
-            
-            return response.data;
-          } catch (requestError) {
-            if (process.argv.includes('--debug')) {
-              console.log(chalk.red(`DEBUG: Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`));
-            }
-            throw requestError;
-          }
-        } else {
-          // We've exhausted all options for getting an API key
-          console.log(chalk.yellow('No API key available. You need to either:'));
-          console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'));
-          console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
-          console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
-          console.log(chalk.yellow('4. Set the BERGET_API_KEY environment variable'));
-          console.log(chalk.yellow('\nExample:'));
-          console.log(chalk.yellow('  export BERGET_API_KEY=your_api_key_here'));
-          console.log(chalk.yellow('  # or for a single command:'));
-          console.log(chalk.yellow('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it'));
-          throw new Error('No API key available. Please provide an API key or set a default API key.');
-        }
+        // We've exhausted all options for getting an API key
+        console.log(chalk.yellow('No API key available. You need to either:'));
+        console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'));
+        console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
+        console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
+        console.log(chalk.yellow('4. Set the BERGET_API_KEY environment variable'));
+        console.log(chalk.yellow('\nExample:'));
+        console.log(chalk.yellow('  export BERGET_API_KEY=your_api_key_here'));
+        console.log(chalk.yellow('  # or for a single command:'));
+        console.log(chalk.yellow('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it'));
+        throw new Error('No API key available. Please provide an API key or set a default API key.');
       }
     } catch (error) {
       // Improved error handling
