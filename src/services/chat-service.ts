@@ -95,7 +95,7 @@ export class ChatService {
         optionsCopy.apiKey = envApiKey;
       }
       // If still no API key, try to get the default one
-      else if (!optionsCopy.apiKey) {
+      if (!optionsCopy.apiKey) {
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: No API key provided, trying to get default'))
         }
@@ -126,15 +126,7 @@ export class ChatService {
             console.log(chalk.yellow(`DEBUG: promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`))
           }
           
-          // Check for environment variables first
-          const envApiKey = process.env.BERGET_API_KEY;
-          
-          if (envApiKey) {
-            if (isDebug) {
-              console.log(chalk.yellow('DEBUG: Using API key from BERGET_API_KEY environment variable'));
-            }
-            optionsCopy.apiKey = envApiKey;
-          } else if (apiKey) {
+          if (apiKey) {
             if (isDebug) {
               console.log(chalk.yellow('DEBUG: Using API key from default API key manager'));
             }
@@ -261,18 +253,11 @@ export class ChatService {
     try {
       // Check for environment variable if no API key is provided
       const envApiKey = process.env.BERGET_API_KEY;
+      const effectiveApiKey = apiKey || envApiKey;
       
-      if (apiKey) {
+      if (effectiveApiKey) {
         const headers = {
-          'Authorization': `Bearer ${apiKey}`
-        }
-        
-        const { data, error } = await this.client.GET('/v1/models', { headers })
-        if (error) throw new Error(JSON.stringify(error))
-        return data
-      } else if (envApiKey) {
-        const headers = {
-          'Authorization': `Bearer ${envApiKey}`
+          'Authorization': `Bearer ${effectiveApiKey}`
         }
         
         const { data, error } = await this.client.GET('/v1/models', { headers })
