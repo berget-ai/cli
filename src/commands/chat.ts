@@ -57,15 +57,24 @@ export function registerChatCommands(program: Command): void {
         if (!apiKey && !apiKeyId) {
           try {
             const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-            const defaultApiKeyData =
-              defaultApiKeyManager.getDefaultApiKeyData()
+            const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
 
             if (defaultApiKeyData) {
               apiKeyId = defaultApiKeyData.id
               apiKey = defaultApiKeyData.key
-              console.log(
-                chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
-              )
+              
+              if (apiKey) {
+                console.log(
+                  chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
+                )
+              } else {
+                console.log(
+                  chalk.yellow(`Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`)
+                )
+                console.log(
+                  chalk.yellow(`Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`)
+                )
+              }
             } else {
               // No default API key, prompt the user to create one
               console.log(chalk.yellow('No default API key set.'))
@@ -226,10 +235,13 @@ export function registerChatCommands(program: Command): void {
               // Only add apiKey if it actually exists
               if (apiKey) {
                 completionOptions.apiKey = apiKey
-                
                 console.log(chalk.yellow('DEBUG: Using API key from command options or default'))
               } else {
                 console.log(chalk.yellow('DEBUG: No API key available in chat command'))
+                // If we got this far with defaultApiKeyData but no apiKey, there's a problem
+                if (defaultApiKeyManager.getDefaultApiKeyData()) {
+                  console.log(chalk.yellow('DEBUG: Default API key data exists but key is missing'))
+                }
               }
 
               // Debug output

@@ -118,9 +118,11 @@ export class ChatService {
             console.log(chalk.yellow('DEBUG: Calling promptForDefaultApiKey'))
           }
           
-          const apiKey = await defaultApiKeyManager.promptForDefaultApiKey();
+          const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData();
+          const apiKey = defaultApiKeyData?.key || await defaultApiKeyManager.promptForDefaultApiKey();
           
           if (isDebug) {
+            console.log(chalk.yellow(`DEBUG: Default API key data exists: ${!!defaultApiKeyData}`))
             console.log(chalk.yellow(`DEBUG: promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`))
           }
           
@@ -132,7 +134,12 @@ export class ChatService {
               console.log(chalk.yellow('DEBUG: Using API key from BERGET_API_KEY environment variable'));
             }
             optionsCopy.apiKey = envApiKey;
-          } else if (!apiKey) {
+          } else if (apiKey) {
+            if (isDebug) {
+              console.log(chalk.yellow('DEBUG: Using API key from default API key manager'));
+            }
+            optionsCopy.apiKey = apiKey;
+          } else {
             console.log(chalk.yellow('No API key available. You need to either:'));
             console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'));
             console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
