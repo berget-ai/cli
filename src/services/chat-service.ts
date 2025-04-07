@@ -142,7 +142,10 @@ export class ChatService {
             console.log(chalk.yellow('DEBUG: Setting API key in options'))
           }
           
-          optionsCopy.apiKey = apiKey;
+          // Only set the API key if it's not null
+          if (apiKey) {
+            optionsCopy.apiKey = apiKey;
+          }
         } catch (error) {
           console.log(chalk.red('Error getting API key:'))
           if (error instanceof Error) {
