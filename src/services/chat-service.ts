@@ -81,6 +81,7 @@ export class ChatService {
       logger.debug('Checking for API key')
       logger.debug(`optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`)
       
+      
       // Check for environment variables first - prioritize this over everything else
       const envApiKey = process.env.BERGET_API_KEY;
       if (envApiKey) {
