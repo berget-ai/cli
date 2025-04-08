@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import chalk from 'chalk'
+import { logger } from './logger'
 
 interface TokenData {
   access_token: string
@@ -44,7 +45,7 @@ export class TokenManager {
         this.tokenData = JSON.parse(data)
       }
     } catch (error) {
-      console.error(chalk.dim('Failed to load authentication token'))
+      logger.error('Failed to load authentication token')
       this.tokenData = null
     }
   }
@@ -65,7 +66,7 @@ export class TokenManager {
         }
       }
     } catch (error) {
-      console.error(chalk.dim('Failed to save authentication token'))
+      logger.error('Failed to save authentication token')
     }
   }
   
@@ -100,14 +101,14 @@ export class TokenManager {
       const expirationBuffer = 10 * 60 * 1000 // 10 minutes in milliseconds
       const isExpired = Date.now() + expirationBuffer >= this.tokenData.expires_at;
       
-      if (isExpired && process.argv.includes('--debug')) {
-        console.log(chalk.yellow(`DEBUG: Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`));
+      if (isExpired) {
+        logger.debug(`Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`);
       }
       
       return isExpired;
     } catch (error) {
       // If there's any error checking expiration, assume token is expired
-      console.error(chalk.dim(`Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`));
+      logger.error(`Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`);
       return true;
     }
   }

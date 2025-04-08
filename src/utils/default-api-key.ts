@@ -4,6 +4,7 @@ import * as os from 'os'
 import chalk from 'chalk'
 import { ApiKeyService } from '../services/api-key-service'
 import readline from 'readline'
+import { logger } from './logger'
 
 interface DefaultApiKeyData {
   id: string
@@ -47,9 +48,7 @@ export class DefaultApiKeyManager {
         this.defaultApiKey = JSON.parse(data)
       }
     } catch (error) {
-      if (process.argv.includes('--debug')) {
-        console.error(chalk.dim('Failed to load default API key configuration'))
-      }
+      logger.debug('Failed to load default API key configuration')
       this.defaultApiKey = null
     }
   }
@@ -70,9 +69,7 @@ export class DefaultApiKeyManager {
         }
       }
     } catch (error) {
-      if (process.argv.includes('--debug')) {
-        console.error(chalk.dim('Failed to save default API key configuration'))
-      }
+      logger.debug('Failed to save default API key configuration')
     }
   }
   
@@ -112,42 +109,30 @@ export class DefaultApiKeyManager {
    */
   public async promptForDefaultApiKey(): Promise<string | null> {
     try {
-      const isDebug = process.argv.includes('--debug')
-      
-      if (isDebug) {
-        console.log(chalk.yellow('DEBUG: promptForDefaultApiKey called'))
-      }
+      logger.debug('promptForDefaultApiKey called')
       
       // If we already have a default API key, return it
       if (this.defaultApiKey) {
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: Using existing default API key'))
-        }
+        logger.debug('Using existing default API key')
         return this.defaultApiKey.key
       }
 
-      if (isDebug) {
-        console.log(chalk.yellow('DEBUG: No default API key found, getting ApiKeyService'))
-      }
+      logger.debug('No default API key found, getting ApiKeyService')
       
       const apiKeyService = ApiKeyService.getInstance()
       
       // Get all API keys
       let apiKeys;
       try {
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: Calling apiKeyService.list()'))
-        }
+        logger.debug('Calling apiKeyService.list()')
         
         apiKeys = await apiKeyService.list()
         
-        if (isDebug) {
-          console.log(chalk.yellow(`DEBUG: Got ${apiKeys ? apiKeys.length : 0} API keys`))
-        }
+        logger.debug(`Got ${apiKeys ? apiKeys.length : 0} API keys`)
         
         if (!apiKeys || apiKeys.length === 0) {
-          console.log(chalk.yellow('No API keys found. Create one with:'))
-          console.log(chalk.blue('  berget api-keys create --name "My Key"'))
+          logger.warn('No API keys found. Create one with:')
+          logger.info('  berget api-keys create --name "My Key"')
           return null
         }
       } catch (error) {
@@ -158,25 +143,23 @@ export class DefaultApiKeyManager {
                            errorMessage.includes('AUTH_FAILED');
         
         if (isAuthError) {
-          console.log(chalk.yellow('Authentication required. Please run `berget auth login` first.'));
+          logger.warn('Authentication required. Please run `berget auth login` first.');
         } else {
-          console.log(chalk.red('Error fetching API keys:'));
+          logger.error('Error fetching API keys:');
           if (error instanceof Error) {
-            console.log(chalk.red(error.message));
-            if (isDebug) {
-              console.log(chalk.yellow(`DEBUG: API key list error: ${error.message}`));
-              console.log(chalk.yellow(`DEBUG: Stack: ${error.stack}`));
-            }
+            logger.error(error.message);
+            logger.debug(`API key list error: ${error.message}`);
+            logger.debug(`Stack: ${error.stack}`);
           }
         }
         return null;
       }
       
-      console.log(chalk.blue('Select an API key to use as default:'))
+      logger.info('Select an API key to use as default:')
       
       // Display available API keys
       apiKeys.forEach((key, index) => {
-        console.log(`  ${index + 1}. ${key.name} (${key.prefix}...)`)
+        logger.log(`  ${index + 1}. ${key.name} (${key.prefix}...)`)
       })
       
       // Create readline interface for user input
@@ -199,7 +182,7 @@ export class DefaultApiKeyManager {
       })
       
       if (selection === -1) {
-        console.log(chalk.yellow('No API key selected'))
+        logger.warn('No API key selected')
         return null
       }
       
@@ -219,10 +202,10 @@ export class DefaultApiKeyManager {
         newKey.key
       )
       
-      console.log(chalk.green(`✓ Default API key set to: ${newKey.name}`))
+      logger.success(`✓ Default API key set to: ${newKey.name}`)
       return newKey.key
     } catch (error) {
-      console.error(chalk.red('Failed to set default API key:'), error)
+      logger.error('Failed to set default API key:', error)
       return null
     }
   }

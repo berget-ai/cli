@@ -1,6 +1,7 @@
 import { createAuthenticatedClient } from '../client'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 import chalk from 'chalk'
+import { logger } from '../utils/logger'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -49,127 +50,102 @@ export class ChatService {
    */
   public async createCompletion(options: ChatCompletionOptions): Promise<any> {
     try {
-      console.log(chalk.yellow('DEBUG: Starting createCompletion method'))
+      logger.debug('Starting createCompletion method')
       
       // Check if options is defined
       if (!options) {
-        console.log(chalk.red('ERROR: options is undefined'))
+        logger.error('options is undefined')
         throw new Error('Chat completion options are undefined')
       }
       
       // Log the raw options object
-      console.log(chalk.yellow('DEBUG: Raw options:'), typeof options, options ? 'defined' : 'undefined')
+      logger.debug('Raw options: ' + (typeof options) + ' ' + (options ? 'defined' : 'undefined'))
       
       const headers: Record<string, string> = {}
       
-      // Check if debug is enabled
-      const isDebug = process.argv.includes('--debug')
-      
-      if (isDebug) {
-        console.log(chalk.yellow('DEBUG: Starting createCompletion with options:'))
-        try {
-          console.log(chalk.yellow(JSON.stringify({
-            ...options,
-            apiKey: options.apiKey ? '***' : undefined,
-            messages: options.messages ? `${options.messages.length} messages` : undefined
-          }, null, 2)))
-        } catch (error) {
-          console.log(chalk.red('ERROR: Failed to stringify options:'), error)
-        }
+      logger.debug('Starting createCompletion with options:')
+      try {
+        logger.debug(JSON.stringify({
+          ...options,
+          apiKey: options.apiKey ? '***' : undefined,
+          messages: options.messages ? `${options.messages.length} messages` : undefined
+        }, null, 2))
+      } catch (error) {
+        logger.error('Failed to stringify options:', error)
       }
       
       // Create a copy of options to avoid modifying the original
       const optionsCopy = { ...options }
       
-      if (isDebug) {
-        console.log(chalk.yellow('DEBUG: Checking for API key'))
-        console.log(chalk.yellow(`DEBUG: optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`))
-      }
+      logger.debug('Checking for API key')
+      logger.debug(`optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`)
       
       // Check for environment variables first - prioritize this over everything else
       const envApiKey = process.env.BERGET_API_KEY;
       if (envApiKey) {
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: Using API key from BERGET_API_KEY environment variable'));
-        }
+        logger.debug('Using API key from BERGET_API_KEY environment variable');
         optionsCopy.apiKey = envApiKey;
       } 
       // Only try to get the default API key if no API key is provided and no env var is set
       else if (!optionsCopy.apiKey) {
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: No API key provided, trying to get default'))
-        }
+        logger.debug('No API key provided, trying to get default')
         
         try {
           // Import the DefaultApiKeyManager directly
-          if (isDebug) {
-            console.log(chalk.yellow('DEBUG: Importing DefaultApiKeyManager'))
-          }
+          logger.debug('Importing DefaultApiKeyManager')
           
           const DefaultApiKeyManager = (await import('../utils/default-api-key')).DefaultApiKeyManager;
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
           
-          if (isDebug) {
-            console.log(chalk.yellow('DEBUG: Got DefaultApiKeyManager instance'))
-          }
+          logger.debug('Got DefaultApiKeyManager instance')
           
           // Try to get the default API key
-          if (isDebug) {
-            console.log(chalk.yellow('DEBUG: Calling promptForDefaultApiKey'))
-          }
+          logger.debug('Calling promptForDefaultApiKey')
           
           const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData();
           const apiKey = defaultApiKeyData?.key || await defaultApiKeyManager.promptForDefaultApiKey();
           
-          if (isDebug) {
-            console.log(chalk.yellow(`DEBUG: Default API key data exists: ${!!defaultApiKeyData}`))
-            console.log(chalk.yellow(`DEBUG: promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`))
-          }
+          logger.debug(`Default API key data exists: ${!!defaultApiKeyData}`)
+          logger.debug(`promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`)
           
           if (apiKey) {
-            if (isDebug) {
-              console.log(chalk.yellow('DEBUG: Using API key from default API key manager'));
-            }
+            logger.debug('Using API key from default API key manager');
             optionsCopy.apiKey = apiKey;
           } else {
-            console.log(chalk.yellow('No API key available. You need to either:'));
-            console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'));
-            console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
-            console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
-            console.log(chalk.yellow('4. Set the BERGET_API_KEY environment variable'));
-            console.log(chalk.yellow('\nExample:'));
-            console.log(chalk.yellow('  export BERGET_API_KEY=your_api_key_here'));
-            console.log(chalk.yellow('  # or for a single command:'));
-            console.log(chalk.yellow('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it'));
+            logger.warn('No API key available. You need to either:');
+            logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
+            logger.warn('2. Set a default API key with: berget api-keys set-default <id>');
+            logger.warn('3. Provide an API key with the --api-key option');
+            logger.warn('4. Set the BERGET_API_KEY environment variable');
+            logger.warn('\nExample:');
+            logger.warn('  export BERGET_API_KEY=your_api_key_here');
+            logger.warn('  # or for a single command:');
+            logger.warn('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it');
             throw new Error('No API key provided and no default API key set');
           }
           
           // Set the API key in the options
-          if (isDebug) {
-            console.log(chalk.yellow('DEBUG: Setting API key in options'))
-          }
+          logger.debug('Setting API key in options')
           
           // Only set the API key if it's not null
           if (apiKey) {
             optionsCopy.apiKey = apiKey;
           }
         } catch (error) {
-          console.log(chalk.red('Error getting API key:'))
+          logger.error('Error getting API key:')
           if (error instanceof Error) {
-            console.log(chalk.red(error.message))
+            logger.error(error.message)
           }
-          console.log(chalk.yellow('Please create an API key with: berget api-keys create --name "My Key"'))
+          logger.warn('Please create an API key with: berget api-keys create --name "My Key"')
           throw new Error('Failed to get API key')
         }
       }
       
-      if (isDebug) {
-        console.log(chalk.yellow('DEBUG: Chat completion options:'))
-        console.log(chalk.yellow(JSON.stringify({
-          ...optionsCopy,
-          apiKey: optionsCopy.apiKey ? '***' : undefined // Hide the actual API key in debug output
-        }, null, 2)))
-      }
+      logger.debug('Chat completion options:')
+      logger.debug(JSON.stringify({
+        ...optionsCopy,
+        apiKey: optionsCopy.apiKey ? '***' : undefined // Hide the actual API key in debug output
+      }, null, 2))
       
       // If an API key is provided, use it for this request
       if (optionsCopy.apiKey) {
@@ -177,11 +153,9 @@ export class ChatService {
         // Remove apiKey from options before sending to API
         const { apiKey, ...requestOptions } = optionsCopy
         
-        if (isDebug) {
-          console.log(chalk.yellow('DEBUG: Using provided API key'))
-          console.log(chalk.yellow('DEBUG: Request options:'))
-          console.log(chalk.yellow(JSON.stringify(requestOptions, null, 2)))
-        }
+        logger.debug('Using provided API key')
+        logger.debug('Request options:')
+        logger.debug(JSON.stringify(requestOptions, null, 2))
         
         try {
           const response = await this.client.POST('/v1/chat/completions', {
@@ -194,33 +168,29 @@ export class ChatService {
           if (responseAny && responseAny.error) 
             throw new Error(JSON.stringify(responseAny.error))
           
-          if (isDebug) {
-            console.log(chalk.yellow('DEBUG: API response:'))
-            console.log(chalk.yellow(JSON.stringify(response, null, 2)))
-            
-            // Output the complete response data for debugging
-            console.log(chalk.yellow('DEBUG: Complete response data:'))
-            console.log(chalk.yellow(JSON.stringify(response.data, null, 2)))
-          }
+          logger.debug('API response:')
+          logger.debug(JSON.stringify(response, null, 2))
+          
+          // Output the complete response data for debugging
+          logger.debug('Complete response data:')
+          logger.debug(JSON.stringify(response.data, null, 2))
           
           return response.data
         } catch (requestError) {
-          if (process.argv.includes('--debug')) {
-            console.log(chalk.red(`DEBUG: Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`))
-          }
+          logger.debug(`Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`)
           throw requestError
         }
       } else {
         // We've exhausted all options for getting an API key
-        console.log(chalk.yellow('No API key available. You need to either:'));
-        console.log(chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'));
-        console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
-        console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
-        console.log(chalk.yellow('4. Set the BERGET_API_KEY environment variable'));
-        console.log(chalk.yellow('\nExample:'));
-        console.log(chalk.yellow('  export BERGET_API_KEY=your_api_key_here'));
-        console.log(chalk.yellow('  # or for a single command:'));
-        console.log(chalk.yellow('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it'));
+        logger.warn('No API key available. You need to either:');
+        logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
+        logger.warn('2. Set a default API key with: berget api-keys set-default <id>');
+        logger.warn('3. Provide an API key with the --api-key option');
+        logger.warn('4. Set the BERGET_API_KEY environment variable');
+        logger.warn('\nExample:');
+        logger.warn('  export BERGET_API_KEY=your_api_key_here');
+        logger.warn('  # or for a single command:');
+        logger.warn('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it');
         throw new Error('No API key available. Please provide an API key or set a default API key.');
       }
     } catch (error) {
@@ -240,7 +210,7 @@ export class ChatService {
         }
       }
       
-      console.error(chalk.red(errorMessage));
+      logger.error(errorMessage);
       throw new Error(errorMessage);
     }
   }
@@ -287,7 +257,7 @@ export class ChatService {
         }
       }
       
-      console.error(chalk.red(errorMessage));
+      logger.error(errorMessage);
       throw new Error(errorMessage);
     }
   }

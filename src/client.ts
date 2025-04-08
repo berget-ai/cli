@@ -5,6 +5,7 @@ import * as path from 'path'
 import * as os from 'os'
 import chalk from 'chalk'
 import { TokenManager } from './utils/token-manager'
+import { logger } from './utils/logger'
 
 // API Base URL
 // Use --local flag to test against local API
@@ -13,8 +14,8 @@ const API_BASE_URL =
   process.env.BERGET_API_URL ||
   (isLocalMode ? 'http://localhost:3000' : 'https://api.berget.ai')
 
-if (isLocalMode && !process.env.BERGET_API_URL && process.argv.includes('--debug')) {
-  console.log(chalk.yellow('Using local API endpoint: http://localhost:3000'))
+if (isLocalMode && !process.env.BERGET_API_URL) {
+  logger.debug('Using local API endpoint: http://localhost:3000')
 }
 
 // Create a typed client for the Berget API
@@ -50,12 +51,8 @@ export const clearAuthToken = (): void => {
 export const createAuthenticatedClient = () => {
   const tokenManager = TokenManager.getInstance()
 
-  if (!tokenManager.getAccessToken() && process.argv.includes('--debug')) {
-    console.warn(
-      chalk.yellow(
-        'No authentication token found. Please run `berget auth login` first.'
-      )
-    )
+  if (!tokenManager.getAccessToken()) {
+    logger.debug('No authentication token found. Please run `berget auth login` first.')
   }
 
   // Create the base client
@@ -101,17 +98,13 @@ export const createAuthenticatedClient = () => {
               ...args
             )
           } catch (requestError) {
-            if (process.argv.includes('--debug')) {
-              console.log(
-                chalk.red(
-                  `DEBUG: Request error: ${
-                    requestError instanceof Error
-                      ? requestError.message
-                      : String(requestError)
-                  }`
-                )
-              )
-            }
+            logger.debug(
+              `Request error: ${
+                requestError instanceof Error
+                  ? requestError.message
+                  : String(requestError)
+              }`
+            )
             return {
               error: {
                 message: `Request failed: ${
@@ -160,32 +153,12 @@ export const createAuthenticatedClient = () => {
             }
 
             if (isAuthError && tokenManager.getRefreshToken()) {
-              if (process.argv.includes('--debug')) {
-                console.log(
-                  chalk.yellow(
-                    'DEBUG: Auth error detected, attempting token refresh'
-                  )
-                )
-                console.log(
-                  chalk.yellow(
-                    `DEBUG: Error details: ${JSON.stringify(
-                      result.error,
-                      null,
-                      2
-                    )}`
-                  )
-                )
-              }
+              logger.debug('Auth error detected, attempting token refresh')
+              logger.debug(`Error details: ${JSON.stringify(result.error, null, 2)}`)
 
               const refreshed = await refreshAccessToken(tokenManager)
               if (refreshed) {
-                if (process.argv.includes('--debug')) {
-                  console.log(
-                    chalk.green(
-                      'DEBUG: Token refreshed successfully, retrying request'
-                    )
-                  )
-                }
+                logger.debug('Token refreshed successfully, retrying request')
 
                 // Update the Authorization header with the new token
                 if (!args[1]) args[1] = {}
@@ -197,9 +170,7 @@ export const createAuthenticatedClient = () => {
                   ...args
                 )
               } else {
-                if (process.argv.includes('--debug')) {
-                  console.log(chalk.red('DEBUG: Token refresh failed'))
-                }
+                logger.debug('Token refresh failed')
                 
                 // Add a more helpful error message for users
                 if (typeof result.error === 'object') {
@@ -227,9 +198,7 @@ async function refreshAccessToken(
     const refreshToken = tokenManager.getRefreshToken()
     if (!refreshToken) return false
 
-    if (process.argv.includes('--debug')) {
-      console.log(chalk.yellow('DEBUG: Attempting to refresh access token'))
-    }
+    logger.debug('Attempting to refresh access token')
 
     // Use fetch directly since this endpoint might not be in the OpenAPI spec
     try {
@@ -244,11 +213,7 @@ async function refreshAccessToken(
 
       // Handle HTTP errors
       if (!response.ok) {
-        if (process.argv.includes('--debug')) {
-          console.log(
-            chalk.yellow(`DEBUG: Token refresh error: HTTP ${response.status} ${response.statusText}`)
-          )
-        }
+        logger.debug(`Token refresh error: HTTP ${response.status} ${response.statusText}`)
 
         // Check if the refresh token itself is expired or invalid
         if (response.status === 401 || response.status === 403) {
@@ -290,9 +255,7 @@ async function refreshAccessToken(
         return false
       }
 
-      if (process.argv.includes('--debug')) {
-        console.log(chalk.green('DEBUG: Token refreshed successfully'))
-      }
+      logger.debug('Token refreshed successfully')
 
       // Update the token
       tokenManager.updateAccessToken(
@@ -303,9 +266,7 @@ async function refreshAccessToken(
       // If a new refresh token was provided, update that too
       if (data.refresh_token) {
         tokenManager.setTokens(data.token, data.refresh_token, data.expires_in || 3600)
-        if (process.argv.includes('--debug')) {
-          console.log(chalk.green('DEBUG: Refresh token also updated'))
-        }
+        logger.debug('Refresh token also updated')
       }
     } catch (fetchError) {
       console.warn(
