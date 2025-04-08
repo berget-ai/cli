@@ -70,7 +70,7 @@ export class ApiKeyService {
           throw new Error(JSON.stringify(error))
         } catch (parseError) {
           // If we can't parse the error as JSON, check if it's an auth error by string matching
-          if (typeof error === 'string' && error.includes('Unauthorized')) {
+          if (typeof error === 'string' && error.toString().includes('Unauthorized')) {
             throw new Error(JSON.stringify({
               error: "Authentication failed. Your session may have expired.",
               code: "AUTH_FAILED",
