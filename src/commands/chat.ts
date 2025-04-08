@@ -52,9 +52,17 @@ export function registerChatCommands(program: Command): void {
         // Check if we have an API key or need to get one
         let apiKey = options.apiKey
         let apiKeyId = options.apiKeyId
-
-        // If no API key or API key ID provided, check for default API key
-        if (!apiKey && !apiKeyId) {
+        
+        // Check for environment variable first
+        const envApiKey = process.env.BERGET_API_KEY;
+        if (envApiKey) {
+          console.log(
+            chalk.dim(`Using API key from BERGET_API_KEY environment variable`)
+          )
+          apiKey = envApiKey;
+        }
+        // If no API key or API key ID provided and no env var, check for default API key
+        else if (!apiKey && !apiKeyId) {
           try {
             const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
             const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()

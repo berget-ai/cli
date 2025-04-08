@@ -86,16 +86,16 @@ export class ChatService {
         console.log(chalk.yellow(`DEBUG: optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`))
       }
       
-      // Check for environment variables first
+      // Check for environment variables first - prioritize this over everything else
       const envApiKey = process.env.BERGET_API_KEY;
       if (envApiKey) {
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: Using API key from BERGET_API_KEY environment variable'));
         }
         optionsCopy.apiKey = envApiKey;
-      }
-      // If still no API key, try to get the default one
-      if (!optionsCopy.apiKey) {
+      } 
+      // Only try to get the default API key if no API key is provided and no env var is set
+      else if (!optionsCopy.apiKey) {
         if (isDebug) {
           console.log(chalk.yellow('DEBUG: No API key provided, trying to get default'))
         }
@@ -251,9 +251,9 @@ export class ChatService {
    */
   public async listModels(apiKey?: string): Promise<any> {
     try {
-      // Check for environment variable if no API key is provided
+      // Check for environment variable first, then fallback to provided API key
       const envApiKey = process.env.BERGET_API_KEY;
-      const effectiveApiKey = apiKey || envApiKey;
+      const effectiveApiKey = envApiKey || apiKey;
       
       if (effectiveApiKey) {
         const headers = {
