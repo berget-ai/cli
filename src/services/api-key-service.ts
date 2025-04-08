@@ -56,36 +56,7 @@ export class ApiKeyService {
   public async list(): Promise<ApiKey[]> {
     try {
       const { data, error } = await this.client.GET('/v1/api-keys')
-      if (error) {
-        // Check if this is an authentication error
-        try {
-          const errorObj = typeof error === 'string' ? JSON.parse(error) : error
-          if (errorObj.status === 401) {
-            throw new Error(
-              JSON.stringify({
-                error: 'Authentication failed. Your session may have expired.',
-                code: 'AUTH_FAILED',
-                details:
-                  "Please run 'berget auth login' to authenticate again.",
-              })
-            )
-          }
-          throw new Error(JSON.stringify(error))
-        } catch (parseError) {
-          // If we can't parse the error as JSON, check if it's an auth error by string matching
-          if (typeof error === 'string' && (error as string).includes('Unauthorized')) {
-            throw new Error(
-              JSON.stringify({
-                error: 'Authentication failed. Your session may have expired.',
-                code: 'AUTH_FAILED',
-                details:
-                  "Please run 'berget auth login' to authenticate again.",
-              })
-            )
-          }
-          throw new Error(JSON.stringify({ error: String(error) }))
-        }
-      }
+      if (error) throw error
       return data || []
     } catch (error) {
       handleError('Failed to list API keys', error)
