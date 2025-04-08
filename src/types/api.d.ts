@@ -14,6 +14,20 @@ export interface paths {
     /**
      * List all API keys
      * @description Lists all API keys for the authenticated user's organization.
+     *
+     * ## Using the CLI
+     *
+     * You can also manage API keys using our CLI tool:
+     * ```
+     * # Login first (if you haven't already)
+     * npx berget auth login
+     *
+     * # List all API keys
+     * npx berget api-keys list
+     *
+     * # Create a new API key
+     * npx berget api-keys create --name my-api-key
+     * ```
      */
     get: {
       responses: {
@@ -36,6 +50,17 @@ export interface paths {
     /**
      * Create a new API key
      * @description Creates a new API key for the authenticated user's organization. The full API key is only returned once at creation time.
+     *
+     * ## Using the CLI
+     *
+     * Creating an API key is easier with our CLI tool:
+     * ```
+     * # Login first (if you haven't already)
+     * npx berget auth login
+     *
+     * # Create a new API key
+     * npx berget api-keys create --name my-api-key
+     * ```
      */
     post: {
       requestBody: {
@@ -97,6 +122,21 @@ export interface paths {
     /**
      * Rotate an API key
      * @description Rotates an API key by invalidating the old key and generating a new one. The new key is returned in the response and is only shown once.
+     *
+     * ## Using the CLI
+     *
+     * You can also rotate API keys using our CLI tool:
+     * ```
+     * # Login first (if you haven't already)
+     * npx berget auth login
+     *
+     * # Rotate an API key
+     * npx berget api-keys rotate --id <key-id>
+     * ```
+     *
+     * ## Security Note
+     *
+     * When you rotate an API key, the old key becomes invalid immediately. Make sure to update any applications using the key.
      */
     put: {
       parameters: {
@@ -131,6 +171,20 @@ export interface paths {
     /**
      * Get API key usage statistics
      * @description Returns usage statistics for a specific API key including request count, daily breakdown, model-specific usage, and token consumption.
+     *
+     * ## Using the CLI
+     *
+     * You can also view API key usage using our CLI tool:
+     * ```
+     * # Login first (if you haven't already)
+     * npx berget auth login
+     *
+     * # View usage for a specific API key
+     * npx berget api-keys usage --id <key-id>
+     *
+     * # View usage for all API keys
+     * npx berget usage
+     * ```
      */
     get: {
       parameters: {
@@ -351,13 +405,27 @@ export interface paths {
   "/v1/auth/login": {
     /**
      * OAuth login
-     * @description Initiates OAuth login flow via Keycloak
+     * @description Initiates OAuth login flow via Keycloak.
+     *
+     * ## CLI Authentication
+     *
+     * For a simpler experience, you can use our CLI tool to authenticate:
+     * ```
+     * npx berget auth login
+     * ```
+     *
+     * After logging in, you can create an API key with:
+     * ```
+     * npx berget api-keys create --name my-api-key
+     * ```
      */
     get: {
       parameters: {
         query?: {
           /** @description URL to redirect to after successful login */
           redirect_uri?: string;
+          /** @description How to return the token after successful login (default is redirect) */
+          response_type?: "redirect" | "json";
         };
       };
       responses: {
@@ -389,29 +457,108 @@ export interface paths {
     };
   };
   "/v1/auth/device": {
-    /** Initiate device authorization flow */
+    /**
+     * Initiate device authorization flow
+     * @description Initiates the device authorization flow, returning a device code and user verification URL.
+     *
+     * ## Using the CLI
+     *
+     * The recommended way to authenticate is through our CLI tool:
+     * ```
+     * npx berget auth login
+     * ```
+     *
+     * This handles the device flow automatically and provides a better user experience.
+     */
     post: {
       responses: {
         /** @description Device authorization initiated */
         200: {
-          content: never;
+          content: {
+            "application/json": components["schemas"]["DeviceAuthInitResponse"];
+          };
         };
       };
     };
   };
   "/v1/auth/device/token": {
-    /** Poll for device token */
+    /**
+     * Poll for device token
+     * @description Polls for the status of a device authorization flow. The client should poll this endpoint
+     * until it receives a token or an error.
+     *
+     * ## Using the CLI
+     *
+     * The recommended way to authenticate is through our CLI tool:
+     * ```
+     * npx berget auth login
+     * ```
+     *
+     * This handles the polling automatically and provides a better user experience.
+     *
+     * ## Troubleshooting
+     *
+     * - If you receive a 400 error, the device code may be invalid or expired
+     * - If you receive a 429 error, you're polling too frequently
+     * - If you receive a 500 error, there may be an issue with the authentication service
+     */
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            device_code?: string;
-          };
+          "application/json": components["schemas"]["DeviceAuthRequest"];
         };
       };
       responses: {
         /** @description Token returned or pending status */
         200: {
+          content: {
+            "application/json": components["schemas"]["DeviceAuthPendingResponse"] | components["schemas"]["DeviceAuthTokenResponse"];
+          };
+        };
+        /** @description Invalid device code or expired token */
+        400: {
+          content: never;
+        };
+        /** @description Polling too frequently */
+        429: {
+          content: never;
+        };
+        /** @description Server error during authentication */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/v1/auth/refresh": {
+    /**
+     * Refresh access token
+     * @description Refreshes an access token using a refresh token. This endpoint can be used to obtain a new
+     * access token when the current one expires.
+     *
+     * ## Using the CLI
+     *
+     * The CLI tool handles token refresh automatically:
+     * ```
+     * # The CLI will refresh tokens as needed
+     * npx berget api-keys list
+     * ```
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["RefreshTokenRequest"];
+        };
+      };
+      responses: {
+        /** @description New access and refresh tokens */
+        200: {
+          content: {
+            "application/json": components["schemas"]["RefreshTokenResponse"];
+          };
+        };
+        /** @description Invalid or expired refresh token */
+        401: {
           content: never;
         };
       };
@@ -1418,8 +1565,6 @@ export interface components {
     };
     AuthToken: {
       accessToken: string;
-      /** @enum {string} */
-      tokenType: "Bearer";
       expiresIn: number;
       user?: {
         id: string;
@@ -1436,6 +1581,55 @@ export interface components {
       email: string | null;
       /** Format: uri */
       avatarUrl: string;
+    };
+    RefreshTokenRequest: {
+      /** @description The refresh token to use */
+      refresh_token: string;
+      /** @description Whether this is a device token */
+      is_device_token?: boolean;
+    };
+    RefreshTokenResponse: {
+      /** @description The new access token */
+      token: string;
+      /** @description The new refresh token */
+      refresh_token: string;
+      /** @description Seconds until the access token expires */
+      expires_in: number;
+      /** @description Seconds until the refresh token expires */
+      refresh_expires_in: number;
+    };
+    DeviceAuthRequest: {
+      /** @description The device code obtained from the device authorization request */
+      device_code: string;
+    };
+    DeviceAuthInitResponse: {
+      /** @description Code used by the device to poll for authentication status */
+      device_code: string;
+      /** @description Code displayed to the user for authentication */
+      user_code: string;
+      /** @description URL where the user should enter the user_code */
+      verification_url: string;
+      /** @description Expiration time in seconds */
+      expires_in: number;
+      /** @description Polling interval in seconds */
+      interval: number;
+    };
+    DeviceAuthPendingResponse: {
+      /**
+       * @description Authentication is still pending
+       * @enum {string}
+       */
+      status: "pending";
+    };
+    DeviceAuthTokenResponse: {
+      /** @description Access token */
+      token: string;
+      /** @description Refresh token */
+      refresh_token: string;
+      /** @description Access token expiration time in seconds */
+      expires_in: number;
+      /** @description Refresh token expiration time in seconds */
+      refresh_expires_in: number;
     };
     Usage: {
       current_period: {
