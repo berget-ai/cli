@@ -61,6 +61,13 @@ export function registerChatCommands(program: Command): void {
             chalk.dim(`Using API key from BERGET_API_KEY environment variable`)
           )
           apiKey = envApiKey;
+          
+          // Debug the API key (first few characters only)
+          if (process.argv.includes('--debug')) {
+            console.log(
+              chalk.yellow(`DEBUG: API key from env starts with: ${envApiKey.substring(0, 4)}...`)
+            )
+          }
         }
         // If API key is already provided via command line, use it
         else if (options.apiKey) {

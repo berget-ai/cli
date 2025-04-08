@@ -213,6 +213,10 @@ export class ChatService {
           model: requestOptions.model || 'google/gemma-3-27b-it'
         };
         
+        // Debug the headers being sent
+        logger.debug('Headers being sent:')
+        logger.debug(JSON.stringify(headers, null, 2))
+        
         const response = await this.client.POST('/v1/chat/completions', {
           body: requestBody,
           headers
@@ -266,6 +270,16 @@ export class ChatService {
     
     // Create URL with query parameters
     const url = new URL(`${API_BASE_URL}/v1/chat/completions`);
+    
+    // Debug the headers and options
+    logger.debug('Streaming headers:')
+    logger.debug(JSON.stringify(headers, null, 2))
+    
+    logger.debug('Streaming options:')
+    logger.debug(JSON.stringify({
+      ...options,
+      onChunk: options.onChunk ? 'function present' : 'no function'
+    }, null, 2))
     
     try {
       // Make fetch request directly to handle streaming
