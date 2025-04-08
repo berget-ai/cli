@@ -9,7 +9,7 @@ export interface ChatMessage {
 }
 
 export interface ChatCompletionOptions {
-  model: string
+  model?: string
   messages: ChatMessage[]
   temperature?: number
   max_tokens?: number
@@ -139,6 +139,12 @@ export class ChatService {
           logger.warn('Please create an API key with: berget api-keys create --name "My Key"')
           throw new Error('Failed to get API key')
         }
+      }
+      
+      // Set default model if not provided
+      if (!optionsCopy.model) {
+        logger.debug('No model specified, using default: google/gemma-3-27b-it')
+        optionsCopy.model = 'google/gemma-3-27b-it'
       }
       
       logger.debug('Chat completion options:')
