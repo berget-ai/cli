@@ -70,14 +70,14 @@ export class ApiKeyService {
           throw new Error(JSON.stringify(error))
         } catch (parseError) {
           // If we can't parse the error as JSON, check if it's an auth error by string matching
-          if (typeof error === 'string' && error.includes('Unauthorized')) {
+          if (typeof error === 'string' && error.toString().includes('Unauthorized')) {
             throw new Error(JSON.stringify({
               error: "Authentication failed. Your session may have expired.",
               code: "AUTH_FAILED",
               details: "Please run 'berget auth login' to authenticate again."
             }))
           }
-          throw new Error(JSON.stringify({ error: error.toString() }))
+          throw new Error(JSON.stringify({ error: String(error) }))
         }
       }
       return data || []

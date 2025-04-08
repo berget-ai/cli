@@ -249,6 +249,7 @@ export function registerChatCommands(program: Command): void {
               } else {
                 console.log(chalk.yellow('DEBUG: No API key available in chat command'))
                 // If we got this far with defaultApiKeyData but no apiKey, there's a problem
+                const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
                 if (defaultApiKeyManager.getDefaultApiKeyData()) {
                   console.log(chalk.yellow('DEBUG: Default API key data exists but key is missing'))
                 }
