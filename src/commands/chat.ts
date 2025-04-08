@@ -240,41 +240,46 @@ export function registerChatCommands(program: Command): void {
 
             try {
               // Call the API
-              console.log(chalk.yellow('DEBUG: Preparing completion options'))
-              
               const completionOptions: ChatCompletionOptions = {
                 model: options.args?.[0] || 'google/gemma-3-27b-it',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
                 max_tokens: options.maxTokens || 4096,
+                stream: options.stream || false
               }
 
               // Only add apiKey if it actually exists
               if (apiKey) {
                 completionOptions.apiKey = apiKey
-                console.log(chalk.yellow('DEBUG: Using API key from command options or default'))
-              } else {
-                console.log(chalk.yellow('DEBUG: No API key available in chat command'))
-                // If we got this far with defaultApiKeyData but no apiKey, there's a problem
-                const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
-                if (defaultApiKeyManager.getDefaultApiKeyData()) {
-                  console.log(chalk.yellow('DEBUG: Default API key data exists but key is missing'))
-                }
               }
-
-              // Debug output
-              console.log(chalk.yellow('DEBUG: Completion options:'))
-              console.log(chalk.yellow(JSON.stringify({
-                ...completionOptions,
-                apiKey: completionOptions.apiKey ? '***' : undefined,
-                messages: completionOptions.messages.map((m: any) => ({
-                  role: m.role,
-                  content: m.content.length > 50 ? m.content.substring(0, 50) + '...' : m.content
-                }))
-              }, null, 2)))
-
-              console.log(chalk.yellow('DEBUG: Calling chatService.createCompletion'))
+              
+              // Add streaming support
+              if (options.stream) {
+                let assistantResponse = ''
+                process.stdout.write(chalk.blue('Assistant: '))
+                
+                completionOptions.onChunk = (chunk: any) => {
+                  if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
+                    const content = chunk.choices[0].delta.content
+                    process.stdout.write(content)
+                    assistantResponse += content
+                  }
+                }
+                
+                await chatService.createCompletion(completionOptions)
+                console.log('\n')
+                
+                // Add assistant response to messages
+                messages.push({
+                  role: 'assistant',
+                  content: assistantResponse
+                })
+                
+                // Continue the conversation
+                askQuestion()
+                return
+              }
               
               const response = await chatService.createCompletion(
                 completionOptions
