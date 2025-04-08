@@ -169,8 +169,14 @@ export class ChatService {
           if (requestOptions.stream && requestOptions.onChunk) {
             return await this.handleStreamingResponse(requestOptions, headers);
           } else {
+            // Ensure model is always defined for the API call
+            const requestBody = {
+              ...requestOptions,
+              model: requestOptions.model || 'google/gemma-3-27b-it'
+            };
+            
             const response = await this.client.POST('/v1/chat/completions', {
-              body: requestOptions,
+              body: requestBody,
               headers
             })
             
