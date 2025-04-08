@@ -52,7 +52,9 @@ export const createAuthenticatedClient = () => {
   const tokenManager = TokenManager.getInstance()
 
   if (!tokenManager.getAccessToken()) {
-    logger.debug('No authentication token found. Please run `berget auth login` first.')
+    logger.debug(
+      'No authentication token found. Please run `berget auth login` first.'
+    )
   }
 
   // Create the base client
@@ -85,7 +87,10 @@ export const createAuthenticatedClient = () => {
           }
 
           // Update the Authorization header with the current token
-          if (tokenManager.getAccessToken()) {
+          if (
+            !args[1]?.headers?.Authorization &&
+            tokenManager.getAccessToken()
+          ) {
             if (!args[1]) args[1] = {}
             if (!args[1].headers) args[1].headers = {}
             args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
@@ -119,42 +124,55 @@ export const createAuthenticatedClient = () => {
           // If we get an auth error, try to refresh the token and retry
           if (result.error) {
             // Detect various forms of authentication errors
-            let isAuthError = false;
-            
+            let isAuthError = false
+
             try {
               // Standard 401 Unauthorized
-              if (typeof result.error === 'object' && result.error.status === 401) {
-                isAuthError = true;
+              if (
+                typeof result.error === 'object' &&
+                result.error.status === 401
+              ) {
+                isAuthError = true
               }
               // OAuth specific errors
-              else if (result.error.error &&
+              else if (
+                result.error.error &&
                 (result.error.error.code === 'invalid_token' ||
-                 result.error.error.code === 'token_expired' ||
-                 result.error.error.message === 'Invalid API key' ||
-                 result.error.error.message?.toLowerCase().includes('token') ||
-                 result.error.error.message?.toLowerCase().includes('unauthorized'))) {
-                isAuthError = true;
+                  result.error.error.code === 'token_expired' ||
+                  result.error.error.message === 'Invalid API key' ||
+                  result.error.error.message?.toLowerCase().includes('token') ||
+                  result.error.error.message
+                    ?.toLowerCase()
+                    .includes('unauthorized'))
+              ) {
+                isAuthError = true
               }
               // Message-based detection as fallback
-              else if (typeof result.error === 'string' && 
+              else if (
+                typeof result.error === 'string' &&
                 (result.error.toLowerCase().includes('unauthorized') ||
-                 result.error.toLowerCase().includes('token') ||
-                 result.error.toLowerCase().includes('auth'))) {
-                isAuthError = true;
+                  result.error.toLowerCase().includes('token') ||
+                  result.error.toLowerCase().includes('auth'))
+              ) {
+                isAuthError = true
               }
             } catch (parseError) {
               // If we can't parse the error structure, do a simple string check
-              const errorStr = String(result.error);
-              if (errorStr.toLowerCase().includes('unauthorized') ||
-                  errorStr.toLowerCase().includes('token') ||
-                  errorStr.toLowerCase().includes('auth')) {
-                isAuthError = true;
+              const errorStr = String(result.error)
+              if (
+                errorStr.toLowerCase().includes('unauthorized') ||
+                errorStr.toLowerCase().includes('token') ||
+                errorStr.toLowerCase().includes('auth')
+              ) {
+                isAuthError = true
               }
             }
 
             if (isAuthError && tokenManager.getRefreshToken()) {
               logger.debug('Auth error detected, attempting token refresh')
-              logger.debug(`Error details: ${JSON.stringify(result.error, null, 2)}`)
+              logger.debug(
+                `Error details: ${JSON.stringify(result.error, null, 2)}`
+              )
 
               const refreshed = await refreshAccessToken(tokenManager)
               if (refreshed) {
@@ -171,10 +189,11 @@ export const createAuthenticatedClient = () => {
                 )
               } else {
                 logger.debug('Token refresh failed')
-                
+
                 // Add a more helpful error message for users
                 if (typeof result.error === 'object') {
-                  result.error.userMessage = 'Your session has expired. Please run `berget auth login` to log in again.'
+                  result.error.userMessage =
+                    'Your session has expired. Please run `berget auth login` to log in again.'
                 }
               }
             }
@@ -209,11 +228,13 @@ async function refreshAccessToken(
           Accept: 'application/json',
         },
         body: JSON.stringify({ refresh_token: refreshToken }),
-      });
+      })
 
       // Handle HTTP errors
       if (!response.ok) {
-        logger.debug(`Token refresh error: HTTP ${response.status} ${response.statusText}`)
+        logger.debug(
+          `Token refresh error: HTTP ${response.status} ${response.statusText}`
+        )
 
         // Check if the refresh token itself is expired or invalid
         if (response.status === 401 || response.status === 403) {
@@ -258,27 +279,30 @@ async function refreshAccessToken(
       logger.debug('Token refreshed successfully')
 
       // Update the token
-      tokenManager.updateAccessToken(
-        data.token,
-        data.expires_in || 3600
-      )
-      
+      tokenManager.updateAccessToken(data.token, data.expires_in || 3600)
+
       // If a new refresh token was provided, update that too
       if (data.refresh_token) {
-        tokenManager.setTokens(data.token, data.refresh_token, data.expires_in || 3600)
+        tokenManager.setTokens(
+          data.token,
+          data.refresh_token,
+          data.expires_in || 3600
+        )
         logger.debug('Refresh token also updated')
       }
     } catch (fetchError) {
       console.warn(
         chalk.yellow(
           `Failed to refresh token: ${
-            fetchError instanceof Error ? fetchError.message : String(fetchError)
+            fetchError instanceof Error
+              ? fetchError.message
+              : String(fetchError)
           }`
         )
       )
       return false
     }
-    
+
     return true
   } catch (error) {
     console.warn(
