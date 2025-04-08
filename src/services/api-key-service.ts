@@ -33,10 +33,10 @@ export interface ApiKeyResponse {
 export class ApiKeyService {
   private static instance: ApiKeyService
   private client = createAuthenticatedClient()
-  
+
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.API_KEYS
-  
+
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.API_KEYS
 
@@ -59,23 +59,29 @@ export class ApiKeyService {
       if (error) {
         // Check if this is an authentication error
         try {
-          const errorObj = typeof error === 'string' ? JSON.parse(error) : error;
+          const errorObj = typeof error === 'string' ? JSON.parse(error) : error
           if (errorObj.status === 401) {
-            throw new Error(JSON.stringify({
-              error: "Authentication failed. Your session may have expired.",
-              code: "AUTH_FAILED",
-              details: "Please run 'berget auth login' to authenticate again."
-            }))
+            throw new Error(
+              JSON.stringify({
+                error: 'Authentication failed. Your session may have expired.',
+                code: 'AUTH_FAILED',
+                details:
+                  "Please run 'berget auth login' to authenticate again.",
+              })
+            )
           }
           throw new Error(JSON.stringify(error))
         } catch (parseError) {
           // If we can't parse the error as JSON, check if it's an auth error by string matching
-          if (typeof error === 'string' && error.toString().includes('Unauthorized')) {
-            throw new Error(JSON.stringify({
-              error: "Authentication failed. Your session may have expired.",
-              code: "AUTH_FAILED",
-              details: "Please run 'berget auth login' to authenticate again."
-            }))
+          if (typeof error === 'string' && error.includes('Unauthorized')) {
+            throw new Error(
+              JSON.stringify({
+                error: 'Authentication failed. Your session may have expired.',
+                code: 'AUTH_FAILED',
+                details:
+                  "Please run 'berget auth login' to authenticate again.",
+              })
+            )
           }
           throw new Error(JSON.stringify({ error: String(error) }))
         }
@@ -94,7 +100,7 @@ export class ApiKeyService {
   public async create(options: CreateApiKeyOptions): Promise<ApiKeyResponse> {
     try {
       const { data, error } = await this.client.POST('/v1/api-keys', {
-        body: options
+        body: options,
       })
       if (error) throw new Error(JSON.stringify(error))
       return data!
@@ -111,7 +117,7 @@ export class ApiKeyService {
   public async delete(id: string): Promise<boolean> {
     try {
       const { error } = await this.client.DELETE('/v1/api-keys/{id}', {
-        params: { path: { id } }
+        params: { path: { id } },
       })
       if (error) throw new Error(JSON.stringify(error))
       return true
@@ -127,9 +133,12 @@ export class ApiKeyService {
    */
   public async rotate(id: string): Promise<ApiKeyResponse> {
     try {
-      const { data, error } = await this.client.PUT('/v1/api-keys/{id}/rotate', {
-        params: { path: { id } }
-      })
+      const { data, error } = await this.client.PUT(
+        '/v1/api-keys/{id}/rotate',
+        {
+          params: { path: { id } },
+        }
+      )
       if (error) throw new Error(JSON.stringify(error))
       return data!
     } catch (error) {
@@ -145,7 +154,7 @@ export class ApiKeyService {
   public async describe(id: string): Promise<any> {
     try {
       const { data, error } = await this.client.GET('/v1/api-keys/{id}/usage', {
-        params: { path: { id } }
+        params: { path: { id } },
       })
       if (error) throw new Error(JSON.stringify(error))
       return data
