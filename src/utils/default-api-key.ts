@@ -151,16 +151,25 @@ export class DefaultApiKeyManager {
           return null
         }
       } catch (error) {
-        console.log(chalk.red('Error fetching API keys:'))
-        if (error instanceof Error) {
-          console.log(chalk.red(error.message))
-          if (isDebug) {
-            console.log(chalk.yellow(`DEBUG: API key list error: ${error.message}`))
-            console.log(chalk.yellow(`DEBUG: Stack: ${error.stack}`))
+        // Check if this is an authentication error
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isAuthError = errorMessage.includes('Unauthorized') || 
+                           errorMessage.includes('Authentication failed') ||
+                           errorMessage.includes('AUTH_FAILED');
+        
+        if (isAuthError) {
+          console.log(chalk.yellow('Authentication required. Please run `berget auth login` first.'));
+        } else {
+          console.log(chalk.red('Error fetching API keys:'));
+          if (error instanceof Error) {
+            console.log(chalk.red(error.message));
+            if (isDebug) {
+              console.log(chalk.yellow(`DEBUG: API key list error: ${error.message}`));
+              console.log(chalk.yellow(`DEBUG: Stack: ${error.stack}`));
+            }
           }
         }
-        console.log(chalk.yellow('Please make sure you are logged in with: berget auth login'))
-        return null
+        return null;
       }
       
       console.log(chalk.blue('Select an API key to use as default:'))

@@ -30,11 +30,11 @@ export function handleError(message: string, error: any): void {
   
   // Check for authentication errors
   if (
-    (typeof error === 'string' && error.includes('Unauthorized')) ||
-    (error && error.message && error.message.includes('Unauthorized')) ||
-    (error && error.code && error.code === 401)
+    (typeof error === 'string' && (error.includes('Unauthorized') || error.includes('Authentication failed'))) ||
+    (error && error.message && (error.message.includes('Unauthorized') || error.message.includes('Authentication failed'))) ||
+    (error && error.code && (error.code === 401 || error.code === 'AUTH_FAILED'))
   ) {
     console.error(chalk.yellow('\nYou need to be logged in to use this command.'));
-    console.error(chalk.yellow('Run `berget login` to authenticate.'));
+    console.error(chalk.yellow('Run `berget auth login` to authenticate.'));
   }
 }

@@ -126,21 +126,38 @@ export const createAuthenticatedClient = () => {
           // If we get an auth error, try to refresh the token and retry
           if (result.error) {
             // Detect various forms of authentication errors
-            const isAuthError =
+            let isAuthError = false;
+            
+            try {
               // Standard 401 Unauthorized
-              (typeof result.error === 'object' && result.error.status === 401) ||
+              if (typeof result.error === 'object' && result.error.status === 401) {
+                isAuthError = true;
+              }
               // OAuth specific errors
-              (result.error.error &&
+              else if (result.error.error &&
                 (result.error.error.code === 'invalid_token' ||
                  result.error.error.code === 'token_expired' ||
                  result.error.error.message === 'Invalid API key' ||
                  result.error.error.message?.toLowerCase().includes('token') ||
-                 result.error.error.message?.toLowerCase().includes('unauthorized'))) ||
+                 result.error.error.message?.toLowerCase().includes('unauthorized'))) {
+                isAuthError = true;
+              }
               // Message-based detection as fallback
-              (typeof result.error === 'string' && 
+              else if (typeof result.error === 'string' && 
                 (result.error.toLowerCase().includes('unauthorized') ||
                  result.error.toLowerCase().includes('token') ||
-                 result.error.toLowerCase().includes('auth')))
+                 result.error.toLowerCase().includes('auth'))) {
+                isAuthError = true;
+              }
+            } catch (parseError) {
+              // If we can't parse the error structure, do a simple string check
+              const errorStr = String(result.error);
+              if (errorStr.toLowerCase().includes('unauthorized') ||
+                  errorStr.toLowerCase().includes('token') ||
+                  errorStr.toLowerCase().includes('auth')) {
+                isAuthError = true;
+              }
+            }
 
             if (isAuthError && tokenManager.getRefreshToken()) {
               if (process.argv.includes('--debug')) {

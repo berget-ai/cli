@@ -157,9 +157,19 @@ export function registerChatCommands(program: Command): void {
               }
             }
           } catch (error) {
-            console.error(chalk.red('Error fetching API key:'))
-            console.error(error)
-            console.log(chalk.yellow('Using default authentication instead.'))
+            // Check if this is an authentication error
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isAuthError = errorMessage.includes('Unauthorized') || 
+                               errorMessage.includes('Authentication failed') ||
+                               errorMessage.includes('AUTH_FAILED');
+            
+            if (isAuthError) {
+              console.log(chalk.yellow('Authentication required. Please run `berget auth login` first.'));
+            } else {
+              console.error(chalk.red('Error fetching API key:'));
+              console.error(error);
+            }
+            console.log(chalk.yellow('Using default authentication instead.'));
           }
         }
 
