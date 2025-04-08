@@ -191,7 +191,8 @@ export class ChatService {
     try {
       // If an API key is provided, use it for this request
       if (options.apiKey) {
-        headers['Authorization'] = `Bearer ${options.apiKey}`
+        // API keys should be sent directly, not with Bearer prefix
+        headers['Authorization'] = options.apiKey
       }
       
       // Remove apiKey and onChunk from options before sending to API
@@ -381,7 +382,7 @@ export class ChatService {
       
       if (effectiveApiKey) {
         const headers = {
-          'Authorization': `Bearer ${effectiveApiKey}`
+          'Authorization': effectiveApiKey
         }
         
         const { data, error } = await this.client.GET('/v1/models', { headers })
