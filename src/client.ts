@@ -10,7 +10,7 @@ import { logger } from './utils/logger'
 // API Base URL
 // Use --local flag to test against local API
 const isLocalMode = process.argv.includes('--local')
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.BERGET_API_URL ||
   (isLocalMode ? 'http://localhost:3000' : 'https://api.berget.ai')
 

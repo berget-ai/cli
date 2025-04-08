@@ -1,4 +1,4 @@
-import { createAuthenticatedClient } from '../client'
+import { createAuthenticatedClient, API_BASE_URL } from '../client'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 import chalk from 'chalk'
 import { logger } from '../utils/logger'
@@ -16,6 +16,7 @@ export interface ChatCompletionOptions {
   stream?: boolean
   top_p?: number
   apiKey?: string
+  onChunk?: (chunk: any) => void
 }
 
 /**
@@ -164,24 +165,29 @@ export class ChatService {
         logger.debug(JSON.stringify(requestOptions, null, 2))
         
         try {
-          const response = await this.client.POST('/v1/chat/completions', {
-            body: requestOptions,
-            headers
-          })
-          
-          // Check if response has an error property
-          const responseAny = response as any;
-          if (responseAny && responseAny.error) 
-            throw new Error(JSON.stringify(responseAny.error))
-          
-          logger.debug('API response:')
-          logger.debug(JSON.stringify(response, null, 2))
-          
-          // Output the complete response data for debugging
-          logger.debug('Complete response data:')
-          logger.debug(JSON.stringify(response.data, null, 2))
-          
-          return response.data
+          // Handle streaming responses differently
+          if (requestOptions.stream && requestOptions.onChunk) {
+            return await this.handleStreamingResponse(requestOptions, headers);
+          } else {
+            const response = await this.client.POST('/v1/chat/completions', {
+              body: requestOptions,
+              headers
+            })
+            
+            // Check if response has an error property
+            const responseAny = response as any;
+            if (responseAny && responseAny.error) 
+              throw new Error(JSON.stringify(responseAny.error))
+            
+            logger.debug('API response:')
+            logger.debug(JSON.stringify(response, null, 2))
+            
+            // Output the complete response data for debugging
+            logger.debug('Complete response data:')
+            logger.debug(JSON.stringify(response.data, null, 2))
+            
+            return response.data
+          }
         } catch (requestError) {
           logger.debug(`Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`)
           throw requestError
@@ -218,6 +224,105 @@ export class ChatService {
       
       logger.error(errorMessage);
       throw new Error(errorMessage);
+    }
+  }
+  
+  /**
+   * Handle streaming response from the API
+   * @param options Request options
+   * @param headers Request headers
+   * @returns A promise that resolves when the stream is complete
+   */
+  private async handleStreamingResponse(options: any, headers: Record<string, string>): Promise<any> {
+    logger.debug('Handling streaming response')
+    
+    // Create URL with query parameters
+    const url = new URL(`${API_BASE_URL}/v1/chat/completions`);
+    
+    try {
+      // Make fetch request directly to handle streaming
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        body: JSON.stringify(options)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error(`Stream request failed: ${response.status} ${response.statusText}`);
+        logger.debug(`Error response: ${errorText}`);
+        throw new Error(`Stream request failed: ${response.status} ${response.statusText}`);
+      }
+      
+      if (!response.body) {
+        throw new Error('No response body received');
+      }
+      
+      // Process the stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let fullResponse: any = null;
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        logger.debug(`Received chunk: ${chunk.length} bytes`);
+        
+        // Process the chunk - it may contain multiple SSE events
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const jsonData = line.slice(5).trim();
+            
+            // Skip empty data or [DONE] marker
+            if (jsonData === '' || jsonData === '[DONE]') continue;
+            
+            try {
+              const parsedData = JSON.parse(jsonData);
+              
+              // Call the onChunk callback with the parsed data
+              if (options.onChunk) {
+                options.onChunk(parsedData);
+              }
+              
+              // Keep track of the full response
+              if (!fullResponse) {
+                fullResponse = parsedData;
+              } else if (parsedData.choices && parsedData.choices[0] && parsedData.choices[0].delta) {
+                // Accumulate content for the full response
+                if (parsedData.choices[0].delta.content) {
+                  fullContent += parsedData.choices[0].delta.content;
+                }
+              }
+            } catch (e) {
+              logger.error(`Error parsing chunk: ${e}`);
+              logger.debug(`Problematic chunk: ${jsonData}`);
+            }
+          }
+        }
+      }
+      
+      // Construct the final response object similar to non-streaming response
+      if (fullResponse) {
+        if (fullContent) {
+          fullResponse.choices[0].message = {
+            role: 'assistant',
+            content: fullContent
+          };
+        }
+        return fullResponse;
+      }
+      
+      return { choices: [{ message: { role: 'assistant', content: fullContent } }] };
+    } catch (error) {
+      logger.error(`Streaming error: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
   
