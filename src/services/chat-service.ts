@@ -53,34 +53,29 @@ export class ChatService {
     try {
       logger.debug('Starting createCompletion method')
       
-      // Check if options is defined
-      if (!options) {
-        logger.error('options is undefined')
-        throw new Error('Chat completion options are undefined')
+      // Initialize options if undefined
+      const optionsCopy = options ? { ...options } : { messages: [] }
+      
+      
+      // Check if messages are defined
+      if (!optionsCopy.messages || !Array.isArray(optionsCopy.messages)) {
+        logger.error('messages is undefined or not an array')
+        optionsCopy.messages = []
       }
       
-      // Log the raw options object
-      logger.debug('Raw options: ' + (typeof options) + ' ' + (options ? 'defined' : 'undefined'))
-      
-      const headers: Record<string, string> = {}
-      
+      // Log the options object
       logger.debug('Starting createCompletion with options:')
       try {
         logger.debug(JSON.stringify({
-          ...options,
-          apiKey: options.apiKey ? '***' : undefined,
-          messages: options.messages ? `${options.messages.length} messages` : undefined
+          ...optionsCopy,
+          apiKey: optionsCopy.apiKey ? '***' : undefined,
+          messages: optionsCopy.messages ? `${optionsCopy.messages.length} messages` : '0 messages'
         }, null, 2))
       } catch (error) {
         logger.error('Failed to stringify options:', error)
       }
       
-      // Create a copy of options to avoid modifying the original
-      const optionsCopy = { ...options }
-      
-      logger.debug('Checking for API key')
-      logger.debug(`optionsCopy.apiKey exists: ${!!optionsCopy.apiKey}`)
-      
+      const headers: Record<string, string> = {}
       
       // Check for environment variables first - prioritize this over everything else
       const envApiKey = process.env.BERGET_API_KEY;
@@ -158,8 +153,8 @@ export class ChatService {
       // If an API key is provided, use it for this request
       if (optionsCopy.apiKey) {
         headers['Authorization'] = `Bearer ${optionsCopy.apiKey}`
-        // Remove apiKey from options before sending to API
-        const { apiKey, ...requestOptions } = optionsCopy
+        // Remove apiKey and onChunk from options before sending to API
+        const { apiKey, onChunk, ...requestOptions } = optionsCopy
         
         logger.debug('Using provided API key')
         logger.debug('Request options:')
@@ -167,8 +162,8 @@ export class ChatService {
         
         try {
           // Handle streaming responses differently
-          if (requestOptions.stream && requestOptions.onChunk) {
-            return await this.handleStreamingResponse(requestOptions, headers);
+          if (requestOptions.stream && options && options.onChunk) {
+            return await this.handleStreamingResponse({...requestOptions, onChunk: options.onChunk}, headers);
           } else {
             // Ensure model is always defined for the API call
             const requestBody = {
@@ -199,7 +194,7 @@ export class ChatService {
           logger.debug(`Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`)
           throw requestError
         }
-      } else {
+      } else if (optionsCopy) {
         // We've exhausted all options for getting an API key
         logger.warn('No API key available. You need to either:');
         logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
