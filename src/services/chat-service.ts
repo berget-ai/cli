@@ -253,25 +253,6 @@ export class ChatService {
     logger.warn('  # or for a single command:');
     logger.warn('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it');
     throw new Error('No API key available. Please provide an API key or set a default API key.');
-      // Improved error handling
-      let errorMessage = 'Failed to create chat completion';
-      
-      if (error instanceof Error) {
-        try {
-          // Try to parse the error message as JSON
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error && parsedError.error.message) {
-            errorMessage = `Chat error: ${parsedError.error.message}`;
-          }
-        } catch (e) {
-          // If parsing fails, use the original error message
-          errorMessage = `Chat error: ${error.message}`;
-        }
-      }
-      
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
-    }
   }
   
   /**
