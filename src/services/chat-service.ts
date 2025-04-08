@@ -82,9 +82,17 @@ export class ChatService {
       if (envApiKey) {
         logger.debug('Using API key from BERGET_API_KEY environment variable');
         optionsCopy.apiKey = envApiKey;
+        // Skip the default API key logic if we already have a key
+        return this.executeCompletion(optionsCopy, headers);
       } 
+      // If API key is already provided, use it directly
+      else if (optionsCopy.apiKey) {
+        logger.debug('Using API key provided in options');
+        // Skip the default API key logic if we already have a key
+        return this.executeCompletion(optionsCopy, headers);
+      }
       // Only try to get the default API key if no API key is provided and no env var is set
-      else if (!optionsCopy.apiKey) {
+      else {
         logger.debug('No API key provided, trying to get default')
         
         try {
@@ -150,64 +158,101 @@ export class ChatService {
         apiKey: optionsCopy.apiKey ? '***' : undefined // Hide the actual API key in debug output
       }, null, 2))
       
-      // If an API key is provided, use it for this request
-      if (optionsCopy.apiKey) {
-        headers['Authorization'] = `Bearer ${optionsCopy.apiKey}`
-        // Remove apiKey and onChunk from options before sending to API
-        const { apiKey, onChunk, ...requestOptions } = optionsCopy
-        
-        logger.debug('Using provided API key')
-        logger.debug('Request options:')
-        logger.debug(JSON.stringify(requestOptions, null, 2))
-        
-        try {
-          // Handle streaming responses differently
-          if (requestOptions.stream && options && options.onChunk) {
-            return await this.handleStreamingResponse({...requestOptions, onChunk: options.onChunk}, headers);
-          } else {
-            // Ensure model is always defined for the API call
-            const requestBody = {
-              ...requestOptions,
-              model: requestOptions.model || 'google/gemma-3-27b-it'
-            };
-            
-            const response = await this.client.POST('/v1/chat/completions', {
-              body: requestBody,
-              headers
-            })
-            
-            // Check if response has an error property
-            const responseAny = response as any;
-            if (responseAny && responseAny.error) 
-              throw new Error(JSON.stringify(responseAny.error))
-            
-            logger.debug('API response:')
-            logger.debug(JSON.stringify(response, null, 2))
-            
-            // Output the complete response data for debugging
-            logger.debug('Complete response data:')
-            logger.debug(JSON.stringify(response.data, null, 2))
-            
-            return response.data
-          }
-        } catch (requestError) {
-          logger.debug(`Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`)
-          throw requestError
-        }
-      } else if (optionsCopy) {
-        // We've exhausted all options for getting an API key
-        logger.warn('No API key available. You need to either:');
-        logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
-        logger.warn('2. Set a default API key with: berget api-keys set-default <id>');
-        logger.warn('3. Provide an API key with the --api-key option');
-        logger.warn('4. Set the BERGET_API_KEY environment variable');
-        logger.warn('\nExample:');
-        logger.warn('  export BERGET_API_KEY=your_api_key_here');
-        logger.warn('  # or for a single command:');
-        logger.warn('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it');
-        throw new Error('No API key available. Please provide an API key or set a default API key.');
-      }
+      return this.executeCompletion(optionsCopy, headers);
     } catch (error) {
+      // Improved error handling
+      let errorMessage = 'Failed to create chat completion';
+      
+      if (error instanceof Error) {
+        try {
+          // Try to parse the error message as JSON
+          const parsedError = JSON.parse(error.message);
+          if (parsedError.error && parsedError.error.message) {
+            errorMessage = `Chat error: ${parsedError.error.message}`;
+          }
+        } catch (e) {
+          // If parsing fails, use the original error message
+          errorMessage = `Chat error: ${error.message}`;
+        }
+      }
+      
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+  
+  /**
+   * Execute the completion request with the provided options
+   * @param options The completion options
+   * @param headers Additional headers to include
+   * @returns The completion response
+   */
+  private async executeCompletion(options: ChatCompletionOptions, headers: Record<string, string> = {}): Promise<any> {
+    try {
+      // If an API key is provided, use it for this request
+      if (options.apiKey) {
+        headers['Authorization'] = `Bearer ${options.apiKey}`
+      }
+      
+      // Remove apiKey and onChunk from options before sending to API
+      const { apiKey, onChunk, ...requestOptions } = options
+      
+      logger.debug('Request options:')
+      logger.debug(JSON.stringify({
+        ...requestOptions,
+        messages: requestOptions.messages ? `${requestOptions.messages.length} messages` : '0 messages'
+      }, null, 2))
+      
+      // Handle streaming responses differently
+      if (requestOptions.stream && onChunk) {
+        return await this.handleStreamingResponse({...requestOptions, onChunk}, headers);
+      } else {
+        // Ensure model is always defined for the API call
+        const requestBody = {
+          ...requestOptions,
+          model: requestOptions.model || 'google/gemma-3-27b-it'
+        };
+        
+        const response = await this.client.POST('/v1/chat/completions', {
+          body: requestBody,
+          headers
+        })
+        
+        // Check if response has an error property
+        const responseAny = response as any;
+        if (responseAny && responseAny.error) 
+          throw new Error(JSON.stringify(responseAny.error))
+        
+        logger.debug('API response:')
+        logger.debug(JSON.stringify(response, null, 2))
+        
+        // Output the complete response data for debugging
+        logger.debug('Complete response data:')
+        logger.debug(JSON.stringify(response.data, null, 2))
+        
+        return response.data
+      }
+    } catch (requestError) {
+      logger.debug(`Request error: ${requestError instanceof Error ? requestError.message : String(requestError)}`)
+      throw requestError
+    }
+  }
+  
+  /**
+   * Handle the case when no API key is available
+   */
+  private handleNoApiKey(): never {
+    // We've exhausted all options for getting an API key
+    logger.warn('No API key available. You need to either:');
+    logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
+    logger.warn('2. Set a default API key with: berget api-keys set-default <id>');
+    logger.warn('3. Provide an API key with the --api-key option');
+    logger.warn('4. Set the BERGET_API_KEY environment variable');
+    logger.warn('\nExample:');
+    logger.warn('  export BERGET_API_KEY=your_api_key_here');
+    logger.warn('  # or for a single command:');
+    logger.warn('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it');
+    throw new Error('No API key available. Please provide an API key or set a default API key.');
       // Improved error handling
       let errorMessage = 'Failed to create chat completion';
       
@@ -247,6 +292,7 @@ export class ChatService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
           ...headers
         },
         body: JSON.stringify(options)

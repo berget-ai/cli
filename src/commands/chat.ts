@@ -45,6 +45,7 @@ export function registerChatCommands(program: Command): void {
       '--api-key-id <id>',
       'ID of the API key to use from your saved keys'
     )
+    .option('--stream', 'Stream the response')
     .action(async (options) => {
       try {
         const chatService = ChatService.getInstance()
@@ -60,6 +61,13 @@ export function registerChatCommands(program: Command): void {
             chalk.dim(`Using API key from BERGET_API_KEY environment variable`)
           )
           apiKey = envApiKey;
+        }
+        // If API key is already provided via command line, use it
+        else if (options.apiKey) {
+          console.log(
+            chalk.dim(`Using API key from command line argument`)
+          )
+          apiKey = options.apiKey;
         }
         // If no API key or API key ID provided and no env var, check for default API key
         else if (!apiKey && !apiKeyId) {
