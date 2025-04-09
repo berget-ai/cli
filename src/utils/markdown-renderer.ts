@@ -17,8 +17,6 @@ marked.setOptions({
     link: chalk.blue.underline,
     // Adjust the width to fit the terminal
     width: process.stdout.columns || 80,
-    // Use true colors if supported
-    colors: true,
     // Customize code block rendering
     codespan: chalk.cyan,
     // Customize list bullet style

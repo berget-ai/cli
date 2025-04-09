@@ -7,6 +7,7 @@ import { ApiKeyService } from '../services/api-key-service'
 import { AuthService } from '../services/auth-service'
 import { handleError } from '../utils/error-handler'
 import { DefaultApiKeyManager } from '../utils/default-api-key'
+import { renderMarkdown, containsMarkdown } from '../utils/markdown-renderer'
 
 /**
  * Helper function to get user confirmation
@@ -272,8 +273,10 @@ export function registerChatCommands(program: Command): void {
               // Add streaming support
               if (options.stream) {
                 let assistantResponse = ''
-                process.stdout.write(chalk.blue('Assistant: '))
+                console.log(chalk.blue('Assistant: '))
                 
+                // For streaming, we'll collect the response and render it at the end
+                // since markdown needs the complete text to render properly
                 completionOptions.onChunk = (chunk: any) => {
                   if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
                     const content = chunk.choices[0].delta.content
@@ -332,7 +335,15 @@ export function registerChatCommands(program: Command): void {
               })
 
               // Display the response
-              console.log(chalk.blue('Assistant: ') + assistantMessage)
+              console.log(chalk.blue('Assistant: '))
+              
+              // Check if the response contains markdown and render it if it does
+              if (containsMarkdown(assistantMessage)) {
+                console.log(renderMarkdown(assistantMessage))
+              } else {
+                console.log(assistantMessage)
+              }
+              
               console.log() // Empty line for better readability
 
               // Continue the conversation
