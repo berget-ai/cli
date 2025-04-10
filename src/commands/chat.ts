@@ -450,23 +450,27 @@ export function registerChatCommands(program: Command): void {
         console.log(chalk.bold('Available Chat Models:'))
         console.log(chalk.dim('─'.repeat(70)))
         console.log(
-          chalk.dim('MODEL ID'.padEnd(30)) +
-            chalk.dim('OWNER'.padEnd(25)) +
+          chalk.dim('MODEL ID'.padEnd(40)) +
             chalk.dim('CAPABILITIES')
         )
         console.log(chalk.dim('─'.repeat(70)))
 
-        models.data.forEach((model: any) => {
+        // Filter to only show active models
+        const activeModels = models.data.filter((model: any) => model.active === true);
+        
+        activeModels.forEach((model: any) => {
           const capabilities = []
           if (model.capabilities.vision) capabilities.push('vision')
           if (model.capabilities.function_calling)
             capabilities.push('function_calling')
           if (model.capabilities.json_mode) capabilities.push('json_mode')
 
+          // Format model ID in Huggingface compatible format (owner/model)
+          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(40)
+          
           console.log(
-            model.id.padEnd(30) +
-              model.owned_by.padEnd(25) +
-              capabilities.join(', ')
+            modelId +
+            capabilities.join(', ')
           )
         })
       } catch (error) {
