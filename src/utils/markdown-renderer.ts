@@ -18,9 +18,7 @@ marked.setOptions({
     // Adjust the width to fit the terminal
     width: process.stdout.columns || 80,
     // Customize code block rendering
-    codespan: chalk.cyan,
-    // Customize list bullet style
-    bullet: '• '
+    codespan: chalk.cyan
   })
 })
 
