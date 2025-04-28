@@ -36,10 +36,10 @@ export function registerModelCommands(program: Command): void {
 
           console.log('Available Models:')
           console.log(
-            'ID                      OWNED BY                  CAPABILITIES'
+            'ID                                                 OWNED BY                 CAPABILITIES'
           )
           // Ensure response has the expected structure
-          const modelData = response as { data?: any[] };
+          const modelData = response as { data?: any[] }
           if (modelData.data) {
             modelData.data.forEach((model: any) => {
               const capabilities = []
@@ -49,8 +49,8 @@ export function registerModelCommands(program: Command): void {
               if (model.capabilities.json_mode) capabilities.push('json_mode')
 
               console.log(
-                `${model.id.padEnd(24)} ${model.owned_by.padEnd(
-                  25
+                `${model.root.padEnd(50)} ${model.owned_by.padEnd(
+                  24
                 )} ${capabilities.join(', ')}`
               )
             })
