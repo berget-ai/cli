@@ -219,12 +219,6 @@ export function registerChatCommands(program: Command): void {
           }
         }
 
-        // Set up readline interface for user input
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        })
-
         // Prepare messages array
         const messages: ChatMessage[] = []
 
@@ -333,6 +327,12 @@ export function registerChatCommands(program: Command): void {
             process.exit(1)
           }
         }
+
+        // Set up readline interface for user input (only for interactive mode)
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        })
 
         console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
         console.log(chalk.cyan('----------------------------------------'))
