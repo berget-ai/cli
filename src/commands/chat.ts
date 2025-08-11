@@ -273,7 +273,16 @@ export function registerChatCommands(program: Command): void {
               completionOptions.onChunk = (chunk: any) => {
                 if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
                   const content = chunk.choices[0].delta.content
-                  process.stdout.write(content)
+                  try {
+                    process.stdout.write(content)
+                  } catch (error: any) {
+                    // Handle EPIPE errors gracefully (when pipe is closed)
+                    if (error.code === 'EPIPE') {
+                      // Stop streaming if the pipe is closed
+                      return
+                    }
+                    throw error
+                  }
                   assistantResponse += content
                 }
               }
@@ -389,7 +398,16 @@ export function registerChatCommands(program: Command): void {
                 completionOptions.onChunk = (chunk: any) => {
                   if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
                     const content = chunk.choices[0].delta.content
-                    process.stdout.write(content)
+                    try {
+                      process.stdout.write(content)
+                    } catch (error: any) {
+                      // Handle EPIPE errors gracefully (when pipe is closed)
+                      if (error.code === 'EPIPE') {
+                        // Stop streaming if the pipe is closed
+                        return
+                      }
+                      throw error
+                    }
                     assistantResponse += content
                   }
                 }
