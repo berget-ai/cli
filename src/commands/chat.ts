@@ -37,7 +37,7 @@ export function registerChatCommands(program: Command): void {
   chat
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
-    .argument('[model]', 'Model to use (default: google/gemma-3-27b-it)')
+    .argument('[model]', 'Model to use (default: openai/gpt-oss)')
     .option('-s, --system <message>', 'System message')
     .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
     .option('-m, --max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
@@ -257,7 +257,7 @@ export function registerChatCommands(program: Command): void {
             try {
               // Call the API
               const completionOptions: ChatCompletionOptions = {
-                model: options.args?.[0] || 'google/gemma-3-27b-it',
+                model: options.args?.[0] || 'openai/gpt-oss',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
