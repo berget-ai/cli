@@ -118,152 +118,21 @@ alias ask='npx berget chat run openai/gpt-oss'
 
 ## Avancerade exempel
 
-### Automatisk commit-workflow
+Se `examples/` mappen för kompletta skript:
+
+- **smart-commit.sh** - Automatisk generering av conventional commit-meddelanden
+- **ai-review.sh** - AI-driven kodgranskning
+- **security-check.sh** - Säkerhetsgranskning av commits
 
 ```bash
-#!/bin/bash
-# save as ~/bin/smart-commit
-set -e
+# Kopiera exempel-skript
+cp examples/*.sh ~/bin/
+chmod +x ~/bin/*.sh
 
-# Kontrollera att det finns ändringar
-if [[ -z $(git diff --cached) ]]; then
-    echo "Inga staged ändringar hittades. Kör 'git add' först."
-    exit 1
-fi
-
-# Generera commit-meddelande
-COMMIT_MSG=$(git diff --cached | npx berget chat run openai/gpt-oss "Generate a conventional commit message for this staged diff. Reply with only the commit message, nothing else:")
-
-echo "Föreslaget commit-meddelande:"
-echo "  $COMMIT_MSG"
-echo
-
-read -p "Vill du använda detta meddelande? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    git commit -m "$COMMIT_MSG"
-    echo "✅ Commit skapad!"
-else
-    echo "❌ Commit avbruten"
-fi
-```
-
-### Kod-review-script
-
-```bash
-#!/bin/bash
-# save as ~/bin/ai-review
-set -e
-
-if [[ $# -eq 0 ]]; then
-    echo "Användning: ai-review <fil>"
-    exit 1
-fi
-
-FILE="$1"
-
-if [[ ! -f "$FILE" ]]; then
-    echo "Fel: Filen '$FILE' finns inte"
-    exit 1
-fi
-
-echo "🔍 Granskar $FILE med AI..."
-echo "================================"
-
-cat "$FILE" | npx berget chat run openai/gpt-oss "
-Granska denna kod och ge feedback på:
-1. Kodkvalitet och läsbarhet
-2. Potentiella buggar eller problem
-3. Prestandaförbättringar
-4. Best practices
-5. Säkerhetsaspekter
-
-Ge konkreta förslag på förbättringar:
-"
-```
-
-### Säkerhetsgranskning av commits
-
-```bash
-#!/bin/bash
-# save as ~/bin/security-check
-set -e
-
-echo "🔒 Säkerhetsgranskning av commits..."
-echo "===================================="
-
-# Kontrollera om det finns staged ändringar
-if [[ -z $(git diff --cached) ]]; then
-    echo "Inga staged ändringar hittades. Kör 'git add' först."
-    exit 1
-fi
-
-# Hämta diff för säkerhetsgranskning
-DIFF=$(git diff --cached)
-
-echo "Analyserar säkerhetsrisker i staged ändringar..."
-
-SECURITY_REPORT=$(echo "$DIFF" | npx berget chat run openai/gpt-oss "
-Analysera denna git diff för säkerhetsrisker och sårbarheter:
-
-1. **Känslig information**: API-nycklar, lösenord, tokens, secrets
-2. **Injektionsrisker**: SQL injection, XSS, command injection
-3. **Autentisering/auktorisering**: Svaga kontroller, privilege escalation
-4. **Kryptografi**: Svag kryptering, hårdkodade nycklar
-5. **Input-validering**: Otillräcklig validering, buffer overflows
-6. **Filhantering**: Path traversal, osäkra filoperationer
-7. **Nätverkssäkerhet**: Osäkra anslutningar, CSRF
-8. **Loggning**: Känslig data i loggar, information disclosure
-
-Ge en säkerhetsbedömning:
-- 🟢 SÄKER: Inga säkerhetsrisker identifierade
-- 🟡 VARNING: Mindre säkerhetsrisker som bör åtgärdas
-- 🔴 KRITISK: Allvarliga säkerhetsrisker som MÅSTE åtgärdas
-
-Format:
-**SÄKERHETSBEDÖMNING: [🟢/🟡/🔴] [SÄKER/VARNING/KRITISK]**
-
-**IDENTIFIERADE RISKER:**
-- [Lista specifika risker om några]
-
-**REKOMMENDATIONER:**
-- [Konkreta åtgärder för att åtgärda riskerna]
-
-Diff:
-\`\`\`diff
-$DIFF
-\`\`\`
-")
-
-echo "$SECURITY_REPORT"
-echo ""
-
-# Extrahera säkerhetsnivå från rapporten
-if echo "$SECURITY_REPORT" | grep -q "🔴.*KRITISK"; then
-    echo "❌ KRITISKA säkerhetsrisker identifierade!"
-    echo "Commit blockerad. Åtgärda säkerhetsproblemen innan du fortsätter."
-    exit 1
-elif echo "$SECURITY_REPORT" | grep -q "🟡.*VARNING"; then
-    echo "⚠️  Säkerhetsvarningar identifierade."
-    read -p "Vill du fortsätta med commit trots varningarna? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Commit avbruten. Åtgärda säkerhetsproblemen först."
-        exit 1
-    fi
-elif echo "$SECURITY_REPORT" | grep -q "🟢.*SÄKER"; then
-    echo "✅ Inga säkerhetsrisker identifierade. Säkert att fortsätta!"
-else
-    echo "⚠️  Kunde inte avgöra säkerhetsstatus. Granska manuellt."
-    read -p "Vill du fortsätta med commit? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Commit avbruten."
-        exit 1
-    fi
-fi
-
-echo "Säkerhetsgranskning klar. Du kan nu köra 'git commit'."
+# Använd dem
+~/bin/smart-commit.sh
+~/bin/ai-review.sh src/main.js
+~/bin/security-check.sh
 ```
 
 ## Miljövariabler
