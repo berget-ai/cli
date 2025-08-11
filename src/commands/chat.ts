@@ -232,16 +232,25 @@ export function registerChatCommands(program: Command): void {
 
         // Check if input is being piped in
         let inputMessage = message
-        if (!inputMessage && !process.stdin.isTTY) {
+        let stdinContent = ''
+        
+        if (!process.stdin.isTTY) {
           // Read from stdin (piped input)
           const chunks = []
           for await (const chunk of process.stdin) {
             chunks.push(chunk)
           }
-          inputMessage = Buffer.concat(chunks).toString('utf8').trim()
+          stdinContent = Buffer.concat(chunks).toString('utf8').trim()
         }
 
-        // If a message is provided (either as argument or from stdin), send it directly and exit
+        // Combine stdin content with message if both exist
+        if (stdinContent && message) {
+          inputMessage = `${stdinContent}\n\n${message}`
+        } else if (stdinContent && !message) {
+          inputMessage = stdinContent
+        }
+
+        // If a message is provided (either as argument, from stdin, or both), send it directly and exit
         if (inputMessage) {
           // Add user message
           messages.push({
