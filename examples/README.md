@@ -1,63 +1,63 @@
 # Berget CLI Examples
 
-Denna mapp innehåller praktiska exempel på hur du kan använda Berget CLI för olika automatiseringsuppgifter.
+This folder contains practical examples of how you can use Berget CLI for various automation tasks.
 
-## Skript
+## Scripts
 
 ### smart-commit.sh
-Automatisk generering av conventional commit-meddelanden baserat på git diff.
+Automatic generation of conventional commit messages based on git diff.
 
 ```bash
-# Gör skriptet körbart
+# Make the script executable
 chmod +x examples/smart-commit.sh
 
-# Använd det
+# Use it
 git add .
 ./examples/smart-commit.sh
 ```
 
 ### ai-review.sh
-AI-driven kodgranskning som analyserar filer för kvalitet, buggar och säkerhetsaspekter.
+AI-driven code review that analyzes files for quality, bugs, and security aspects.
 
 ```bash
-# Gör skriptet körbart
+# Make the script executable
 chmod +x examples/ai-review.sh
 
-# Granska en fil
+# Review a file
 ./examples/ai-review.sh src/main.js
 ```
 
 ### security-check.sh
-Säkerhetsgranskning av git commits som blockerar commits med kritiska säkerhetsrisker.
+Security review of git commits that blocks commits with critical security risks.
 
 ```bash
-# Gör skriptet körbart
+# Make the script executable
 chmod +x examples/security-check.sh
 
-# Kör säkerhetskontroll
+# Run security check
 git add .
 ./examples/security-check.sh
 ```
 
 ## Installation
 
-För att använda dessa skript:
+To use these scripts:
 
-1. Kopiera dem till din `~/bin` mapp eller annan plats i din PATH
-2. Gör dem körbara med `chmod +x`
-3. Se till att du har Berget CLI installerat och konfigurerat
+1. Copy them to your `~/bin` folder or another location in your PATH
+2. Make them executable with `chmod +x`
+3. Make sure you have Berget CLI installed and configured
 
 ```bash
-# Kopiera till ~/bin
+# Copy to ~/bin
 cp examples/*.sh ~/bin/
 
-# Gör dem körbara
+# Make them executable
 chmod +x ~/bin/smart-commit.sh ~/bin/ai-review.sh ~/bin/security-check.sh
 ```
 
 ## Git Aliases
 
-Du kan också lägga till dessa som git aliases:
+You can also add these as git aliases:
 
 ```bash
 git config --global alias.ai-commit '!~/bin/smart-commit.sh'
@@ -65,7 +65,7 @@ git config --global alias.ai-review '!~/bin/ai-review.sh'
 git config --global alias.security-check '!~/bin/security-check.sh'
 ```
 
-Sedan kan du använda:
+Then you can use:
 
 ```bash
 git ai-commit
