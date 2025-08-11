@@ -6,6 +6,9 @@
     "berget": "dist/index.js"
   },
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "node --import tsx ./index.ts --local",
     "login": "node --import tsx ./index.ts --local auth login",
