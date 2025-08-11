@@ -38,6 +38,7 @@ export function registerChatCommands(program: Command): void {
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
     .argument('[model]', 'Model to use (default: openai/gpt-oss)')
+    .argument('[message]', 'Message to send directly (skips interactive mode)')
     .option('-s, --system <message>', 'System message')
     .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
     .option('-m, --max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
@@ -47,7 +48,7 @@ export function registerChatCommands(program: Command): void {
       'ID of the API key to use from your saved keys'
     )
     .option('--no-stream', 'Disable streaming (streaming is enabled by default)')
-    .action(async (model, options) => {
+    .action(async (model, message, options) => {
       try {
         const chatService = ChatService.getInstance()
 
@@ -233,6 +234,104 @@ export function registerChatCommands(program: Command): void {
             role: 'system',
             content: options.system,
           })
+        }
+
+        // If a message is provided, send it directly and exit
+        if (message) {
+          // Add user message
+          messages.push({
+            role: 'user',
+            content: message,
+          })
+
+          try {
+            // Call the API
+            const completionOptions: ChatCompletionOptions = {
+              model: model || 'openai/gpt-oss',
+              messages: messages,
+              temperature:
+                options.temperature !== undefined ? options.temperature : 0.7,
+              max_tokens: options.maxTokens || 4096,
+              stream: options.stream !== false
+            }
+
+            // Only add apiKey if it actually exists
+            if (apiKey) {
+              completionOptions.apiKey = apiKey
+            }
+            
+            // Add streaming support (now default)
+            if (completionOptions.stream) {
+              let assistantResponse = ''
+              
+              // Stream the response in real-time
+              completionOptions.onChunk = (chunk: any) => {
+                if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
+                  const content = chunk.choices[0].delta.content
+                  process.stdout.write(content)
+                  assistantResponse += content
+                }
+              }
+              
+              try {
+                await chatService.createCompletion(completionOptions)
+              } catch (streamError) {
+                console.error(chalk.red('\nStreaming error:'), streamError)
+                
+                // Fallback to non-streaming if streaming fails
+                console.log(chalk.yellow('Falling back to non-streaming mode...'))
+                completionOptions.stream = false
+                delete completionOptions.onChunk
+                
+                const response = await chatService.createCompletion(completionOptions)
+                
+                if (response && response.choices && response.choices[0] && response.choices[0].message) {
+                  assistantResponse = response.choices[0].message.content
+                  console.log(assistantResponse)
+                }
+              }
+              console.log() // Add newline at the end
+              return
+            }
+            
+            const response = await chatService.createCompletion(
+              completionOptions
+            )
+
+            // Check if response has the expected structure
+            if (
+              !response ||
+              !response.choices ||
+              !response.choices[0] ||
+              !response.choices[0].message
+            ) {
+              console.error(
+                chalk.red('Error: Unexpected response format from API')
+              )
+              console.error(
+                chalk.red('Response:', JSON.stringify(response, null, 2))
+              )
+              throw new Error('Unexpected response format from API')
+            }
+
+            // Get assistant's response
+            const assistantMessage = response.choices[0].message.content
+
+            // Display the response
+            if (containsMarkdown(assistantMessage)) {
+              console.log(renderMarkdown(assistantMessage))
+            } else {
+              console.log(assistantMessage)
+            }
+            
+            return
+          } catch (error) {
+            console.error(chalk.red('Error: Failed to get response'))
+            if (error instanceof Error) {
+              console.error(chalk.red(error.message))
+            }
+            process.exit(1)
+          }
         }
 
         console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
