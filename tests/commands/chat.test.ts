@@ -49,7 +49,10 @@ describe('Chat Commands', () => {
       const runCommand = chatCommand?.commands.find(cmd => cmd.name() === 'run')
       
       expect(runCommand).toBeDefined()
-      expect(runCommand?.description()).toContain('openai/gpt-oss')
+      
+      // Check the argument description which contains the default model
+      const modelArgument = runCommand?.args?.find(arg => arg.name() === 'model')
+      expect(modelArgument?.description).toContain('openai/gpt-oss')
     })
 
     it('should have streaming enabled by default', () => {
