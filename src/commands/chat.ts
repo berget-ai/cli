@@ -284,7 +284,23 @@ export function registerChatCommands(program: Command): void {
                   }
                 }
                 
-                await chatService.createCompletion(completionOptions)
+                try {
+                  await chatService.createCompletion(completionOptions)
+                } catch (streamError) {
+                  console.error(chalk.red('\nStreaming error:'), streamError)
+                  
+                  // Fallback to non-streaming if streaming fails
+                  console.log(chalk.yellow('Falling back to non-streaming mode...'))
+                  completionOptions.stream = false
+                  delete completionOptions.onChunk
+                  
+                  const response = await chatService.createCompletion(completionOptions)
+                  
+                  if (response && response.choices && response.choices[0] && response.choices[0].message) {
+                    assistantResponse = response.choices[0].message.content
+                    console.log(assistantResponse)
+                  }
+                }
                 console.log('\n')
                 
                 // Add assistant response to messages
