@@ -230,12 +230,23 @@ export function registerChatCommands(program: Command): void {
           })
         }
 
-        // If a message is provided, send it directly and exit
-        if (message) {
+        // Check if input is being piped in
+        let inputMessage = message
+        if (!inputMessage && !process.stdin.isTTY) {
+          // Read from stdin (piped input)
+          const chunks = []
+          for await (const chunk of process.stdin) {
+            chunks.push(chunk)
+          }
+          inputMessage = Buffer.concat(chunks).toString('utf8').trim()
+        }
+
+        // If a message is provided (either as argument or from stdin), send it directly and exit
+        if (inputMessage) {
           // Add user message
           messages.push({
             role: 'user',
-            content: message,
+            content: inputMessage,
           })
 
           try {
