@@ -46,7 +46,7 @@ export function registerChatCommands(program: Command): void {
       '--api-key-id <id>',
       'ID of the API key to use from your saved keys'
     )
-    .option('--stream', 'Stream the response')
+    .option('--no-stream', 'Disable streaming (streaming is enabled by default)')
     .action(async (options) => {
       try {
         const chatService = ChatService.getInstance()
@@ -262,7 +262,7 @@ export function registerChatCommands(program: Command): void {
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
                 max_tokens: options.maxTokens || 4096,
-                stream: options.stream || false
+                stream: options.stream !== false
               }
 
               // Only add apiKey if it actually exists
@@ -270,13 +270,12 @@ export function registerChatCommands(program: Command): void {
                 completionOptions.apiKey = apiKey
               }
               
-              // Add streaming support
-              if (options.stream) {
+              // Add streaming support (now default)
+              if (completionOptions.stream) {
                 let assistantResponse = ''
                 console.log(chalk.blue('Assistant: '))
                 
-                // For streaming, we'll collect the response and render it at the end
-                // since markdown needs the complete text to render properly
+                // Stream the response in real-time
                 completionOptions.onChunk = (chunk: any) => {
                   if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
                     const content = chunk.choices[0].delta.content
