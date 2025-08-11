@@ -37,7 +37,8 @@ export function registerChatCommands(program: Command): void {
   chat
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
-    .argument('[model]', 'Model to use (default: google/gemma-3-27b-it)')
+    .argument('[model]', 'Model to use (default: openai/gpt-oss)')
+    .argument('[message]', 'Message to send directly (skips interactive mode)')
     .option('-s, --system <message>', 'System message')
     .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
     .option('-m, --max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
@@ -46,8 +47,8 @@ export function registerChatCommands(program: Command): void {
       '--api-key-id <id>',
       'ID of the API key to use from your saved keys'
     )
-    .option('--stream', 'Stream the response')
-    .action(async (options) => {
+    .option('--no-stream', 'Disable streaming (streaming is enabled by default)')
+    .action(async (model, message, options) => {
       try {
         const chatService = ChatService.getInstance()
 
@@ -218,12 +219,6 @@ export function registerChatCommands(program: Command): void {
           }
         }
 
-        // Set up readline interface for user input
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        })
-
         // Prepare messages array
         const messages: ChatMessage[] = []
 
@@ -234,6 +229,139 @@ export function registerChatCommands(program: Command): void {
             content: options.system,
           })
         }
+
+        // Check if input is being piped in
+        let inputMessage = message
+        let stdinContent = ''
+        
+        if (!process.stdin.isTTY) {
+          // Read from stdin (piped input)
+          const chunks = []
+          for await (const chunk of process.stdin) {
+            chunks.push(chunk)
+          }
+          stdinContent = Buffer.concat(chunks).toString('utf8').trim()
+        }
+
+        // Combine stdin content with message if both exist
+        if (stdinContent && message) {
+          inputMessage = `${stdinContent}\n\n${message}`
+        } else if (stdinContent && !message) {
+          inputMessage = stdinContent
+        }
+
+        // If a message is provided (either as argument, from stdin, or both), send it directly and exit
+        if (inputMessage) {
+          // Add user message
+          messages.push({
+            role: 'user',
+            content: inputMessage,
+          })
+
+          try {
+            // Call the API
+            const completionOptions: ChatCompletionOptions = {
+              model: model || 'openai/gpt-oss',
+              messages: messages,
+              temperature:
+                options.temperature !== undefined ? options.temperature : 0.7,
+              max_tokens: options.maxTokens || 4096,
+              stream: options.stream !== false
+            }
+
+            // Only add apiKey if it actually exists
+            if (apiKey) {
+              completionOptions.apiKey = apiKey
+            }
+            
+            // Add streaming support (now default)
+            if (completionOptions.stream) {
+              let assistantResponse = ''
+              
+              // Stream the response in real-time
+              completionOptions.onChunk = (chunk: any) => {
+                if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
+                  const content = chunk.choices[0].delta.content
+                  try {
+                    process.stdout.write(content)
+                  } catch (error: any) {
+                    // Handle EPIPE errors gracefully (when pipe is closed)
+                    if (error.code === 'EPIPE') {
+                      // Stop streaming if the pipe is closed
+                      return
+                    }
+                    throw error
+                  }
+                  assistantResponse += content
+                }
+              }
+              
+              try {
+                await chatService.createCompletion(completionOptions)
+              } catch (streamError) {
+                console.error(chalk.red('\nStreaming error:'), streamError)
+                
+                // Fallback to non-streaming if streaming fails
+                console.log(chalk.yellow('Falling back to non-streaming mode...'))
+                completionOptions.stream = false
+                delete completionOptions.onChunk
+                
+                const response = await chatService.createCompletion(completionOptions)
+                
+                if (response && response.choices && response.choices[0] && response.choices[0].message) {
+                  assistantResponse = response.choices[0].message.content
+                  console.log(assistantResponse)
+                }
+              }
+              console.log() // Add newline at the end
+              return
+            }
+            
+            const response = await chatService.createCompletion(
+              completionOptions
+            )
+
+            // Check if response has the expected structure
+            if (
+              !response ||
+              !response.choices ||
+              !response.choices[0] ||
+              !response.choices[0].message
+            ) {
+              console.error(
+                chalk.red('Error: Unexpected response format from API')
+              )
+              console.error(
+                chalk.red('Response:', JSON.stringify(response, null, 2))
+              )
+              throw new Error('Unexpected response format from API')
+            }
+
+            // Get assistant's response
+            const assistantMessage = response.choices[0].message.content
+
+            // Display the response
+            if (containsMarkdown(assistantMessage)) {
+              console.log(renderMarkdown(assistantMessage))
+            } else {
+              console.log(assistantMessage)
+            }
+            
+            return
+          } catch (error) {
+            console.error(chalk.red('Error: Failed to get response'))
+            if (error instanceof Error) {
+              console.error(chalk.red(error.message))
+            }
+            process.exit(1)
+          }
+        }
+
+        // Set up readline interface for user input (only for interactive mode)
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        })
 
         console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'))
         console.log(chalk.cyan('----------------------------------------'))
@@ -257,12 +385,12 @@ export function registerChatCommands(program: Command): void {
             try {
               // Call the API
               const completionOptions: ChatCompletionOptions = {
-                model: options.args?.[0] || 'google/gemma-3-27b-it',
+                model: model || 'openai/gpt-oss',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
                 max_tokens: options.maxTokens || 4096,
-                stream: options.stream || false
+                stream: options.stream !== false
               }
 
               // Only add apiKey if it actually exists
@@ -270,22 +398,46 @@ export function registerChatCommands(program: Command): void {
                 completionOptions.apiKey = apiKey
               }
               
-              // Add streaming support
-              if (options.stream) {
+              // Add streaming support (now default)
+              if (completionOptions.stream) {
                 let assistantResponse = ''
                 console.log(chalk.blue('Assistant: '))
                 
-                // For streaming, we'll collect the response and render it at the end
-                // since markdown needs the complete text to render properly
+                // Stream the response in real-time
                 completionOptions.onChunk = (chunk: any) => {
                   if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
                     const content = chunk.choices[0].delta.content
-                    process.stdout.write(content)
+                    try {
+                      process.stdout.write(content)
+                    } catch (error: any) {
+                      // Handle EPIPE errors gracefully (when pipe is closed)
+                      if (error.code === 'EPIPE') {
+                        // Stop streaming if the pipe is closed
+                        return
+                      }
+                      throw error
+                    }
                     assistantResponse += content
                   }
                 }
                 
-                await chatService.createCompletion(completionOptions)
+                try {
+                  await chatService.createCompletion(completionOptions)
+                } catch (streamError) {
+                  console.error(chalk.red('\nStreaming error:'), streamError)
+                  
+                  // Fallback to non-streaming if streaming fails
+                  console.log(chalk.yellow('Falling back to non-streaming mode...'))
+                  completionOptions.stream = false
+                  delete completionOptions.onChunk
+                  
+                  const response = await chatService.createCompletion(completionOptions)
+                  
+                  if (response && response.choices && response.choices[0] && response.choices[0].message) {
+                    assistantResponse = response.choices[0].message.content
+                    console.log(assistantResponse)
+                  }
+                }
                 console.log('\n')
                 
                 // Add assistant response to messages

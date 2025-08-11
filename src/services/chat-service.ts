@@ -1,4 +1,4 @@
-import { createAuthenticatedClient, API_BASE_URL } from '../client'
+import { createAuthenticatedClient } from '../client'
 import { logger } from '../utils/logger'
 
 export interface ChatMessage {
@@ -323,28 +323,15 @@ export class ChatService {
     options: any,
     headers: Record<string, string>
   ): Promise<any> {
-    logger.debug('Handling streaming response')
-
-    // Create URL with query parameters
-    const url = new URL(`${API_BASE_URL}/v1/chat/completions`)
-
-    // Debug the headers and options
-    logger.debug('Streaming headers:')
-    logger.debug(JSON.stringify(headers, null, 2))
-
-    logger.debug('Streaming options:')
-    logger.debug(
-      JSON.stringify(
-        {
-          ...options,
-          onChunk: options.onChunk ? 'function present' : 'no function',
-        },
-        null,
-        2
-      )
-    )
+    // Use the same base URL as the client
+    const baseUrl = process.env.API_BASE_URL || 'https://api.berget.ai'
+    const url = new URL(`${baseUrl}/v1/chat/completions`)
 
     try {
+      logger.debug(`Making streaming request to: ${url.toString()}`)
+      logger.debug(`Headers:`, JSON.stringify(headers, null, 2))
+      logger.debug(`Body:`, JSON.stringify(options, null, 2))
+
       // Make fetch request directly to handle streaming
       const response = await fetch(url.toString(), {
         method: 'POST',
@@ -356,14 +343,17 @@ export class ChatService {
         body: JSON.stringify(options),
       })
 
+      logger.debug(`Response status: ${response.status}`)
+      logger.debug(`Response headers:`, JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2))
+
       if (!response.ok) {
         const errorText = await response.text()
         logger.error(
           `Stream request failed: ${response.status} ${response.statusText}`
         )
-        logger.debug(`Error response: ${errorText}`)
+        logger.error(`Error response: ${errorText}`)
         throw new Error(
-          `Stream request failed: ${response.status} ${response.statusText}`
+          `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`
         )
       }
 
