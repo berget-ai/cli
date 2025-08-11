@@ -10,6 +10,20 @@ import { DefaultApiKeyManager } from '../utils/default-api-key'
 import { renderMarkdown, containsMarkdown } from '../utils/markdown-renderer'
 
 /**
+ * Clean AI response by removing internal reasoning text
+ */
+function cleanAIResponse(response: string): string {
+  // Remove text between "analysis" and "assistantfinal" (case insensitive)
+  const cleanedResponse = response.replace(/analysis.*?assistantfinal/gis, '')
+  
+  // Also remove standalone "analysis" or "assistantfinal" words
+  return cleanedResponse
+    .replace(/^analysis.*$/gim, '')
+    .replace(/^assistantfinal.*$/gim, '')
+    .trim()
+}
+
+/**
  * Helper function to get user confirmation
  */
 async function confirm(question: string): Promise<boolean> {
@@ -313,6 +327,13 @@ export function registerChatCommands(program: Command): void {
                   console.log(assistantResponse)
                 }
               }
+              
+              // Clean the response by removing analysis/reasoning text
+              assistantResponse = cleanAIResponse(assistantResponse)
+              
+              // Clear stdout and write the clean response
+              process.stdout.write('\r\x1b[K') // Clear current line
+              process.stdout.write(assistantResponse)
               console.log() // Add newline at the end
               return
             }
@@ -340,11 +361,13 @@ export function registerChatCommands(program: Command): void {
             // Get assistant's response
             const assistantMessage = response.choices[0].message.content
 
-            // Display the response
-            if (containsMarkdown(assistantMessage)) {
-              console.log(renderMarkdown(assistantMessage))
+            // Clean and display the response
+            const cleanedMessage = cleanAIResponse(assistantMessage)
+            
+            if (containsMarkdown(cleanedMessage)) {
+              console.log(renderMarkdown(cleanedMessage))
             } else {
-              console.log(assistantMessage)
+              console.log(cleanedMessage)
             }
             
             return
@@ -440,10 +463,13 @@ export function registerChatCommands(program: Command): void {
                 }
                 console.log('\n')
                 
+                // Clean the response by removing analysis/reasoning text
+                const cleanedResponse = cleanAIResponse(assistantResponse)
+                
                 // Add assistant response to messages
                 messages.push({
                   role: 'assistant',
-                  content: assistantResponse
+                  content: cleanedResponse
                 })
                 
                 // Continue the conversation
@@ -480,20 +506,23 @@ export function registerChatCommands(program: Command): void {
               // Get assistant's response
               const assistantMessage = response.choices[0].message.content
 
-              // Add to messages array
+              // Clean and add to messages array
+              const cleanedMessage = cleanAIResponse(assistantMessage)
               messages.push({
                 role: 'assistant',
-                content: assistantMessage,
+                content: cleanedMessage,
               })
 
-              // Display the response
+              // Clean and display the response
+              const cleanedMessage = cleanAIResponse(assistantMessage)
+              
               console.log(chalk.blue('Assistant: '))
               
               // Check if the response contains markdown and render it if it does
-              if (containsMarkdown(assistantMessage)) {
-                console.log(renderMarkdown(assistantMessage))
+              if (containsMarkdown(cleanedMessage)) {
+                console.log(renderMarkdown(cleanedMessage))
               } else {
-                console.log(assistantMessage)
+                console.log(cleanedMessage)
               }
               
               console.log() // Empty line for better readability
