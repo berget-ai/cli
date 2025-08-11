@@ -12,6 +12,8 @@
     "logout": "node --import tsx ./index.ts --local auth logout",
     "whoami": "node --import tsx ./index.ts --local auth whoami",
     "build": "tsc",
+    "test": "vitest",
+    "test:run": "vitest run",
     "prepublishOnly": "npm run build",
     "generate-types": "openapi-typescript https://api.berget.ai/openapi.json -o src/types/api.d.ts"
   },
@@ -23,7 +25,8 @@
     "@types/marked-terminal": "^6.1.1",
     "@types/node": "^20.11.20",
     "tsx": "^4.19.3",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
   },
   "dependencies": {
     "chalk": "^4.1.2",
