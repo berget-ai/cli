@@ -1,191 +1,191 @@
 # Berget CLI
 
-En kommandoradsverktyg för att interagera med Berget AI:s infrastruktur och AI-modeller.
+A command-line tool for interacting with Berget AI's infrastructure and AI models.
 
 ## Installation
 
 ```bash
 npm install -g berget
-# eller använd direkt med npx
+# or use directly with npx
 npx berget --help
 ```
 
-## Autentisering
+## Authentication
 
-Innan du kan använda CLI:t behöver du autentisera dig:
+Before you can use the CLI, you need to authenticate:
 
 ```bash
-# Logga in med OAuth
+# Login with OAuth
 npx berget auth login
 
-# Skapa en API-nyckel
-npx berget api-keys create --name "Min CLI-nyckel"
+# Create an API key
+npx berget api-keys create --name "My CLI Key"
 
-# Eller använd miljövariabel
+# Or use environment variable
 export BERGET_API_KEY=sk_ber_your_api_key_here
 ```
 
-## Chat-kommandot
+## Chat Command
 
-### Grundläggande användning
+### Basic Usage
 
 ```bash
-# Interaktiv chat-session
+# Interactive chat session
 npx berget chat run
 
-# Använd specifik modell
+# Use specific model
 npx berget chat run openai/gpt-oss
 
-# Skicka direktmeddelande
-npx berget chat run openai/gpt-oss "Förklara vad Docker är"
+# Send direct message
+npx berget chat run openai/gpt-oss "Explain what Docker is"
 
-# Använd pipe för input
-echo "Vad är Kubernetes?" | npx berget chat run openai/gpt-oss
+# Use pipe for input
+echo "What is Kubernetes?" | npx berget chat run openai/gpt-oss
 ```
 
-### Praktiska användningsområden
+### Practical Use Cases
 
-#### 1. Git Commit-meddelanden
+#### 1. Git Commit Messages
 
 ```bash
-# Generera commit-meddelande från git diff
-git diff | npx berget chat run openai/gpt-oss "Skapa ett conventional commit-meddelande för denna diff. Svara endast med meddelandet:"
+# Generate commit message from git diff
+git diff | npx berget chat run openai/gpt-oss "Create a conventional commit message for this diff. Reply with only the message:"
 
-# Använd som alias
+# Use as alias
 alias gitcommit='git diff | npx berget chat run openai/gpt-oss "Generate a conventional commit message for this diff. Reply with only the commit message, nothing else:"'
 ```
 
-#### 2. Kodgranskning och förklaringar
+#### 2. Code Review and Explanations
 
 ```bash
-# Förklara kod
-cat src/main.js | npx berget chat run openai/gpt-oss "Förklara vad denna kod gör:"
+# Explain code
+cat src/main.js | npx berget chat run openai/gpt-oss "Explain what this code does:"
 
-# Hitta buggar
-cat problematic-file.py | npx berget chat run openai/gpt-oss "Analysera denna kod och hitta potentiella buggar:"
+# Find bugs
+cat problematic-file.py | npx berget chat run openai/gpt-oss "Analyze this code and find potential bugs:"
 
-# Förbättringsförslag
-git diff | npx berget chat run openai/gpt-oss "Ge förslag på förbättringar för denna kodändring:"
+# Improvement suggestions
+git diff | npx berget chat run openai/gpt-oss "Give suggestions for improvements to this code change:"
 ```
 
-#### 3. Dokumentation
+#### 3. Documentation
 
 ```bash
-# Generera README
-ls -la | npx berget chat run openai/gpt-oss "Skapa en README.md för detta projekt baserat på filstrukturen:"
+# Generate README
+ls -la | npx berget chat run openai/gpt-oss "Create a README.md for this project based on the file structure:"
 
-# Kommentera kod
-cat uncommented-code.js | npx berget chat run openai/gpt-oss "Lägg till JSDoc-kommentarer till denna kod:"
+# Comment code
+cat uncommented-code.js | npx berget chat run openai/gpt-oss "Add JSDoc comments to this code:"
 ```
 
-#### 4. Systemadministration
+#### 4. System Administration
 
 ```bash
-# Analysera loggar
-tail -n 100 /var/log/nginx/error.log | npx berget chat run openai/gpt-oss "Analysera dessa felloggar och föreslå lösningar:"
+# Analyze logs
+tail -n 100 /var/log/nginx/error.log | npx berget chat run openai/gpt-oss "Analyze these error logs and suggest solutions:"
 
-# Förklara kommandon
-npx berget chat run openai/gpt-oss "Förklara vad detta bash-kommando gör: find . -name '*.js' -exec grep -l 'TODO' {} \;"
+# Explain commands
+npx berget chat run openai/gpt-oss "Explain what this bash command does: find . -name '*.js' -exec grep -l 'TODO' {} \;"
 ```
 
-## Användbara Bash/Zsh-alias
+## Useful Bash/Zsh Aliases
 
-Lägg till dessa i din `~/.bashrc`, `~/.zshrc` eller liknande:
+Add these to your `~/.bashrc`, `~/.zshrc` or similar:
 
 ```bash
-# Git-relaterade alias
+# Git-related aliases
 alias gai='git diff | npx berget chat run openai/gpt-oss "Generate a conventional commit message for this diff. Reply with only the commit message, nothing else:"'
-alias gexplain='git log --oneline -10 | npx berget chat run openai/gpt-oss "Förklara vad dessa commits gör:"'
+alias gexplain='git log --oneline -10 | npx berget chat run openai/gpt-oss "Explain what these commits do:"'
 alias gsec='~/bin/security-check'
 
-# Kod-relaterade alias
-alias explain='npx berget chat run openai/gpt-oss "Förklara denna kod:"'
-alias review='npx berget chat run openai/gpt-oss "Granska denna kod och ge förbättringsförslag:"'
-alias debug='npx berget chat run openai/gpt-oss "Hitta och förklara potentiella buggar i denna kod:"'
+# Code-related aliases
+alias explain='npx berget chat run openai/gpt-oss "Explain this code:"'
+alias review='npx berget chat run openai/gpt-oss "Review this code and give improvement suggestions:"'
+alias debug='npx berget chat run openai/gpt-oss "Find and explain potential bugs in this code:"'
 
-# Dokumentations-alias
-alias docgen='npx berget chat run openai/gpt-oss "Generera dokumentation för denna kod:"'
-alias readme='ls -la | npx berget chat run openai/gpt-oss "Skapa en README.md för detta projekt:"'
+# Documentation aliases
+alias docgen='npx berget chat run openai/gpt-oss "Generate documentation for this code:"'
+alias readme='ls -la | npx berget chat run openai/gpt-oss "Create a README.md for this project:"'
 
-# System-alias
-alias loganalyze='npx berget chat run openai/gpt-oss "Analysera dessa loggar och föreslå lösningar:"'
-alias cmdexplain='npx berget chat run openai/gpt-oss "Förklara detta kommando:"'
+# System aliases
+alias loganalyze='npx berget chat run openai/gpt-oss "Analyze these logs and suggest solutions:"'
+alias cmdexplain='npx berget chat run openai/gpt-oss "Explain this command:"'
 
-# Snabb AI-assistent
+# Quick AI assistant
 alias ai='npx berget chat run openai/gpt-oss'
 alias ask='npx berget chat run openai/gpt-oss'
 ```
 
-## Avancerade exempel
+## Advanced Examples
 
-Se `examples/` mappen för kompletta skript:
+See the `examples/` folder for complete scripts:
 
-- **smart-commit.sh** - Automatisk generering av conventional commit-meddelanden
-- **ai-review.sh** - AI-driven kodgranskning
-- **security-check.sh** - Säkerhetsgranskning av commits
+- **smart-commit.sh** - Automatic generation of conventional commit messages
+- **ai-review.sh** - AI-driven code review
+- **security-check.sh** - Security review of commits
 
 ```bash
-# Kopiera exempel-skript
+# Copy example scripts
 cp examples/*.sh ~/bin/
 chmod +x ~/bin/*.sh
 
-# Använd dem
+# Use them
 ~/bin/smart-commit.sh
 ~/bin/ai-review.sh src/main.js
 ~/bin/security-check.sh
 ```
 
-## Miljövariabler
+## Environment Variables
 
 ```bash
-# API-nyckel (rekommenderat)
+# API key (recommended)
 export BERGET_API_KEY=sk_ber_your_api_key_here
 
-# Debug-läge
+# Debug mode
 export LOG_LEVEL=debug
 
-# Anpassad API-bas-URL (om du använder egen instans)
+# Custom API base URL (if using your own instance)
 export API_BASE_URL=https://your-custom-api.example.com
 ```
 
-## Tips och tricks
+## Tips and Tricks
 
-1. **Använd pipes**: Kombinera med andra Unix-verktyg för kraftfulla workflows
-2. **Korta prompter**: Var specifik men koncis i dina prompter för bästa resultat
-3. **Streaming**: Streaming är aktiverat som standard för snabbare svar
-4. **Modellval**: Experimentera med olika modeller för olika uppgifter
-5. **Alias**: Skapa alias för vanliga användningsfall för att spara tid
+1. **Use pipes**: Combine with other Unix tools for powerful workflows
+2. **Short prompts**: Be specific but concise in your prompts for best results
+3. **Streaming**: Streaming is enabled by default for faster responses
+4. **Model selection**: Experiment with different models for different tasks
+5. **Aliases**: Create aliases for common use cases to save time
 
-## Kommandoreferens
+## Command Reference
 
-- `auth login` - Logga in till Berget
-- `auth logout` - Logga ut från Berget
-- `auth whoami` - Visa aktuell användarinformation
-- `api-keys list` - Lista API-nycklar
-- `api-keys create` - Skapa en ny API-nyckel
-- `models list` - Lista tillgängliga AI-modeller
-- `chat run` - Starta en chat-session med en AI-modell
-- `chat list` - Lista tillgängliga chat-modeller
+- `auth login` - Login to Berget
+- `auth logout` - Logout from Berget
+- `auth whoami` - Show current user information
+- `api-keys list` - List API keys
+- `api-keys create` - Create a new API key
+- `models list` - List available AI models
+- `chat run` - Start a chat session with an AI model
+- `chat list` - List available chat models
 
-För en komplett lista över kommandon, kör:
+For a complete list of commands, run:
 
 ```bash
 npx berget --help
 ```
 
-## Felsökning
+## Troubleshooting
 
 ```bash
-# Aktivera debug-läge
+# Enable debug mode
 npx berget --debug chat run openai/gpt-oss "test"
 
-# Kontrollera autentisering
+# Check authentication
 npx berget auth whoami
 
-# Lista tillgängliga modeller
+# List available models
 npx berget chat list
 
-# Kontrollera API-nyckel-status
+# Check API key status
 npx berget api-keys list
 ```
 
@@ -193,7 +193,7 @@ npx berget api-keys list
 
 ### Setup
 
-Klona repositoriet och installera beroenden:
+Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/berget-ai/cli.git
@@ -201,31 +201,31 @@ cd cli
 npm install
 ```
 
-### Testa lokalt
+### Test Locally
 
-Använd `start`-skriptet för att testa CLI:t lokalt med `--local`-flaggan:
+Use the `start` script to test the CLI locally with the `--local` flag:
 
 ```bash
 npm start -- <command> [options]
 ```
 
-Till exempel:
+For example:
 
 ```bash
-# Testa inloggning
+# Test login
 npm start -- auth login
 
-# Testa whoami
+# Test whoami
 npm start -- auth whoami
 
-# Testa med debug-output
+# Test with debug output
 npm start -- auth whoami --debug
 ```
 
-## Bidra
+## Contributing
 
-Berget CLI är öppen källkod. Bidrag välkomnas!
+Berget CLI is open source. Contributions are welcome!
 
 - GitHub: [berget-ai/cli](https://github.com/berget-ai/cli)
-- Issues: [Rapportera buggar](https://github.com/berget-ai/cli/issues)
-- Dokumentation: [docs.berget.ai](https://docs.berget.ai)
+- Issues: [Report bugs](https://github.com/berget-ai/cli/issues)
+- Documentation: [docs.berget.ai](https://docs.berget.ai)

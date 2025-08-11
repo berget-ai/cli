@@ -3,24 +3,24 @@
 # Usage: ./smart-commit.sh
 set -e
 
-# Kontrollera att det finns ändringar
+# Check if there are staged changes
 if [[ -z $(git diff --cached) ]]; then
-    echo "Inga staged ändringar hittades. Kör 'git add' först."
+    echo "No staged changes found. Run 'git add' first."
     exit 1
 fi
 
-# Generera commit-meddelande
+# Generate commit message
 COMMIT_MSG=$(git diff --cached | npx berget chat run openai/gpt-oss "Generate a conventional commit message for this staged diff. Reply with only the commit message, nothing else:")
 
-echo "Föreslaget commit-meddelande:"
+echo "Suggested commit message:"
 echo "  $COMMIT_MSG"
 echo
 
-read -p "Vill du använda detta meddelande? (y/N): " -n 1 -r
+read -p "Do you want to use this message? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     git commit -m "$COMMIT_MSG"
-    echo "✅ Commit skapad!"
+    echo "✅ Commit created!"
 else
-    echo "❌ Commit avbruten"
+    echo "❌ Commit cancelled"
 fi

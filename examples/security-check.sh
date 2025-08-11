@@ -3,47 +3,69 @@
 # Usage: ./security-check.sh
 set -e
 
-echo "🔒 Säkerhetsgranskning av commits..."
+echo "🔒 Security review of commits..."
 echo "===================================="
 
-# Kontrollera om det finns staged ändringar
+# Check if there are staged changes
 if [[ -z $(git diff --cached) ]]; then
-    echo "Inga staged ändringar hittades. Kör 'git add' först."
+    echo "No staged changes found. Run 'git add' first."
     exit 1
 fi
 
-# Hämta diff för säkerhetsgranskning
+# Get diff for security review
 DIFF=$(git diff --cached)
 
-echo "Analyserar säkerhetsrisker i staged ändringar..."
+echo "Analyzing security risks in staged changes..."
 
 SECURITY_REPORT=$(echo "$DIFF" | npx berget chat run openai/gpt-oss "
-Analysera denna git diff för säkerhetsrisker och sårbarheter:
+Analyze this git diff for security vulnerabilities using OWASP Top 20 Code Review recommendations:
 
-1. **Känslig information**: API-nycklar, lösenord, tokens, secrets
-2. **Injektionsrisker**: SQL injection, XSS, command injection
-3. **Autentisering/auktorisering**: Svaga kontroller, privilege escalation
-4. **Kryptografi**: Svag kryptering, hårdkodade nycklar
-5. **Input-validering**: Otillräcklig validering, buffer overflows
-6. **Filhantering**: Path traversal, osäkra filoperationer
-7. **Nätverkssäkerhet**: Osäkra anslutningar, CSRF
-8. **Loggning**: Känslig data i loggar, information disclosure
+**OWASP Top 20 Security Categories to Check:**
 
-Ge en säkerhetsbedömning:
-- 🟢 SÄKER: Inga säkerhetsrisker identifierade
-- 🟡 VARNING: Mindre säkerhetsrisker som bör åtgärdas
-- 🔴 KRITISK: Allvarliga säkerhetsrisker som MÅSTE åtgärdas
+1. **A01 - Broken Access Control**: Authorization bypasses, privilege escalation, insecure direct object references
+2. **A02 - Cryptographic Failures**: Weak encryption, hardcoded keys, insecure random number generation, plain text storage
+3. **A03 - Injection**: SQL injection, NoSQL injection, command injection, LDAP injection, XSS
+4. **A04 - Insecure Design**: Missing security controls, threat modeling gaps, insecure architecture patterns
+5. **A05 - Security Misconfiguration**: Default credentials, unnecessary features enabled, verbose error messages
+6. **A06 - Vulnerable Components**: Outdated dependencies, known vulnerable libraries, unpatched components
+7. **A07 - Authentication Failures**: Weak passwords, session management flaws, credential stuffing vulnerabilities
+8. **A08 - Software Integrity Failures**: Unsigned code, insecure CI/CD pipelines, auto-update without verification
+9. **A09 - Logging Failures**: Insufficient logging, sensitive data in logs, log injection
+10. **A10 - Server-Side Request Forgery**: SSRF vulnerabilities, unvalidated URLs, internal service access
 
-Format:
-**SÄKERHETSBEDÖMNING: [🟢/🟡/🔴] [SÄKER/VARNING/KRITISK]**
+**Additional Critical Areas:**
+11. **Input Validation**: Insufficient sanitization, buffer overflows, format string vulnerabilities
+12. **Output Encoding**: XSS prevention, content type validation, encoding bypasses
+13. **File Operations**: Path traversal, file upload vulnerabilities, insecure file permissions
+14. **Network Security**: Insecure protocols, certificate validation, CSRF protection
+15. **Session Management**: Session fixation, insecure cookies, session timeout issues
+16. **Error Handling**: Information disclosure, stack traces in production, verbose error messages
+17. **Business Logic**: Race conditions, workflow bypasses, price manipulation
+18. **API Security**: Rate limiting, input validation, authentication on all endpoints
+19. **Mobile Security**: Insecure data storage, weak encryption, certificate pinning
+20. **Cloud Security**: Misconfigured permissions, exposed storage, insecure defaults
 
-**IDENTIFIERADE RISKER:**
-- [Lista specifika risker om några]
+**Assessment Criteria:**
+- 🟢 SAFE: No security risks identified according to OWASP guidelines
+- 🟡 WARNING: Minor security risks that should be addressed (OWASP Medium risk)
+- 🔴 CRITICAL: Serious security risks that MUST be addressed immediately (OWASP High/Critical risk)
 
-**REKOMMENDATIONER:**
-- [Konkreta åtgärder för att åtgärda riskerna]
+**Required Response Format:**
+**SECURITY ASSESSMENT: [🟢/🟡/🔴] [SAFE/WARNING/CRITICAL]**
 
-Diff:
+**OWASP CATEGORIES AFFECTED:**
+- [List specific OWASP categories if any vulnerabilities found]
+
+**IDENTIFIED RISKS:**
+- [List specific vulnerabilities with OWASP category references]
+
+**RECOMMENDATIONS:**
+- [Concrete remediation steps following OWASP secure coding practices]
+
+**COMPLIANCE NOTES:**
+- [Any additional security considerations or compliance requirements]
+
+Diff to analyze:
 \`\`\`diff
 $DIFF
 \`\`\`
@@ -52,29 +74,29 @@ $DIFF
 echo "$SECURITY_REPORT"
 echo ""
 
-# Extrahera säkerhetsnivå från rapporten
-if echo "$SECURITY_REPORT" | grep -q "🔴.*KRITISK"; then
-    echo "❌ KRITISKA säkerhetsrisker identifierade!"
-    echo "Commit blockerad. Åtgärda säkerhetsproblemen innan du fortsätter."
+# Extract security level from report
+if echo "$SECURITY_REPORT" | grep -q "🔴.*CRITICAL"; then
+    echo "❌ CRITICAL security risks identified!"
+    echo "Commit blocked. Address security issues before continuing."
     exit 1
-elif echo "$SECURITY_REPORT" | grep -q "🟡.*VARNING"; then
-    echo "⚠️  Säkerhetsvarningar identifierade."
-    read -p "Vill du fortsätta med commit trots varningarna? (y/N): " -n 1 -r
+elif echo "$SECURITY_REPORT" | grep -q "🟡.*WARNING"; then
+    echo "⚠️  Security warnings identified."
+    read -p "Do you want to continue with commit despite warnings? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Commit avbruten. Åtgärda säkerhetsproblemen först."
+        echo "Commit cancelled. Address security issues first."
         exit 1
     fi
-elif echo "$SECURITY_REPORT" | grep -q "🟢.*SÄKER"; then
-    echo "✅ Inga säkerhetsrisker identifierade. Säkert att fortsätta!"
+elif echo "$SECURITY_REPORT" | grep -q "🟢.*SAFE"; then
+    echo "✅ No security risks identified. Safe to continue!"
 else
-    echo "⚠️  Kunde inte avgöra säkerhetsstatus. Granska manuellt."
-    read -p "Vill du fortsätta med commit? (y/N): " -n 1 -r
+    echo "⚠️  Could not determine security status. Review manually."
+    read -p "Do you want to continue with commit? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Commit avbruten."
+        echo "Commit cancelled."
         exit 1
     fi
 fi
 
-echo "Säkerhetsgranskning klar. Du kan nu köra 'git commit'."
+echo "Security review complete. You can now run 'git commit'."
