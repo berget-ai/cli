@@ -47,7 +47,7 @@ export function registerChatCommands(program: Command): void {
       'ID of the API key to use from your saved keys'
     )
     .option('--no-stream', 'Disable streaming (streaming is enabled by default)')
-    .action(async (options) => {
+    .action(async (model, options) => {
       try {
         const chatService = ChatService.getInstance()
 
@@ -257,7 +257,7 @@ export function registerChatCommands(program: Command): void {
             try {
               // Call the API
               const completionOptions: ChatCompletionOptions = {
-                model: options.args?.[0] || 'openai/gpt-oss',
+                model: model || 'openai/gpt-oss',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
