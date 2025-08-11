@@ -55,6 +55,27 @@ cp examples/*.sh ~/bin/
 chmod +x ~/bin/smart-commit.sh ~/bin/ai-review.sh ~/bin/security-check.sh
 ```
 
+## Global Security Hook
+
+For maximum security, you can install a global git hook that automatically runs security checks before every push:
+
+```bash
+# Install the global security hook
+chmod +x examples/install-global-security-hook.sh
+./examples/install-global-security-hook.sh
+```
+
+This will:
+- Create a global pre-push hook that runs on all repositories
+- Automatically analyze commits for security vulnerabilities using OWASP Top 20
+- Block pushes with critical security issues
+- Warn about medium-risk issues and allow you to choose
+
+The hook will run automatically before every `git push`. To bypass it temporarily (not recommended):
+```bash
+git push --no-verify
+```
+
 ## Git Aliases
 
 You can also add these as git aliases:
