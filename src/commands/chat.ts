@@ -716,17 +716,16 @@ export function registerChatCommands(program: Command): void {
         const models = await chatService.listModels(apiKey)
 
         console.log(chalk.bold('Available Chat Models:'))
-        console.log(chalk.dim('─'.repeat(70)))
+        console.log(chalk.dim('─'.repeat(80)))
         console.log(
-          chalk.dim('MODEL ID'.padEnd(40)) +
+          chalk.dim('MODEL ID'.padEnd(45)) +
+            chalk.dim('STATUS'.padEnd(10)) +
             chalk.dim('CAPABILITIES')
         )
-        console.log(chalk.dim('─'.repeat(70)))
+        console.log(chalk.dim('─'.repeat(80)))
 
-        // Show all models with status indication
-        const allModels = models.data;
-        
-        allModels.forEach((model: any) => {
+        // Show all models - no filtering
+        models.data.forEach((model: any) => {
           const capabilities = []
           if (model.capabilities.vision) capabilities.push('vision')
           if (model.capabilities.function_calling)
@@ -734,27 +733,24 @@ export function registerChatCommands(program: Command): void {
           if (model.capabilities.json_mode) capabilities.push('json_mode')
 
           // Format model ID in Huggingface compatible format (owner/model)
-          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(40)
+          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(45)
           
-          let output = modelId + capabilities.join(', ')
-          
-          // Show status
+          // Show status with color coding
           const isUp = model.status && model.status.up === true
-          if (!isUp) {
-            output += chalk.red(' (offline)')
-          } else {
-            output += chalk.green(' (online)')
-          }
+          const status = isUp ? chalk.green('online') : chalk.red('offline')
+          const statusPadded = (isUp ? 'online' : 'offline').padEnd(10)
+          
+          const capabilitiesText = capabilities.join(', ')
+          
+          console.log(modelId + status.padEnd(10) + capabilitiesText)
           
           // Show aliases when API supports them
           // TODO: Uncomment when API adds aliases field
           /*
           if (model.aliases && model.aliases.length > 0) {
-            output += chalk.dim(` (aliases: ${model.aliases.join(', ')})`)
+            console.log(chalk.dim(`  aliases: ${model.aliases.join(', ')}`))
           }
           */
-          
-          console.log(output)
         })
       } catch (error) {
         handleError('Failed to list chat models', error)
