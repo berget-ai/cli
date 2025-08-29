@@ -100,10 +100,10 @@ export function registerChatCommands(program: Command): void {
           )
           apiKey = envApiKey;
           
-          // Debug the API key (first few characters only)
+          // Debug the API key format
           if (process.argv.includes('--debug')) {
             console.log(
-              chalk.yellow(`DEBUG: API key from env starts with: ${envApiKey.substring(0, 4)}...`)
+              chalk.yellow(`DEBUG: API key from env starts with: ${envApiKey.substring(0, 8)}... (length: ${envApiKey.length})`)
             )
           }
         }
@@ -300,18 +300,42 @@ export function registerChatCommands(program: Command): void {
               try {
                 await chatService.createCompletion(completionOptions)
               } catch (streamError) {
-                console.error(chalk.red('\nStreaming error:'), streamError)
-                
+                const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+              
+                if (process.argv.includes('--debug')) {
+                  console.error(chalk.yellow('\nDEBUG: Streaming error details:'))
+                  console.error(chalk.yellow(JSON.stringify(streamError, null, 2)))
+                }
+              
+                if (errorMessage.includes('Internal server error')) {
+                  console.error(chalk.red('\nAPI server error during streaming.'))
+                  console.error(chalk.yellow('This might be a temporary server issue.'))
+                } else {
+                  console.error(chalk.red('\nStreaming error:'), errorMessage)
+                }
+              
                 // Fallback to non-streaming if streaming fails
                 console.log(chalk.yellow('Falling back to non-streaming mode...'))
                 completionOptions.stream = false
                 delete completionOptions.onChunk
+              
+                try {
+                  const response = await chatService.createCompletion(completionOptions)
                 
-                const response = await chatService.createCompletion(completionOptions)
+                  if (response && response.choices && response.choices[0] && response.choices[0].message) {
+                    assistantResponse = response.choices[0].message.content
+                    console.log(assistantResponse)
+                  } else {
+                    console.error(chalk.red('Error: Invalid response format from API'))
+                  }
+                } catch (fallbackError) {
+                  const fallbackErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+                  console.error(chalk.red('Fallback also failed:'), fallbackErrorMessage)
                 
-                if (response && response.choices && response.choices[0] && response.choices[0].message) {
-                  assistantResponse = response.choices[0].message.content
-                  console.log(assistantResponse)
+                  if (fallbackErrorMessage.includes('Internal server error')) {
+                    console.error(chalk.yellow('The API server appears to be experiencing issues.'))
+                    console.error(chalk.yellow('Please try again later.'))
+                  }
                 }
               }
               console.log() // Add newline at the end
@@ -548,6 +572,13 @@ export function registerChatCommands(program: Command): void {
             chalk.dim(`Using API key from BERGET_API_KEY environment variable`)
           )
           apiKey = envApiKey;
+          
+          // Debug the API key format
+          if (process.argv.includes('--debug')) {
+            console.log(
+              chalk.yellow(`DEBUG: API key from env starts with: ${envApiKey.substring(0, 8)}... (length: ${envApiKey.length})`)
+            )
+          }
         }
         // If API key is already provided via command line, use it
         else if (options.apiKey) {
@@ -633,13 +664,56 @@ export function registerChatCommands(program: Command): void {
         }
 
         const chatService = ChatService.getInstance()
-        const models = await chatService.listModels(apiKey)
+        
+        try {
+          const models = await chatService.listModels(apiKey)
 
-        // Debug output
-        if (program.opts().debug) {
-          console.log(chalk.yellow('DEBUG: Models response:'))
-          console.log(chalk.yellow(JSON.stringify(models, null, 2)))
+          // Debug output
+          if (process.argv.includes('--debug')) {
+            console.log(chalk.yellow('DEBUG: Models response:'))
+            console.log(chalk.yellow(JSON.stringify(models, null, 2)))
+          }
+
+          if (!models || !models.data) {
+            console.error(chalk.red('Error: Invalid response format from models API'))
+            console.error(chalk.red('Response:', JSON.stringify(models, null, 2)))
+            return
+          }
+        } catch (error) {
+          // Enhanced error handling for models API
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          
+          if (process.argv.includes('--debug')) {
+            console.log(chalk.yellow('DEBUG: Full error details:'))
+            console.log(chalk.yellow(JSON.stringify(error, null, 2)))
+          }
+          
+          if (errorMessage.includes('Internal server error')) {
+            console.error(chalk.red('API server error when fetching models.'))
+            console.error(chalk.yellow('This might be a temporary server issue. Try again in a few minutes.'))
+            
+            if (apiKey) {
+              console.error(chalk.yellow('If the problem persists, your API key might be invalid or expired.'))
+              console.error(chalk.yellow('Try creating a new API key with: berget api-keys create --name "New Key"'))
+            } else {
+              console.error(chalk.yellow('Try logging in again with: berget auth login'))
+            }
+          } else if (errorMessage.includes('Unauthorized') || errorMessage.includes('AUTH_')) {
+            console.error(chalk.red('Authentication failed.'))
+            if (apiKey) {
+              console.error(chalk.yellow('Your API key appears to be invalid or expired.'))
+              console.error(chalk.yellow('Try creating a new API key with: berget api-keys create --name "New Key"'))
+            } else {
+              console.error(chalk.yellow('Please log in with: berget auth login'))
+            }
+          } else {
+            console.error(chalk.red('Unexpected error:'), errorMessage)
+          }
+          
+          return
         }
+
+        const models = await chatService.listModels(apiKey)
 
         console.log(chalk.bold('Available Chat Models:'))
         console.log(chalk.dim('─'.repeat(70)))
