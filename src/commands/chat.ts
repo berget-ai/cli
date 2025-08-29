@@ -716,13 +716,13 @@ export function registerChatCommands(program: Command): void {
         const models = await chatService.listModels(apiKey)
 
         console.log(chalk.bold('Available Chat Models:'))
-        console.log(chalk.dim('─'.repeat(80)))
+        console.log(chalk.dim('─'.repeat(100)))
         console.log(
-          chalk.dim('MODEL ID'.padEnd(45)) +
-            chalk.dim('STATUS'.padEnd(10)) +
+          chalk.dim('MODEL ID'.padEnd(55)) +
+            chalk.dim('STATUS'.padEnd(12)) +
             chalk.dim('CAPABILITIES')
         )
-        console.log(chalk.dim('─'.repeat(80)))
+        console.log(chalk.dim('─'.repeat(100)))
 
         // Show all models - no filtering
         models.data.forEach((model: any) => {
@@ -733,16 +733,15 @@ export function registerChatCommands(program: Command): void {
           if (model.capabilities.json_mode) capabilities.push('json_mode')
 
           // Format model ID in Huggingface compatible format (owner/model)
-          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(45)
+          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(55)
           
           // Show status with color coding
           const isUp = model.status && model.status.up === true
-          const status = isUp ? chalk.green('online') : chalk.red('offline')
-          const statusPadded = (isUp ? 'online' : 'offline').padEnd(10)
+          const status = isUp ? chalk.green('online'.padEnd(12)) : chalk.red('offline'.padEnd(12))
           
           const capabilitiesText = capabilities.join(', ')
           
-          console.log(modelId + status.padEnd(10) + capabilitiesText)
+          console.log(modelId + status + capabilitiesText)
           
           // Show aliases when API supports them
           // TODO: Uncomment when API adds aliases field
