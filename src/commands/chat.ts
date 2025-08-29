@@ -99,38 +99,11 @@ export function registerChatCommands(program: Command): void {
                 console.log(
                   chalk.yellow(`Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`)
                 )
+                // Don't return here, continue with authentication check
               }
             } else {
-              // No default API key, prompt the user to create one
-              console.log(chalk.yellow('No default API key set.'))
-
-              // Try to prompt for a default API key
-              apiKey = await defaultApiKeyManager.promptForDefaultApiKey()
-
-              if (!apiKey) {
-                console.log(
-                  chalk.red(
-                    'Error: An API key is required to use the chat command.'
-                  )
-                )
-                console.log(chalk.yellow('You can:'))
-                console.log(
-                  chalk.yellow(
-                    '1. Create an API key with: berget api-keys create --name "My Key"'
-                  )
-                )
-                console.log(
-                  chalk.yellow(
-                    '2. Set a default API key with: berget api-keys set-default <id>'
-                  )
-                )
-                console.log(
-                  chalk.yellow(
-                    '3. Provide an API key with the --api-key option'
-                  )
-                )
-                return
-              }
+              // No default API key, try to continue with regular authentication
+              console.log(chalk.dim('No default API key set, using authentication.'))
             }
           } catch (error) {
             if (process.argv.includes('--debug')) {
@@ -139,54 +112,41 @@ export function registerChatCommands(program: Command): void {
               )
               console.log(chalk.yellow(String(error)))
             }
+            // Continue with regular authentication
           }
         }
 
-        // If no direct API key, try to get one from API key ID
+        // If no direct API key, try to get one from API key ID (but don't rotate automatically)
         if (!apiKey && apiKeyId) {
           try {
             const apiKeyService = ApiKeyService.getInstance()
             const keys = await apiKeyService.list()
             const selectedKey = keys.find(
-              (key) => key.id.toString() === options.apiKeyId
+              (key) => key.id.toString() === apiKeyId
             )
 
             if (!selectedKey) {
               console.log(
                 chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
+                  `API key with ID ${apiKeyId} not found. Using default authentication.`
                 )
               )
             } else {
-              console.log(chalk.dim(`Using API key: ${selectedKey.name}`))
-
-              // We need to rotate the key to get the actual key value
-              if (
-                await confirm(
-                  chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`
-                  )
+              console.log(chalk.dim(`Found API key: ${selectedKey.name}`))
+              console.log(
+                chalk.yellow(
+                  `Note: To use this API key for requests, you need to rotate it first with: berget api-keys rotate ${apiKeyId}`
                 )
-              ) {
-                const rotatedKey = await apiKeyService.rotate(options.apiKeyId)
-                apiKey = rotatedKey.key
-                console.log(
-                  chalk.green(
-                    `API key "${selectedKey.name}" rotated successfully.`
-                  )
-                )
-              } else {
-                console.log(
-                  chalk.yellow('Using default authentication instead.')
-                )
-              }
+              )
+              console.log(chalk.dim('Using default authentication instead.'))
             }
           } catch (error) {
             // Check if this is an authentication error
             const errorMessage = error instanceof Error ? error.message : String(error);
             const isAuthError = errorMessage.includes('Unauthorized') || 
                                errorMessage.includes('Authentication failed') ||
-                               errorMessage.includes('AUTH_FAILED');
+                               errorMessage.includes('AUTH_FAILED') ||
+                               errorMessage.includes('Not Found');
             
             if (isAuthError) {
               console.log(chalk.yellow('Authentication required. Please run `berget auth login` first.'));
@@ -201,19 +161,16 @@ export function registerChatCommands(program: Command): void {
         // Verify we have authentication before starting chat
         if (!apiKey) {
           try {
-            AuthService.getInstance()
+            const authService = AuthService.getInstance()
+            // Try to verify authentication works
+            console.log(chalk.dim('Using authenticated session for chat.'))
           } catch (error) {
             console.log(chalk.red('Error: Authentication required for chat'))
             console.log(chalk.yellow('Please either:'))
             console.log(chalk.yellow('1. Log in with `berget auth login`'))
             console.log(chalk.yellow('2. Provide an API key with `--api-key`'))
             console.log(
-              chalk.yellow('3. Provide an API key ID with `--api-key-id`')
-            )
-            console.log(
-              chalk.yellow(
-                '4. Set a default API key with `berget api-keys set-default <id>`'
-              )
+              chalk.yellow('3. Create and set a default API key with `berget api-keys create --name "My Key"`')
             )
             return
           }
@@ -259,9 +216,26 @@ export function registerChatCommands(program: Command): void {
           })
 
           try {
+            // Handle model aliases
+            let resolvedModel = model || 'openai/gpt-oss'
+            
+            // Map common aliases to full model names
+            const modelAliases: { [key: string]: string } = {
+              'gpt-oss': 'openai/gpt-oss',
+              'gpt-4': 'openai/gpt-4',
+              'gpt-3.5': 'openai/gpt-3.5-turbo',
+              'claude': 'anthropic/claude-3-sonnet',
+              'llama': 'meta/llama-2-70b-chat'
+            }
+            
+            if (modelAliases[resolvedModel]) {
+              resolvedModel = modelAliases[resolvedModel]
+              console.log(chalk.dim(`Using model: ${resolvedModel}`))
+            }
+
             // Call the API
             const completionOptions: ChatCompletionOptions = {
-              model: model || 'openai/gpt-oss',
+              model: resolvedModel,
               messages: messages,
               temperature:
                 options.temperature !== undefined ? options.temperature : 0.7,
@@ -383,9 +357,25 @@ export function registerChatCommands(program: Command): void {
             })
 
             try {
+              // Handle model aliases
+              let resolvedModel = model || 'openai/gpt-oss'
+              
+              // Map common aliases to full model names
+              const modelAliases: { [key: string]: string } = {
+                'gpt-oss': 'openai/gpt-oss',
+                'gpt-4': 'openai/gpt-4',
+                'gpt-3.5': 'openai/gpt-3.5-turbo',
+                'claude': 'anthropic/claude-3-sonnet',
+                'llama': 'meta/llama-2-70b-chat'
+              }
+              
+              if (modelAliases[resolvedModel]) {
+                resolvedModel = modelAliases[resolvedModel]
+              }
+
               // Call the API
               const completionOptions: ChatCompletionOptions = {
-                model: model || 'openai/gpt-oss',
+                model: resolvedModel,
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
@@ -532,61 +522,94 @@ export function registerChatCommands(program: Command): void {
         let apiKey = options.apiKey
         let apiKeyId = options.apiKeyId
 
-        // If no API key or API key ID provided, check for default API key
-        if (!apiKey && !apiKeyId) {
-          const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-          const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
+        // Check for environment variable first
+        const envApiKey = process.env.BERGET_API_KEY;
+        if (envApiKey) {
+          console.log(
+            chalk.dim(`Using API key from BERGET_API_KEY environment variable`)
+          )
+          apiKey = envApiKey;
+        }
+        // If API key is already provided via command line, use it
+        else if (options.apiKey) {
+          console.log(
+            chalk.dim(`Using API key from command line argument`)
+          )
+          apiKey = options.apiKey;
+        }
+        // If no API key or API key ID provided and no env var, check for default API key
+        else if (!apiKey && !apiKeyId) {
+          try {
+            const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
+            const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
 
-          if (defaultApiKeyData) {
-            apiKeyId = defaultApiKeyData.id
-            console.log(
-              chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
-            )
+            if (defaultApiKeyData) {
+              apiKeyId = defaultApiKeyData.id
+              apiKey = defaultApiKeyData.key
+              
+              if (apiKey) {
+                console.log(
+                  chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
+                )
+              } else {
+                console.log(
+                  chalk.yellow(`Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`)
+                )
+                console.log(
+                  chalk.yellow(`Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`)
+                )
+              }
+            } else {
+              console.log(chalk.dim('No default API key set, using authentication.'))
+            }
+          } catch (error) {
+            if (process.argv.includes('--debug')) {
+              console.log(
+                chalk.yellow('DEBUG: Error checking default API key:')
+              )
+              console.log(chalk.yellow(String(error)))
+            }
           }
         }
 
-        if (apiKeyId && !apiKey) {
+        // If no direct API key, try to get one from API key ID (but don't rotate automatically)
+        if (!apiKey && apiKeyId) {
           try {
             const apiKeyService = ApiKeyService.getInstance()
             const keys = await apiKeyService.list()
             const selectedKey = keys.find(
-              (key) => key.id.toString() === options.apiKeyId
+              (key) => key.id.toString() === apiKeyId
             )
 
             if (!selectedKey) {
               console.log(
                 chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
+                  `API key with ID ${apiKeyId} not found. Using default authentication.`
                 )
               )
             } else {
-              console.log(chalk.dim(`Using API key: ${selectedKey.name}`))
-
-              // We need to rotate the key to get the actual key value
-              if (
-                await confirm(
-                  chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`
-                  )
+              console.log(chalk.dim(`Found API key: ${selectedKey.name}`))
+              console.log(
+                chalk.yellow(
+                  `Note: To use this API key for requests, you need to rotate it first with: berget api-keys rotate ${apiKeyId}`
                 )
-              ) {
-                const rotatedKey = await apiKeyService.rotate(options.apiKeyId)
-                apiKey = rotatedKey.key
-                console.log(
-                  chalk.green(
-                    `API key "${selectedKey.name}" rotated successfully.`
-                  )
-                )
-              } else {
-                console.log(
-                  chalk.yellow('Using default authentication instead.')
-                )
-              }
+              )
+              console.log(chalk.dim('Using default authentication instead.'))
             }
           } catch (error) {
-            console.error(chalk.red('Error fetching API key:'))
-            console.error(error)
-            console.log(chalk.yellow('Using default authentication instead.'))
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isAuthError = errorMessage.includes('Unauthorized') || 
+                               errorMessage.includes('Authentication failed') ||
+                               errorMessage.includes('AUTH_FAILED') ||
+                               errorMessage.includes('Not Found');
+            
+            if (isAuthError) {
+              console.log(chalk.yellow('Authentication required. Please run `berget auth login` first.'));
+            } else {
+              console.error(chalk.red('Error fetching API key:'));
+              console.error(error);
+            }
+            console.log(chalk.yellow('Using default authentication instead.'));
           }
         }
 
