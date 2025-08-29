@@ -10,6 +10,42 @@ import { DefaultApiKeyManager } from '../utils/default-api-key'
 import { renderMarkdown, containsMarkdown } from '../utils/markdown-renderer'
 
 /**
+ * Resolve model alias to full model name using API data
+ * This will be used when the API supports model aliases
+ */
+async function resolveModelAlias(modelName: string, apiKey?: string): Promise<string> {
+  try {
+    const chatService = ChatService.getInstance()
+    const models = await chatService.listModels(apiKey)
+    
+    // Look for the model by exact name first
+    const exactMatch = models.data.find((model: any) => 
+      model.id === modelName || `${model.owned_by.toLowerCase()}/${model.id}` === modelName
+    )
+    
+    if (exactMatch) {
+      return `${exactMatch.owned_by.toLowerCase()}/${exactMatch.id}`
+    }
+    
+    // Look for alias match when API supports it
+    // TODO: Uncomment when API adds aliases field
+    /*
+    for (const model of models.data) {
+      if (model.aliases && model.aliases.includes(modelName)) {
+        return `${model.owned_by.toLowerCase()}/${model.id}`
+      }
+    }
+    */
+    
+    // If no match found, return original name
+    return modelName
+  } catch (error) {
+    // If we can't fetch models, return original name
+    return modelName
+  }
+}
+
+/**
  * Helper function to get user confirmation
  */
 async function confirm(question: string): Promise<boolean> {
@@ -216,22 +252,13 @@ export function registerChatCommands(program: Command): void {
           })
 
           try {
-            // Handle model aliases
+            // Handle model aliases - will be populated from API when available
             let resolvedModel = model || 'openai/gpt-oss'
             
-            // Map common aliases to full model names
-            const modelAliases: { [key: string]: string } = {
-              'gpt-oss': 'openai/gpt-oss',
-              'gpt-4': 'openai/gpt-4',
-              'gpt-3.5': 'openai/gpt-3.5-turbo',
-              'claude': 'anthropic/claude-3-sonnet',
-              'llama': 'meta/llama-2-70b-chat'
-            }
-            
-            if (modelAliases[resolvedModel]) {
-              resolvedModel = modelAliases[resolvedModel]
-              console.log(chalk.dim(`Using model: ${resolvedModel}`))
-            }
+            // TODO: In the future, fetch model aliases from API
+            // For now, use the model name as-is
+            // When API supports aliases, we'll fetch available models and their aliases
+            // and resolve the alias to the full model name here
 
             // Call the API
             const completionOptions: ChatCompletionOptions = {
@@ -357,21 +384,13 @@ export function registerChatCommands(program: Command): void {
             })
 
             try {
-              // Handle model aliases
+              // Handle model aliases - will be populated from API when available
               let resolvedModel = model || 'openai/gpt-oss'
               
-              // Map common aliases to full model names
-              const modelAliases: { [key: string]: string } = {
-                'gpt-oss': 'openai/gpt-oss',
-                'gpt-4': 'openai/gpt-4',
-                'gpt-3.5': 'openai/gpt-3.5-turbo',
-                'claude': 'anthropic/claude-3-sonnet',
-                'llama': 'meta/llama-2-70b-chat'
-              }
-              
-              if (modelAliases[resolvedModel]) {
-                resolvedModel = modelAliases[resolvedModel]
-              }
+              // TODO: In the future, fetch model aliases from API
+              // For now, use the model name as-is
+              // When API supports aliases, we'll fetch available models and their aliases
+              // and resolve the alias to the full model name here
 
               // Call the API
               const completionOptions: ChatCompletionOptions = {
@@ -643,10 +662,17 @@ export function registerChatCommands(program: Command): void {
           // Format model ID in Huggingface compatible format (owner/model)
           const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(40)
           
-          console.log(
-            modelId +
-            capabilities.join(', ')
-          )
+          let output = modelId + capabilities.join(', ')
+          
+          // Show aliases when API supports them
+          // TODO: Uncomment when API adds aliases field
+          /*
+          if (model.aliases && model.aliases.length > 0) {
+            output += chalk.dim(` (aliases: ${model.aliases.join(', ')})`)
+          }
+          */
+          
+          console.log(output)
         })
       } catch (error) {
         handleError('Failed to list chat models', error)
