@@ -723,10 +723,10 @@ export function registerChatCommands(program: Command): void {
         )
         console.log(chalk.dim('─'.repeat(70)))
 
-        // Filter to only show active models
-        const activeModels = models.data.filter((model: any) => model.active === true);
+        // Show all models with status indication
+        const allModels = models.data;
         
-        activeModels.forEach((model: any) => {
+        allModels.forEach((model: any) => {
           const capabilities = []
           if (model.capabilities.vision) capabilities.push('vision')
           if (model.capabilities.function_calling)
@@ -737,6 +737,14 @@ export function registerChatCommands(program: Command): void {
           const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(40)
           
           let output = modelId + capabilities.join(', ')
+          
+          // Show status
+          const isUp = model.status && model.status.up === true
+          if (!isUp) {
+            output += chalk.red(' (offline)')
+          } else {
+            output += chalk.green(' (online)')
+          }
           
           // Show aliases when API supports them
           // TODO: Uncomment when API adds aliases field
