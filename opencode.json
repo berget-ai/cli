@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "berget": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Berget AI",
+      "options": {
+        "baseURL": "https://api.berget.ai/v1"
+      },
+      "models": {
+        "deepseek-r1": {
+          "name": "GLM-4.6"
+        }
+      }
+    }
+  }
+}

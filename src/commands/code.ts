@@ -165,44 +165,170 @@ export function registerCodeCommands(program: Command): void {
 
         console.log(chalk.cyan(`Initializing OpenCode for project: ${projectName}`))
 
-        // Create API key for the project
+        // Handle API key selection or creation
         let apiKey: string
+        let keyName: string
+        
         try {
           const apiKeyService = ApiKeyService.getInstance()
-          const keyName = `opencode-${projectName}-${Date.now()}`
-          const createOptions: CreateApiKeyOptions = { name: keyName }
-          const keyData = await apiKeyService.create(createOptions)
-          apiKey = keyData.key
-          console.log(chalk.green(`✓ Created API key: ${keyName}`))
+          
+          // List existing API keys
+          console.log(chalk.blue('\n📋 Checking existing API keys...'))
+          const existingKeys = await apiKeyService.list()
+          
+          if (existingKeys.length > 0) {
+            console.log(chalk.blue('Found existing API keys:'))
+            console.log(chalk.dim('─'.repeat(60)))
+            existingKeys.forEach((key, index) => {
+              console.log(`${chalk.cyan((index + 1).toString())}. ${chalk.bold(key.name)} (${key.prefix}...)`)
+              console.log(chalk.dim(`   Created: ${new Date(key.created).toLocaleDateString('sv-SE')}`))
+              console.log(chalk.dim(`   Last used: ${key.lastUsed ? new Date(key.lastUsed).toLocaleDateString('sv-SE') : 'Never'}`))
+              if (index < existingKeys.length - 1) console.log()
+            })
+            console.log(chalk.dim('─'.repeat(60)))
+            console.log(chalk.cyan(`${existingKeys.length + 1}. Create a new API key`))
+            
+            // Get user choice
+            const choice = await new Promise<string>((resolve) => {
+              const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+              })
+              rl.question(chalk.blue('\nSelect an option (1-' + (existingKeys.length + 1) + '): '), (answer) => {
+                rl.close()
+                resolve(answer.trim())
+              })
+            })
+            
+            const choiceIndex = parseInt(choice) - 1
+            
+            if (choiceIndex >= 0 && choiceIndex < existingKeys.length) {
+              // Use existing key
+              const selectedKey = existingKeys[choiceIndex]
+              keyName = selectedKey.name
+              
+              // We need to rotate the key to get the actual key value
+              console.log(chalk.yellow(`\n🔄 Rotating API key "${selectedKey.name}" to get the key value...`))
+              
+              if (await confirm(chalk.yellow('This will invalidate the current key. Continue? (y/n): '))) {
+                const rotatedKey = await apiKeyService.rotate(selectedKey.id.toString())
+                apiKey = rotatedKey.key
+                console.log(chalk.green(`✓ API key rotated successfully`))
+              } else {
+                console.log(chalk.yellow('Cancelled. Please select a different option or create a new key.'))
+                return
+              }
+            } else if (choiceIndex === existingKeys.length) {
+              // Create new key
+              console.log(chalk.blue('\n🔑 Creating new API key...'))
+              
+              const defaultKeyName = `opencode-${projectName}-${Date.now()}`
+              const customName = await new Promise<string>((resolve) => {
+                const rl = readline.createInterface({
+                  input: process.stdin,
+                  output: process.stdout,
+                })
+                rl.question(chalk.blue(`Enter key name (default: ${defaultKeyName}): `), (answer) => {
+                  rl.close()
+                  resolve(answer.trim() || defaultKeyName)
+                })
+              })
+              
+              keyName = customName
+              const createOptions: CreateApiKeyOptions = { name: keyName }
+              const keyData = await apiKeyService.create(createOptions)
+              apiKey = keyData.key
+              console.log(chalk.green(`✓ Created new API key: ${keyName}`))
+            } else {
+              console.log(chalk.red('Invalid selection.'))
+              return
+            }
+          } else {
+            // No existing keys, create new one
+            console.log(chalk.yellow('No existing API keys found.'))
+            console.log(chalk.blue('Creating a new API key...'))
+            
+            const defaultKeyName = `opencode-${projectName}-${Date.now()}`
+            const customName = await new Promise<string>((resolve) => {
+              const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+              })
+              rl.question(chalk.blue(`Enter key name (default: ${defaultKeyName}): `), (answer) => {
+                rl.close()
+                resolve(answer.trim() || defaultKeyName)
+              })
+            })
+            
+            keyName = customName
+            const createOptions: CreateApiKeyOptions = { name: keyName }
+            const keyData = await apiKeyService.create(createOptions)
+            apiKey = keyData.key
+            console.log(chalk.green(`✓ Created new API key: ${keyName}`))
+          }
         } catch (error) {
-          console.error(chalk.red('Failed to create API key:'))
-          handleError('API key creation failed', error)
+          console.error(chalk.red('Failed to handle API keys:'))
+          handleError('API key operation failed', error)
           return
         }
 
-        // Create opencode.json config
+        // Create .env file with API key
+        const envPath = path.join(process.cwd(), '.env')
+        const envContent = `# Berget AI Configuration for ${projectName}
+# Generated by berget code init
+# Do not commit to version control
+BERGET_API_KEY=${apiKey}
+`
+
+        // Create opencode.json config (without API key)
         const config = {
           model: "berget/deepseek-r1", // Will be changed to glm-4-6 later
-          apiKey: apiKey,
+          envKey: "BERGET_API_KEY",
           projectName: projectName,
           provider: "berget",
           created: new Date().toISOString(),
           version: "1.0.0"
         }
 
-        // Ask for permission to create config file
-        console.log(chalk.blue('\nAbout to create configuration file:'))
-        console.log(chalk.dim(`Path: ${configPath}`))
+        // Ask for permission to create config files
+        console.log(chalk.blue('\nAbout to create configuration files:'))
+        console.log(chalk.dim(`Config: ${configPath}`))
+        console.log(chalk.dim(`Environment: ${envPath}`))
         console.log(chalk.dim('This will configure OpenCode to use Berget AI models.'))
+        console.log(chalk.cyan('\n💡 Benefits:'))
+        console.log(chalk.cyan('  • API key stored separately in .env file (not committed to Git)'))
+        console.log(chalk.cyan('  • Easy cost separation per project/customer'))
+        console.log(chalk.cyan('  • Secure key management with environment variables'))
         
-        if (await confirm('\nCreate configuration file? (y/n): ')) {
+        if (await confirm('\nCreate configuration files? (y/n): ')) {
           try {
+            // Create .env file
+            await writeFile(envPath, envContent)
+            console.log(chalk.green(`✓ Created .env with API key`))
+            
+            // Create opencode.json
             await writeFile(configPath, JSON.stringify(config, null, 2))
             console.log(chalk.green(`✓ Created opencode.json`))
             console.log(chalk.dim(`  Model: ${config.model}`))
             console.log(chalk.dim(`  Project: ${config.projectName}`))
+            console.log(chalk.dim(`  API Key: Stored in .env as ${config.envKey}`))
+            
+            // Check if .gitignore exists and add .env if not already there
+            const gitignorePath = path.join(process.cwd(), '.gitignore')
+            let gitignoreContent = ''
+            
+            if (fs.existsSync(gitignorePath)) {
+              gitignoreContent = fs.readFileSync(gitignorePath, 'utf8')
+            }
+            
+            if (!gitignoreContent.includes('.env')) {
+              gitignoreContent += (gitignoreContent.endsWith('\n') ? '' : '\n') + '.env\n'
+              await writeFile(gitignorePath, gitignoreContent)
+              console.log(chalk.green(`✓ Added .env to .gitignore`))
+            }
+            
           } catch (error) {
-            console.error(chalk.red('Failed to create config file:'))
+            console.error(chalk.red('Failed to create config files:'))
             handleError('Config file creation failed', error)
             return
           }
