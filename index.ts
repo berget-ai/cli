@@ -36,6 +36,7 @@ if (process.argv.length <= 2) {
   console.log(chalk.blue(`  ${chalk.bold('berget auth login')}      - Log in to Berget`));
   console.log(chalk.blue(`  ${chalk.bold('berget models list')}     - List available AI models`));
   console.log(chalk.blue(`  ${chalk.bold('berget chat run')}        - Start a chat session`));
+  console.log(chalk.blue(`  ${chalk.bold('berget code init')}       - Initialize AI coding assistant`));
   console.log(chalk.blue(`  ${chalk.bold('berget api-keys list')}   - List your API keys`));
   console.log(chalk.blue(`\nRun ${chalk.bold('berget --help')} for a complete list of commands.`));
 }
@@ -49,7 +50,8 @@ const commonMistakes: Record<string, string> = {
   'list-keys': 'api-keys list',
   'create-key': 'api-keys create',
   'list-clusters': 'clusters list',
-  'usage': 'billing usage'
+  'usage': 'billing usage',
+  'init': 'code init'
 };
 
 // Add error handler for unknown commands

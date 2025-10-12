@@ -16,6 +16,7 @@ export const COMMAND_GROUPS = {
   USERS: 'users',
   BILLING: 'billing',
   CHAT: 'chat',
+  CODE: 'code',
 }
 
 // Subcommands for each group
@@ -31,6 +32,12 @@ export const SUBCOMMANDS = {
   CHAT: {
     RUN: 'run',
     LIST: 'list',
+  },
+  
+  // Code commands
+  CODE: {
+    INIT: 'init',
+    RUN: 'run',
   },
   
   // API Keys commands
@@ -181,4 +188,9 @@ export const COMMAND_DESCRIPTIONS = {
   [COMMAND_GROUPS.CHAT]: 'Interact with AI chat models',
   [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.RUN}`]: 'Run a chat session with a specified model',
   [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.LIST}`]: 'List available chat models',
+  
+  // Code group
+  [COMMAND_GROUPS.CODE]: 'AI-powered coding assistant with OpenCode',
+  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`]: 'Initialize project for AI coding assistant',
+  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`]: 'Run AI coding assistant',
 }

@@ -7,6 +7,7 @@ import { registerModelCommands } from './models'
 import { registerUserCommands } from './users'
 import { registerChatCommands } from './chat'
 import { registerAutocompleteCommands } from './autocomplete'
+import { registerCodeCommands } from './code'
 
 /**
  * Register all command groups with the program
@@ -20,4 +21,5 @@ export function registerCommands(program: Command): void {
   registerUserCommands(program)
   registerChatCommands(program)
   registerAutocompleteCommands(program)
+  registerCodeCommands(program)
 }
