@@ -282,7 +282,7 @@ BERGET_API_KEY=${apiKey}
 
         // Create opencode.json config (without API key)
         const config = {
-          model: "berget/deepseek-r1", // Will be changed to glm-4-6 later
+          model: "berget/deepseek-r1", // TODO: Change to "glm-4-6" when it becomes available (see issue #123)
           envKey: "BERGET_API_KEY",
           projectName: projectName,
           provider: "berget",
