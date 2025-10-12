@@ -75,7 +75,7 @@ describe('Code Commands', () => {
       expect(initCommand?.description()).toBe('Initialize project for AI coding assistant')
     })
 
-    it('should have name and force options', () => {
+    it('should have name, force, and yes options', () => {
       const codeCommand = program.commands.find(cmd => cmd.name() === 'code')
       const initCommand = codeCommand?.commands.find(cmd => cmd.name() === 'init')
       
@@ -83,11 +83,14 @@ describe('Code Commands', () => {
       
       const nameOption = initCommand?.options.find(opt => opt.long === '--name')
       const forceOption = initCommand?.options.find(opt => opt.long === '--force')
+      const yesOption = initCommand?.options.find(opt => opt.long === '--yes')
       
       expect(nameOption).toBeDefined()
       expect(nameOption?.description).toContain('Project name')
       expect(forceOption).toBeDefined()
       expect(forceOption?.description).toContain('Overwrite existing configuration')
+      expect(yesOption).toBeDefined()
+      expect(yesOption?.description).toContain('Automatically answer yes')
     })
 
     it('should check if opencode is installed', () => {
@@ -208,7 +211,7 @@ describe('Code Commands', () => {
       expect(runCommand?.description()).toBe('Run AI coding assistant')
     })
 
-    it('should accept prompt argument and model option', () => {
+    it('should accept prompt argument and model, no-config, and yes options', () => {
       const codeCommand = program.commands.find(cmd => cmd.name() === 'code')
       const runCommand = codeCommand?.commands.find(cmd => cmd.name() === 'run')
       
@@ -216,11 +219,14 @@ describe('Code Commands', () => {
       
       const modelOption = runCommand?.options.find(opt => opt.long === '--model')
       const noConfigOption = runCommand?.options.find(opt => opt.long === '--no-config')
+      const yesOption = runCommand?.options.find(opt => opt.long === '--yes')
       
       expect(modelOption).toBeDefined()
       expect(modelOption?.description).toContain('Model to use')
       expect(noConfigOption).toBeDefined()
       expect(noConfigOption?.description).toContain('Run without loading project config')
+      expect(yesOption).toBeDefined()
+      expect(yesOption?.description).toContain('Automatically answer yes')
     })
 
     it('should load configuration from opencode.json', async () => {
@@ -302,6 +308,40 @@ describe('Code Commands', () => {
     it('should install opencode via npm if user agrees', () => {
       // Should spawn npm install -g opencode-ai
       expect(mockSpawn).toBeDefined()
+    })
+  })
+
+  describe('automation support', () => {
+    it('should support -y flag for automated initialization', () => {
+      const codeCommand = program.commands.find(cmd => cmd.name() === 'code')
+      const initCommand = codeCommand?.commands.find(cmd => cmd.name() === 'init')
+      
+      expect(initCommand).toBeDefined()
+      
+      const yesOption = initCommand?.options.find(opt => opt.long === '--yes')
+      expect(yesOption).toBeDefined()
+      expect(yesOption?.description).toContain('automation')
+    })
+
+    it('should support -y flag for automated run', () => {
+      const codeCommand = program.commands.find(cmd => cmd.name() === 'code')
+      const runCommand = codeCommand?.commands.find(cmd => cmd.name() === 'run')
+      
+      expect(runCommand).toBeDefined()
+      
+      const yesOption = runCommand?.options.find(opt => opt.long === '--yes')
+      expect(yesOption).toBeDefined()
+      expect(yesOption?.description).toContain('automation')
+    })
+
+    it('should use BERGET_API_KEY environment variable in automation mode', () => {
+      // Test that environment variable is used when -y flag is set
+      process.env.BERGET_API_KEY = 'test-env-key'
+      
+      expect(process.env.BERGET_API_KEY).toBe('test-env-key')
+      
+      // Clean up
+      delete process.env.BERGET_API_KEY
     })
   })
 

@@ -12,7 +12,11 @@ import { spawn } from 'child_process'
 /**
  * Helper function to get user confirmation
  */
-async function confirm(question: string): Promise<boolean> {
+async function confirm(question: string, autoYes = false): Promise<boolean> {
+  if (autoYes) {
+    return true
+  }
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -22,6 +26,27 @@ async function confirm(question: string): Promise<boolean> {
     rl.question(question, (answer) => {
       rl.close()
       resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes')
+    })
+  })
+}
+
+/**
+ * Helper function to get user input
+ */
+async function getInput(question: string, defaultValue: string, autoYes = false): Promise<string> {
+  if (autoYes) {
+    return defaultValue
+  }
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  })
+
+  return new Promise<string>((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close()
+      resolve(answer.trim() || defaultValue)
     })
   })
 }
@@ -110,18 +135,22 @@ async function installOpencode(): Promise<boolean> {
 /**
  * Ensure opencode is installed, offering to install if not
  */
-async function ensureOpencodeInstalled(): Promise<boolean> {
+async function ensureOpencodeInstalled(autoYes = false): Promise<boolean> {
   let opencodeInstalled = await checkOpencodeInstalled()
   if (!opencodeInstalled) {
-    console.log(chalk.red('OpenCode is not installed.'))
-    console.log(chalk.blue('OpenCode is required for the AI coding assistant.'))
+    if (!autoYes) {
+      console.log(chalk.red('OpenCode is not installed.'))
+      console.log(chalk.blue('OpenCode is required for the AI coding assistant.'))
+    }
     
-    if (await confirm('Would you like to install OpenCode automatically? (y/n): ')) {
+    if (await confirm('Would you like to install OpenCode automatically? (y/n): ', autoYes)) {
       opencodeInstalled = await installOpencode()
     } else {
-      console.log(chalk.blue('\nInstallation cancelled.'))
-      console.log(chalk.blue('To install manually: curl -fsSL https://opencode.ai/install | bash'))
-      console.log(chalk.blue('Or visit: https://opencode.ai/docs'))
+      if (!autoYes) {
+        console.log(chalk.blue('\nInstallation cancelled.'))
+        console.log(chalk.blue('To install manually: curl -fsSL https://opencode.ai/install | bash'))
+        console.log(chalk.blue('Or visit: https://opencode.ai/docs'))
+      }
     }
   }
   
@@ -141,6 +170,7 @@ export function registerCodeCommands(program: Command): void {
     .description('Initialize project for AI coding assistant')
     .option('-n, --name <name>', 'Project name (defaults to directory name)')
     .option('-f, --force', 'Overwrite existing configuration')
+    .option('-y, --yes', 'Automatically answer yes to all prompts (for automation)')
     .action(async (options) => {
       try {
         const projectName = options.name || getProjectName()
@@ -148,10 +178,12 @@ export function registerCodeCommands(program: Command): void {
         
         // Check if already initialized
         if (fs.existsSync(configPath) && !options.force) {
-          console.log(chalk.yellow('Project already initialized for OpenCode.'))
-          console.log(chalk.dim(`Config file: ${configPath}`))
+          if (!options.yes) {
+            console.log(chalk.yellow('Project already initialized for OpenCode.'))
+            console.log(chalk.dim(`Config file: ${configPath}`))
+          }
           
-          if (await confirm('Do you want to reinitialize? (y/n): ')) {
+          if (await confirm('Do you want to reinitialize? (y/n): ', options.yes)) {
             // Continue with reinitialization
           } else {
             return
@@ -159,7 +191,7 @@ export function registerCodeCommands(program: Command): void {
         }
 
         // Ensure opencode is installed
-        if (!(await ensureOpencodeInstalled())) {
+        if (!(await ensureOpencodeInstalled(options.yes))) {
           return
         }
 
@@ -172,99 +204,92 @@ export function registerCodeCommands(program: Command): void {
         try {
           const apiKeyService = ApiKeyService.getInstance()
           
-          // List existing API keys
-          console.log(chalk.blue('\n📋 Checking existing API keys...'))
-          const existingKeys = await apiKeyService.list()
-          
-          if (existingKeys.length > 0) {
-            console.log(chalk.blue('Found existing API keys:'))
-            console.log(chalk.dim('─'.repeat(60)))
-            existingKeys.forEach((key, index) => {
-              console.log(`${chalk.cyan((index + 1).toString())}. ${chalk.bold(key.name)} (${key.prefix}...)`)
-              console.log(chalk.dim(`   Created: ${new Date(key.created).toLocaleDateString('sv-SE')}`))
-              console.log(chalk.dim(`   Last used: ${key.lastUsed ? new Date(key.lastUsed).toLocaleDateString('sv-SE') : 'Never'}`))
-              if (index < existingKeys.length - 1) console.log()
-            })
-            console.log(chalk.dim('─'.repeat(60)))
-            console.log(chalk.cyan(`${existingKeys.length + 1}. Create a new API key`))
+          // For automation mode, check for environment variable first
+          if (options.yes && process.env.BERGET_API_KEY) {
+            console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
+            apiKey = process.env.BERGET_API_KEY
+            keyName = `env-key-${projectName}`
+          } else {
+            // List existing API keys
+            if (!options.yes) {
+              console.log(chalk.blue('\n📋 Checking existing API keys...'))
+            }
+            const existingKeys = await apiKeyService.list()
             
-            // Get user choice
-            const choice = await new Promise<string>((resolve) => {
-              const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
+            if (existingKeys.length > 0 && !options.yes) {
+              console.log(chalk.blue('Found existing API keys:'))
+              console.log(chalk.dim('─'.repeat(60)))
+              existingKeys.forEach((key, index) => {
+                console.log(`${chalk.cyan((index + 1).toString())}. ${chalk.bold(key.name)} (${key.prefix}...)`)
+                console.log(chalk.dim(`   Created: ${new Date(key.created).toLocaleDateString('sv-SE')}`))
+                console.log(chalk.dim(`   Last used: ${key.lastUsed ? new Date(key.lastUsed).toLocaleDateString('sv-SE') : 'Never'}`))
+                if (index < existingKeys.length - 1) console.log()
               })
-              rl.question(chalk.blue('\nSelect an option (1-' + (existingKeys.length + 1) + '): '), (answer) => {
-                rl.close()
-                resolve(answer.trim())
-              })
-            })
-            
-            const choiceIndex = parseInt(choice) - 1
-            
-            if (choiceIndex >= 0 && choiceIndex < existingKeys.length) {
-              // Use existing key
-              const selectedKey = existingKeys[choiceIndex]
-              keyName = selectedKey.name
+              console.log(chalk.dim('─'.repeat(60)))
+              console.log(chalk.cyan(`${existingKeys.length + 1}. Create a new API key`))
               
-              // We need to rotate the key to get the actual key value
-              console.log(chalk.yellow(`\n🔄 Rotating API key "${selectedKey.name}" to get the key value...`))
-              
-              if (await confirm(chalk.yellow('This will invalidate the current key. Continue? (y/n): '))) {
-                const rotatedKey = await apiKeyService.rotate(selectedKey.id.toString())
-                apiKey = rotatedKey.key
-                console.log(chalk.green(`✓ API key rotated successfully`))
-              } else {
-                console.log(chalk.yellow('Cancelled. Please select a different option or create a new key.'))
-                return
-              }
-            } else if (choiceIndex === existingKeys.length) {
-              // Create new key
-              console.log(chalk.blue('\n🔑 Creating new API key...'))
-              
-              const defaultKeyName = `opencode-${projectName}-${Date.now()}`
-              const customName = await new Promise<string>((resolve) => {
+              // Get user choice
+              const choice = await new Promise<string>((resolve) => {
                 const rl = readline.createInterface({
                   input: process.stdin,
                   output: process.stdout,
                 })
-                rl.question(chalk.blue(`Enter key name (default: ${defaultKeyName}): `), (answer) => {
+                rl.question(chalk.blue('\nSelect an option (1-' + (existingKeys.length + 1) + '): '), (answer) => {
                   rl.close()
-                  resolve(answer.trim() || defaultKeyName)
+                  resolve(answer.trim())
                 })
               })
+              
+              const choiceIndex = parseInt(choice) - 1
+              
+              if (choiceIndex >= 0 && choiceIndex < existingKeys.length) {
+                // Use existing key
+                const selectedKey = existingKeys[choiceIndex]
+                keyName = selectedKey.name
+                
+                // We need to rotate the key to get the actual key value
+                console.log(chalk.yellow(`\n🔄 Rotating API key "${selectedKey.name}" to get the key value...`))
+                
+                if (await confirm(chalk.yellow('This will invalidate the current key. Continue? (y/n): '), options.yes)) {
+                  const rotatedKey = await apiKeyService.rotate(selectedKey.id.toString())
+                  apiKey = rotatedKey.key
+                  console.log(chalk.green(`✓ API key rotated successfully`))
+                } else {
+                  console.log(chalk.yellow('Cancelled. Please select a different option or create a new key.'))
+                  return
+                }
+              } else if (choiceIndex === existingKeys.length) {
+                // Create new key
+                console.log(chalk.blue('\n🔑 Creating new API key...'))
+                
+                const defaultKeyName = `opencode-${projectName}-${Date.now()}`
+                const customName = await getInput(chalk.blue(`Enter key name (default: ${defaultKeyName}): `), defaultKeyName, options.yes)
+                
+                keyName = customName
+                const createOptions: CreateApiKeyOptions = { name: keyName }
+                const keyData = await apiKeyService.create(createOptions)
+                apiKey = keyData.key
+                console.log(chalk.green(`✓ Created new API key: ${keyName}`))
+              } else {
+                console.log(chalk.red('Invalid selection.'))
+                return
+              }
+            } else {
+              // No existing keys or automation mode - create new one
+              if (!options.yes) {
+                console.log(chalk.yellow('No existing API keys found.'))
+                console.log(chalk.blue('Creating a new API key...'))
+              }
+              
+              const defaultKeyName = `opencode-${projectName}-${Date.now()}`
+              const customName = await getInput(chalk.blue(`Enter key name (default: ${defaultKeyName}): `), defaultKeyName, options.yes)
               
               keyName = customName
               const createOptions: CreateApiKeyOptions = { name: keyName }
               const keyData = await apiKeyService.create(createOptions)
               apiKey = keyData.key
               console.log(chalk.green(`✓ Created new API key: ${keyName}`))
-            } else {
-              console.log(chalk.red('Invalid selection.'))
-              return
             }
-          } else {
-            // No existing keys, create new one
-            console.log(chalk.yellow('No existing API keys found.'))
-            console.log(chalk.blue('Creating a new API key...'))
-            
-            const defaultKeyName = `opencode-${projectName}-${Date.now()}`
-            const customName = await new Promise<string>((resolve) => {
-              const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-              })
-              rl.question(chalk.blue(`Enter key name (default: ${defaultKeyName}): `), (answer) => {
-                rl.close()
-                resolve(answer.trim() || defaultKeyName)
-              })
-            })
-            
-            keyName = customName
-            const createOptions: CreateApiKeyOptions = { name: keyName }
-            const keyData = await apiKeyService.create(createOptions)
-            apiKey = keyData.key
-            console.log(chalk.green(`✓ Created new API key: ${keyName}`))
           }
         } catch (error) {
           console.error(chalk.red('Failed to handle API keys:'))
@@ -291,16 +316,18 @@ BERGET_API_KEY=${apiKey}
         }
 
         // Ask for permission to create config files
-        console.log(chalk.blue('\nAbout to create configuration files:'))
-        console.log(chalk.dim(`Config: ${configPath}`))
-        console.log(chalk.dim(`Environment: ${envPath}`))
-        console.log(chalk.dim('This will configure OpenCode to use Berget AI models.'))
-        console.log(chalk.cyan('\n💡 Benefits:'))
-        console.log(chalk.cyan('  • API key stored separately in .env file (not committed to Git)'))
-        console.log(chalk.cyan('  • Easy cost separation per project/customer'))
-        console.log(chalk.cyan('  • Secure key management with environment variables'))
+        if (!options.yes) {
+          console.log(chalk.blue('\nAbout to create configuration files:'))
+          console.log(chalk.dim(`Config: ${configPath}`))
+          console.log(chalk.dim(`Environment: ${envPath}`))
+          console.log(chalk.dim('This will configure OpenCode to use Berget AI models.'))
+          console.log(chalk.cyan('\n💡 Benefits:'))
+          console.log(chalk.cyan('  • API key stored separately in .env file (not committed to Git)'))
+          console.log(chalk.cyan('  • Easy cost separation per project/customer'))
+          console.log(chalk.cyan('  • Secure key management with environment variables'))
+        }
         
-        if (await confirm('\nCreate configuration files? (y/n): ')) {
+        if (await confirm('\nCreate configuration files? (y/n): ', options.yes)) {
           try {
             // Create .env file
             await writeFile(envPath, envContent)
@@ -353,12 +380,13 @@ BERGET_API_KEY=${apiKey}
     .argument('[prompt]', 'Prompt to send directly to OpenCode')
     .option('-m, --model <model>', 'Model to use (overrides config)')
     .option('--no-config', 'Run without loading project config')
+    .option('-y, --yes', 'Automatically answer yes to all prompts (for automation)')
     .action(async (prompt: string, options: any) => {
       try {
         const configPath = path.join(process.cwd(), 'opencode.json')
         
         // Ensure opencode is installed
-        if (!(await ensureOpencodeInstalled())) {
+        if (!(await ensureOpencodeInstalled(options.yes))) {
           return
         }
 
