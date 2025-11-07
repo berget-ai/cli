@@ -36,7 +36,7 @@ export const getAuthToken = (): string | null => {
 export const saveAuthToken = (
   accessToken: string,
   refreshToken: string,
-  expiresIn: number = 3600
+  expiresIn: number = 3600,
 ): void => {
   const tokenManager = TokenManager.getInstance()
   tokenManager.setTokens(accessToken, refreshToken, expiresIn)
@@ -53,7 +53,7 @@ export const createAuthenticatedClient = () => {
 
   if (!tokenManager.getAccessToken()) {
     logger.debug(
-      'No authentication token found. Please run `berget auth login` first.'
+      'No authentication token found. Please run `berget auth login` first.',
     )
   }
 
@@ -100,7 +100,7 @@ export const createAuthenticatedClient = () => {
           let result
           try {
             result = await (target[prop as keyof typeof target] as Function)(
-              ...args
+              ...args,
             )
           } catch (requestError) {
             logger.debug(
@@ -108,7 +108,7 @@ export const createAuthenticatedClient = () => {
                 requestError instanceof Error
                   ? requestError.message
                   : String(requestError)
-              }`
+              }`,
             )
             return {
               error: {
@@ -171,7 +171,7 @@ export const createAuthenticatedClient = () => {
             if (isAuthError && tokenManager.getRefreshToken()) {
               logger.debug('Auth error detected, attempting token refresh')
               logger.debug(
-                `Error details: ${JSON.stringify(result.error, null, 2)}`
+                `Error details: ${JSON.stringify(result.error, null, 2)}`,
               )
 
               const refreshed = await refreshAccessToken(tokenManager)
@@ -185,7 +185,7 @@ export const createAuthenticatedClient = () => {
 
                 // Retry the request
                 return await (target[prop as keyof typeof target] as Function)(
-                  ...args
+                  ...args,
                 )
               } else {
                 logger.debug('Token refresh failed')
@@ -211,7 +211,7 @@ export const createAuthenticatedClient = () => {
 
 // Helper function to refresh the access token
 async function refreshAccessToken(
-  tokenManager: TokenManager
+  tokenManager: TokenManager,
 ): Promise<boolean> {
   try {
     const refreshToken = tokenManager.getRefreshToken()
@@ -233,23 +233,23 @@ async function refreshAccessToken(
       // Handle HTTP errors
       if (!response.ok) {
         logger.debug(
-          `Token refresh error: HTTP ${response.status} ${response.statusText}`
+          `Token refresh error: HTTP ${response.status} ${response.statusText}`,
         )
 
         // Check if the refresh token itself is expired or invalid
         if (response.status === 401 || response.status === 403) {
           console.warn(
             chalk.yellow(
-              'Your refresh token has expired. Please run `berget auth login` again.'
-            )
+              'Your refresh token has expired. Please run `berget auth login` again.',
+            ),
           )
           // Clear tokens if unauthorized - they're invalid
           tokenManager.clearTokens()
         } else {
           console.warn(
             chalk.yellow(
-              `Failed to refresh token: ${response.status} ${response.statusText}`
-            )
+              `Failed to refresh token: ${response.status} ${response.statusText}`,
+            ),
           )
         }
         return false
@@ -259,7 +259,7 @@ async function refreshAccessToken(
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
         console.warn(
-          chalk.yellow(`Unexpected content type in response: ${contentType}`)
+          chalk.yellow(`Unexpected content type in response: ${contentType}`),
         )
         return false
       }
@@ -270,8 +270,8 @@ async function refreshAccessToken(
       if (!data || !data.token) {
         console.warn(
           chalk.yellow(
-            'Invalid token response. Please run `berget auth login` again.'
-          )
+            'Invalid token response. Please run `berget auth login` again.',
+          ),
         )
         return false
       }
@@ -286,7 +286,7 @@ async function refreshAccessToken(
         tokenManager.setTokens(
           data.token,
           data.refresh_token,
-          data.expires_in || 3600
+          data.expires_in || 3600,
         )
         logger.debug('Refresh token also updated')
       }
@@ -297,8 +297,8 @@ async function refreshAccessToken(
             fetchError instanceof Error
               ? fetchError.message
               : String(fetchError)
-          }`
-        )
+          }`,
+        ),
       )
       return false
     }
@@ -309,8 +309,8 @@ async function refreshAccessToken(
       chalk.yellow(
         `Failed to refresh authentication token: ${
           error instanceof Error ? error.message : String(error)
-        }`
-      )
+        }`,
+      ),
     )
     return false
   }

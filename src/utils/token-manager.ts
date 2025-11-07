@@ -17,7 +17,7 @@ export class TokenManager {
   private static instance: TokenManager
   private tokenFilePath: string
   private tokenData: TokenData | null = null
-  
+
   private constructor() {
     // Set up token file path in user's home directory
     const bergetDir = path.join(os.homedir(), '.berget')
@@ -27,14 +27,14 @@ export class TokenManager {
     this.tokenFilePath = path.join(bergetDir, 'auth.json')
     this.loadToken()
   }
-  
+
   public static getInstance(): TokenManager {
     if (!TokenManager.instance) {
       TokenManager.instance = new TokenManager()
     }
     return TokenManager.instance
   }
-  
+
   /**
    * Load token data from file
    */
@@ -49,14 +49,17 @@ export class TokenManager {
       this.tokenData = null
     }
   }
-  
+
   /**
    * Save token data to file
    */
   private saveToken(): void {
     try {
       if (this.tokenData) {
-        fs.writeFileSync(this.tokenFilePath, JSON.stringify(this.tokenData, null, 2))
+        fs.writeFileSync(
+          this.tokenFilePath,
+          JSON.stringify(this.tokenData, null, 2),
+        )
         // Set file permissions to be readable only by the owner
         fs.chmodSync(this.tokenFilePath, 0o600)
       } else {
@@ -69,7 +72,7 @@ export class TokenManager {
       logger.error('Failed to save authentication token')
     }
   }
-  
+
   /**
    * Get the current access token
    * @returns The access token or null if not available
@@ -78,7 +81,7 @@ export class TokenManager {
     if (!this.tokenData) return null
     return this.tokenData.access_token
   }
-  
+
   /**
    * Get the refresh token
    * @returns The refresh token or null if not available
@@ -87,47 +90,56 @@ export class TokenManager {
     if (!this.tokenData) return null
     return this.tokenData.refresh_token
   }
-  
+
   /**
    * Check if the access token is expired
    * @returns true if expired or about to expire (within 5 minutes), false otherwise
    */
   public isTokenExpired(): boolean {
     if (!this.tokenData || !this.tokenData.expires_at) return true
-    
+
     try {
       // Consider token expired if it's within 10 minutes of expiration
       // Using a larger buffer to be more proactive about refreshing
       const expirationBuffer = 10 * 60 * 1000 // 10 minutes in milliseconds
-      const isExpired = Date.now() + expirationBuffer >= this.tokenData.expires_at;
-      
+      const isExpired =
+        Date.now() + expirationBuffer >= this.tokenData.expires_at
+
       if (isExpired) {
-        logger.debug(`Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`);
+        logger.debug(
+          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`,
+        )
       }
-      
-      return isExpired;
+
+      return isExpired
     } catch (error) {
       // If there's any error checking expiration, assume token is expired
-      logger.error(`Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`);
-      return true;
+      logger.error(
+        `Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      return true
     }
   }
-  
+
   /**
    * Set new token data
    * @param accessToken The new access token
    * @param refreshToken The new refresh token
    * @param expiresIn Expiration time in seconds
    */
-  public setTokens(accessToken: string, refreshToken: string, expiresIn: number): void {
+  public setTokens(
+    accessToken: string,
+    refreshToken: string,
+    expiresIn: number,
+  ): void {
     this.tokenData = {
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_at: Date.now() + (expiresIn * 1000)
+      expires_at: Date.now() + expiresIn * 1000,
     }
     this.saveToken()
   }
-  
+
   /**
    * Update just the access token and its expiration
    * @param accessToken The new access token
@@ -135,12 +147,12 @@ export class TokenManager {
    */
   public updateAccessToken(accessToken: string, expiresIn: number): void {
     if (!this.tokenData) return
-    
+
     this.tokenData.access_token = accessToken
-    this.tokenData.expires_at = Date.now() + (expiresIn * 1000)
+    this.tokenData.expires_at = Date.now() + expiresIn * 1000
     this.saveToken()
   }
-  
+
   /**
    * Clear all token data
    */

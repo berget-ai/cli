@@ -18,8 +18,8 @@ marked.setOptions({
     // Adjust the width to fit the terminal
     width: process.stdout.columns || 80,
     // Customize code block rendering
-    codespan: chalk.cyan
-  })
+    codespan: chalk.cyan,
+  }),
 })
 
 /**
@@ -29,7 +29,7 @@ marked.setOptions({
  */
 export function renderMarkdown(markdown: string): string {
   if (!markdown) return ''
-  
+
   try {
     // Convert markdown to terminal-friendly text
     return marked(markdown)
@@ -47,22 +47,22 @@ export function renderMarkdown(markdown: string): string {
  */
 export function containsMarkdown(text: string): boolean {
   if (!text) return false
-  
+
   // Check for common markdown patterns
   const markdownPatterns = [
-    /^#+\s+/m,                // Headers
-    /\*\*.*?\*\*/,            // Bold
-    /\*.*?\*/,                // Italic
-    /`.*?`/,                  // Inline code
-    /```[\s\S]*?```/,         // Code blocks
-    /\[.*?\]\(.*?\)/,         // Links
-    /^\s*[-*+]\s+/m,          // Lists
-    /^\s*\d+\.\s+/m,          // Numbered lists
-    /^\s*>\s+/m,              // Blockquotes
-    /\|.*\|.*\|/,             // Tables
-    /^---+$/m,                // Horizontal rules
-    /^===+$/m                 // Alternative headers
+    /^#+\s+/m, // Headers
+    /\*\*.*?\*\*/, // Bold
+    /\*.*?\*/, // Italic
+    /`.*?`/, // Inline code
+    /```[\s\S]*?```/, // Code blocks
+    /\[.*?\]\(.*?\)/, // Links
+    /^\s*[-*+]\s+/m, // Lists
+    /^\s*\d+\.\s+/m, // Numbered lists
+    /^\s*>\s+/m, // Blockquotes
+    /\|.*\|.*\|/, // Tables
+    /^---+$/m, // Horizontal rules
+    /^===+$/m, // Alternative headers
   ]
-  
-  return markdownPatterns.some(pattern => pattern.test(text))
+
+  return markdownPatterns.some((pattern) => pattern.test(text))
 }

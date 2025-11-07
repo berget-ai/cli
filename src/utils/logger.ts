@@ -8,7 +8,7 @@ export enum LogLevel {
   ERROR = 1,
   WARN = 2,
   INFO = 3,
-  DEBUG = 4
+  DEBUG = 4,
 }
 
 /**
@@ -17,7 +17,7 @@ export enum LogLevel {
 export class Logger {
   private static instance: Logger
   private logLevel: LogLevel = LogLevel.INFO // Default log level
-  
+
   private constructor() {
     // Set log level from environment variable or command line argument
     if (process.env.LOG_LEVEL) {
@@ -28,14 +28,14 @@ export class Logger {
       this.logLevel = LogLevel.ERROR
     }
   }
-  
+
   public static getInstance(): Logger {
     if (!Logger.instance) {
       Logger.instance = new Logger()
     }
     return Logger.instance
   }
-  
+
   /**
    * Set the log level from a string
    */
@@ -61,21 +61,21 @@ export class Logger {
         console.warn(`Invalid log level: ${level}. Using default (INFO).`)
     }
   }
-  
+
   /**
    * Set the log level
    */
   public setLogLevel(level: LogLevel): void {
     this.logLevel = level
   }
-  
+
   /**
    * Get the current log level
    */
   public getLogLevel(): LogLevel {
     return this.logLevel
   }
-  
+
   /**
    * Log a debug message (only shown at DEBUG level)
    */
@@ -88,7 +88,7 @@ export class Logger {
       }
     }
   }
-  
+
   /**
    * Log an info message (shown at INFO level and above)
    */
@@ -101,7 +101,7 @@ export class Logger {
       }
     }
   }
-  
+
   /**
    * Log a warning message (shown at WARN level and above)
    */
@@ -114,7 +114,7 @@ export class Logger {
       }
     }
   }
-  
+
   /**
    * Log an error message (shown at ERROR level and above)
    */
@@ -127,7 +127,7 @@ export class Logger {
       }
     }
   }
-  
+
   /**
    * Log a success message (shown at INFO level and above)
    */
@@ -140,7 +140,7 @@ export class Logger {
       }
     }
   }
-  
+
   /**
    * Log a plain message without color (shown at INFO level and above)
    */

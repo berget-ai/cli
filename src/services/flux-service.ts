@@ -20,10 +20,10 @@ export interface FluxBootstrapOptions {
 export class FluxService {
   private static instance: FluxService
   private client = createAuthenticatedClient()
-  
+
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.FLUX
-  
+
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.FLUX
 

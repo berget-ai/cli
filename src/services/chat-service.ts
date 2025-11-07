@@ -73,8 +73,8 @@ export class ChatService {
                 : '0 messages',
             },
             null,
-            2
-          )
+            2,
+          ),
         )
       } catch (error) {
         logger.error('Failed to stringify options:', error)
@@ -121,7 +121,7 @@ export class ChatService {
 
           logger.debug(`Default API key data exists: ${!!defaultApiKeyData}`)
           logger.debug(
-            `promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`
+            `promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`,
           )
 
           if (apiKey) {
@@ -130,10 +130,10 @@ export class ChatService {
           } else {
             logger.warn('No API key available. You need to either:')
             logger.warn(
-              '1. Create an API key with: berget api-keys create --name "My Key"'
+              '1. Create an API key with: berget api-keys create --name "My Key"',
             )
             logger.warn(
-              '2. Set a default API key with: berget api-keys set-default <id>'
+              '2. Set a default API key with: berget api-keys set-default <id>',
             )
             logger.warn('3. Provide an API key with the --api-key option')
             logger.warn('4. Set the BERGET_API_KEY environment variable')
@@ -141,7 +141,7 @@ export class ChatService {
             logger.warn('  export BERGET_API_KEY=your_api_key_here')
             logger.warn('  # or for a single command:')
             logger.warn(
-              '  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it'
+              '  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it',
             )
             throw new Error('No API key provided and no default API key set')
           }
@@ -159,7 +159,7 @@ export class ChatService {
             logger.error(error.message)
           }
           logger.warn(
-            'Please create an API key with: berget api-keys create --name "My Key"'
+            'Please create an API key with: berget api-keys create --name "My Key"',
           )
           throw new Error('Failed to get API key')
         }
@@ -179,8 +179,8 @@ export class ChatService {
             apiKey: optionsCopy.apiKey ? '***' : undefined, // Hide the actual API key in debug output
           },
           null,
-          2
-        )
+          2,
+        ),
       )
 
       return this.executeCompletion(optionsCopy, headers)
@@ -214,7 +214,7 @@ export class ChatService {
    */
   private async executeCompletion(
     options: ChatCompletionOptions,
-    headers: Record<string, string> = {}
+    headers: Record<string, string> = {},
   ): Promise<any> {
     try {
       // If an API key is provided, use it for this request
@@ -236,15 +236,15 @@ export class ChatService {
               : '0 messages',
           },
           null,
-          2
-        )
+          2,
+        ),
       )
 
       // Handle streaming responses differently
       if (requestOptions.stream && onChunk) {
         return await this.handleStreamingResponse(
           { ...requestOptions, onChunk },
-          headers
+          headers,
         )
       } else {
         // Ensure model is always defined for the API call
@@ -282,7 +282,7 @@ export class ChatService {
           requestError instanceof Error
             ? requestError.message
             : String(requestError)
-        }`
+        }`,
       )
       throw requestError
     }
@@ -295,10 +295,10 @@ export class ChatService {
     // We've exhausted all options for getting an API key
     logger.warn('No API key available. You need to either:')
     logger.warn(
-      '1. Create an API key with: berget api-keys create --name "My Key"'
+      '1. Create an API key with: berget api-keys create --name "My Key"',
     )
     logger.warn(
-      '2. Set a default API key with: berget api-keys set-default <id>'
+      '2. Set a default API key with: berget api-keys set-default <id>',
     )
     logger.warn('3. Provide an API key with the --api-key option')
     logger.warn('4. Set the BERGET_API_KEY environment variable')
@@ -306,10 +306,10 @@ export class ChatService {
     logger.warn('  export BERGET_API_KEY=your_api_key_here')
     logger.warn('  # or for a single command:')
     logger.warn(
-      '  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it'
+      '  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it',
     )
     throw new Error(
-      'No API key available. Please provide an API key or set a default API key.'
+      'No API key available. Please provide an API key or set a default API key.',
     )
   }
 
@@ -321,7 +321,7 @@ export class ChatService {
    */
   private async handleStreamingResponse(
     options: any,
-    headers: Record<string, string>
+    headers: Record<string, string>,
   ): Promise<any> {
     // Use the same base URL as the client
     const baseUrl = process.env.API_BASE_URL || 'https://api.berget.ai'
@@ -344,16 +344,19 @@ export class ChatService {
       })
 
       logger.debug(`Response status: ${response.status}`)
-      logger.debug(`Response headers:`, JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2))
+      logger.debug(
+        `Response headers:`,
+        JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2),
+      )
 
       if (!response.ok) {
         const errorText = await response.text()
         logger.error(
-          `Stream request failed: ${response.status} ${response.statusText}`
+          `Stream request failed: ${response.status} ${response.statusText}`,
         )
         logger.error(`Error response: ${errorText}`)
         throw new Error(
-          `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`
+          `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`,
         )
       }
 
@@ -430,7 +433,7 @@ export class ChatService {
       logger.error(
         `Streaming error: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       )
       throw error
     }

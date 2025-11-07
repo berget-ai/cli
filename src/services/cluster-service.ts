@@ -16,10 +16,10 @@ export interface Cluster {
 export class ClusterService {
   private static instance: ClusterService
   private client = createAuthenticatedClient()
-  
+
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.CLUSTERS
-  
+
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.CLUSTERS
 
@@ -42,7 +42,7 @@ export class ClusterService {
         '/v1/clusters/{clusterId}/usage',
         {
           params: { path: { clusterId } },
-        }
+        },
       )
       if (error) throw new Error(JSON.stringify(error))
       return data
@@ -66,7 +66,7 @@ export class ClusterService {
       throw error
     }
   }
-  
+
   /**
    * Get detailed information about a cluster
    * Command: berget clusters describe
@@ -76,7 +76,7 @@ export class ClusterService {
       // This is a placeholder since the API doesn't have a specific endpoint
       // In a real implementation, this would call a specific endpoint
       const clusters = await this.list()
-      return clusters.find(cluster => cluster.id === clusterId) || null
+      return clusters.find((cluster) => cluster.id === clusterId) || null
     } catch (error) {
       console.error('Failed to describe cluster:', error)
       throw error

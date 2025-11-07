@@ -37,7 +37,7 @@ export class AuthService {
       const { data: profile, error } = await this.client.GET('/v1/users/me')
       if (error) {
         throw new Error(
-          error ? JSON.stringify(error) : 'Failed to get user profile'
+          error ? JSON.stringify(error) : 'Failed to get user profile',
         )
       }
       return profile
@@ -57,14 +57,14 @@ export class AuthService {
       // Step 1: Initiate device authorization
       const { data: deviceData, error: deviceError } = await apiClient.POST(
         '/v1/auth/device',
-        {}
+        {},
       )
 
       if (deviceError || !deviceData) {
         throw new Error(
           deviceError
             ? JSON.stringify(deviceError)
-            : 'Failed to get device authorization data'
+            : 'Failed to get device authorization data',
         )
       }
 
@@ -83,17 +83,17 @@ export class AuthService {
         chalk.cyan(
           `1. Open this URL: ${chalk.bold(
             typedDeviceData.verification_url ||
-              'https://keycloak.berget.ai/device'
-          )}`
-        )
+              'https://keycloak.berget.ai/device',
+          )}`,
+        ),
       )
       if (!typedDeviceData.verification_url)
         console.log(
           chalk.cyan(
             `2. Enter this code: ${chalk.bold(
-              typedDeviceData.user_code || ''
-            )}\n`
-          )
+              typedDeviceData.user_code || '',
+            )}\n`,
+          ),
         )
 
       // Try to open browser automatically
@@ -104,15 +104,15 @@ export class AuthService {
           await open(typedDeviceData.verification_url)
           console.log(
             chalk.dim(
-              "Browser opened automatically. If it didn't open, please use the URL above."
-            )
+              "Browser opened automatically. If it didn't open, please use the URL above.",
+            ),
           )
         }
       } catch (error) {
         console.log(
           chalk.yellow(
-            'Could not open browser automatically. Please open the URL manually.'
-          )
+            'Could not open browser automatically. Please open the URL manually.',
+          ),
         )
       }
 
@@ -136,7 +136,7 @@ export class AuthService {
 
         // Update spinner
         process.stdout.write(
-          `\r${chalk.blue(spinner[spinnerIdx])} Waiting for authentication...`
+          `\r${chalk.blue(spinner[spinnerIdx])} Waiting for authentication...`,
         )
         spinnerIdx = (spinnerIdx + 1) % spinner.length
 
@@ -148,7 +148,7 @@ export class AuthService {
             body: {
               device_code: deviceCode,
             },
-          }
+          },
         )
 
         if (tokenError) {
@@ -170,7 +170,7 @@ export class AuthService {
             // Error or expired
             if (errorCode === 'EXPIRED_TOKEN') {
               console.log(
-                chalk.red('\n\nAuthentication timed out. Please try again.')
+                chalk.red('\n\nAuthentication timed out. Please try again.'),
               )
             } else if (errorCode !== 'AUTHORIZATION_PENDING') {
               // Only show error if it's not the expected "still waiting" error
@@ -187,15 +187,15 @@ export class AuthService {
             // This makes the flow more resilient to temporary issues
             if (process.env.DEBUG) {
               console.log(
-                chalk.yellow(`\n\nReceived error: ${JSON.stringify(errorObj)}`)
+                chalk.yellow(`\n\nReceived error: ${JSON.stringify(errorObj)}`),
               )
               console.log(
-                chalk.yellow('Continuing to wait for authentication...')
+                chalk.yellow('Continuing to wait for authentication...'),
               )
               process.stdout.write(
                 `\r${chalk.blue(
-                  spinner[spinnerIdx]
-                )} Waiting for authentication...`
+                  spinner[spinnerIdx],
+                )} Waiting for authentication...`,
               )
             }
             continue
@@ -219,7 +219,7 @@ export class AuthService {
             saveAuthToken(
               typedTokenData.token,
               typedTokenData.refresh_token || '',
-              typedTokenData.expires_in || 3600
+              typedTokenData.expires_in || 3600,
             )
 
             if (process.argv.includes('--debug')) {
@@ -232,9 +232,9 @@ export class AuthService {
                       refresh_expires_in: typedTokenData.refresh_expires_in,
                     },
                     null,
-                    2
-                  )
-                )
+                    2,
+                  ),
+                ),
               )
             }
 
@@ -244,7 +244,9 @@ export class AuthService {
             if (typedTokenData.user) {
               const user = typedTokenData.user
               console.log(
-                chalk.green(`Logged in as ${user.name || user.email || 'User'}`)
+                chalk.green(
+                  `Logged in as ${user.name || user.email || 'User'}`,
+                ),
               )
             }
 

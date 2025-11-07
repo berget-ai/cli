@@ -10,8 +10,8 @@ vi.mock('../../src/utils/default-api-key')
 vi.mock('readline', () => ({
   createInterface: vi.fn(() => ({
     question: vi.fn(),
-    close: vi.fn()
-  }))
+    close: vi.fn(),
+  })),
 }))
 
 describe('Chat Commands', () => {
@@ -21,21 +21,23 @@ describe('Chat Commands', () => {
 
   beforeEach(() => {
     program = new Command()
-    
+
     // Mock ChatService
     mockChatService = {
       createCompletion: vi.fn(),
-      listModels: vi.fn()
+      listModels: vi.fn(),
     }
     vi.mocked(ChatService.getInstance).mockReturnValue(mockChatService)
-    
+
     // Mock DefaultApiKeyManager
     mockDefaultApiKeyManager = {
       getDefaultApiKeyData: vi.fn(),
-      promptForDefaultApiKey: vi.fn()
+      promptForDefaultApiKey: vi.fn(),
     }
-    vi.mocked(DefaultApiKeyManager.getInstance).mockReturnValue(mockDefaultApiKeyManager)
-    
+    vi.mocked(DefaultApiKeyManager.getInstance).mockReturnValue(
+      mockDefaultApiKeyManager,
+    )
+
     registerChatCommands(program)
   })
 
@@ -45,24 +47,30 @@ describe('Chat Commands', () => {
 
   describe('chat run command', () => {
     it('should use openai/gpt-oss as default model', () => {
-      const chatCommand = program.commands.find(cmd => cmd.name() === 'chat')
-      const runCommand = chatCommand?.commands.find(cmd => cmd.name() === 'run')
-      
+      const chatCommand = program.commands.find((cmd) => cmd.name() === 'chat')
+      const runCommand = chatCommand?.commands.find(
+        (cmd) => cmd.name() === 'run',
+      )
+
       expect(runCommand).toBeDefined()
-      
+
       // Check the help text which contains the default model
       const helpText = runCommand?.helpInformation()
       expect(helpText).toContain('openai/gpt-oss')
     })
 
     it('should have streaming enabled by default', () => {
-      const chatCommand = program.commands.find(cmd => cmd.name() === 'chat')
-      const runCommand = chatCommand?.commands.find(cmd => cmd.name() === 'run')
-      
+      const chatCommand = program.commands.find((cmd) => cmd.name() === 'chat')
+      const runCommand = chatCommand?.commands.find(
+        (cmd) => cmd.name() === 'run',
+      )
+
       expect(runCommand).toBeDefined()
-      
+
       // Check that the option is --no-stream (meaning streaming is default)
-      const streamOption = runCommand?.options.find(opt => opt.long === '--no-stream')
+      const streamOption = runCommand?.options.find(
+        (opt) => opt.long === '--no-stream',
+      )
       expect(streamOption).toBeDefined()
       expect(streamOption?.description).toContain('Disable streaming')
     })
@@ -70,19 +78,21 @@ describe('Chat Commands', () => {
     it('should create completion with correct default options', async () => {
       // Mock API key
       process.env.BERGET_API_KEY = 'test-key'
-      
+
       // Mock successful completion
       mockChatService.createCompletion.mockResolvedValue({
-        choices: [{
-          message: { content: 'Test response' }
-        }]
+        choices: [
+          {
+            message: { content: 'Test response' },
+          },
+        ],
       })
 
       // This would normally test the actual command execution
       // but since it involves readline interaction, we just verify
       // that the service would be called with correct defaults
       expect(mockChatService.createCompletion).not.toHaveBeenCalled()
-      
+
       // Clean up
       delete process.env.BERGET_API_KEY
     })
@@ -99,17 +109,19 @@ describe('Chat Commands', () => {
             capabilities: {
               vision: false,
               function_calling: true,
-              json_mode: true
-            }
-          }
-        ]
+              json_mode: true,
+            },
+          },
+        ],
       }
-      
+
       mockChatService.listModels.mockResolvedValue(mockModels)
-      
-      const chatCommand = program.commands.find(cmd => cmd.name() === 'chat')
-      const listCommand = chatCommand?.commands.find(cmd => cmd.name() === 'list')
-      
+
+      const chatCommand = program.commands.find((cmd) => cmd.name() === 'chat')
+      const listCommand = chatCommand?.commands.find(
+        (cmd) => cmd.name() === 'list',
+      )
+
       expect(listCommand).toBeDefined()
       expect(listCommand?.description()).toBe('List available chat models')
     })

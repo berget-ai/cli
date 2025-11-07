@@ -21,9 +21,12 @@ export function registerBillingCommands(program: Command): void {
         let response
 
         if (options.model) {
-          const { data, error } = await client.GET('/v1/usage/tokens/{modelId}', {
-            params: { path: { modelId: options.model } },
-          })
+          const { data, error } = await client.GET(
+            '/v1/usage/tokens/{modelId}',
+            {
+              params: { path: { modelId: options.model } },
+            },
+          )
           if (error) throw new Error(JSON.stringify(error))
           response = data
         } else {

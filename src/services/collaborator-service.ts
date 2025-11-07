@@ -14,10 +14,10 @@ export interface Collaborator {
 export class CollaboratorService {
   private static instance: CollaboratorService
   private client = createAuthenticatedClient()
-  
+
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.USERS
-  
+
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.USERS
 
@@ -37,7 +37,7 @@ export class CollaboratorService {
    */
   public async invite(
     clusterId: string,
-    githubUsername: string
+    githubUsername: string,
   ): Promise<Collaborator[]> {
     throw new Error('This functionality is not available in the API')
   }

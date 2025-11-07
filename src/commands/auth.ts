@@ -38,7 +38,7 @@ export function registerAuthCommands(program: Command): void {
 
         if (profile) {
           console.log(
-            chalk.bold(`Logged in as: ${profile.name || profile.login}`)
+            chalk.bold(`Logged in as: ${profile.name || profile.login}`),
           )
           console.log(`Email: ${chalk.cyan(profile.email || 'Not available')}`)
           console.log(`Role: ${chalk.cyan(profile.role || 'Not available')}`)
@@ -48,7 +48,9 @@ export function registerAuthCommands(program: Command): void {
           }
         } else {
           console.log(
-            chalk.yellow('You are not logged in. Use `berget login` to log in.')
+            chalk.yellow(
+              'You are not logged in. Use `berget login` to log in.',
+            ),
           )
         }
       } catch (error) {
