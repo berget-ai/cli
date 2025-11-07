@@ -20,321 +20,241 @@
           "description": "Leader key for keybind combinations\n\ndefault: `ctrl+x`",
           "default": "ctrl+x",
           "type": "string",
-          "examples": [
-            "ctrl+x"
-          ]
+          "examples": ["ctrl+x"]
         },
         "app_exit": {
           "description": "Exit the application\n\ndefault: `ctrl+c,ctrl+d,<leader>q`",
           "default": "ctrl+c,ctrl+d,<leader>q",
           "type": "string",
-          "examples": [
-            "ctrl+c,ctrl+d,<leader>q"
-          ]
+          "examples": ["ctrl+c,ctrl+d,<leader>q"]
         },
         "editor_open": {
           "description": "Open external editor\n\ndefault: `<leader>e`",
           "default": "<leader>e",
           "type": "string",
-          "examples": [
-            "<leader>e"
-          ]
+          "examples": ["<leader>e"]
         },
         "theme_list": {
           "description": "List available themes\n\ndefault: `<leader>t`",
           "default": "<leader>t",
           "type": "string",
-          "examples": [
-            "<leader>t"
-          ]
+          "examples": ["<leader>t"]
         },
         "sidebar_toggle": {
           "description": "Toggle sidebar\n\ndefault: `<leader>b`",
           "default": "<leader>b",
           "type": "string",
-          "examples": [
-            "<leader>b"
-          ]
+          "examples": ["<leader>b"]
         },
         "status_view": {
           "description": "View status\n\ndefault: `<leader>s`",
           "default": "<leader>s",
           "type": "string",
-          "examples": [
-            "<leader>s"
-          ]
+          "examples": ["<leader>s"]
         },
         "session_export": {
           "description": "Export session to editor\n\ndefault: `<leader>x`",
           "default": "<leader>x",
           "type": "string",
-          "examples": [
-            "<leader>x"
-          ]
+          "examples": ["<leader>x"]
         },
         "session_new": {
           "description": "Create a new session\n\ndefault: `<leader>n`",
           "default": "<leader>n",
           "type": "string",
-          "examples": [
-            "<leader>n"
-          ]
+          "examples": ["<leader>n"]
         },
         "session_list": {
           "description": "List all sessions\n\ndefault: `<leader>l`",
           "default": "<leader>l",
           "type": "string",
-          "examples": [
-            "<leader>l"
-          ]
+          "examples": ["<leader>l"]
         },
         "session_timeline": {
           "description": "Show session timeline\n\ndefault: `<leader>g`",
           "default": "<leader>g",
           "type": "string",
-          "examples": [
-            "<leader>g"
-          ]
+          "examples": ["<leader>g"]
         },
         "session_share": {
           "description": "Share current session\n\ndefault: `none`",
           "default": "none",
           "type": "string",
-          "examples": [
-            "none"
-          ]
+          "examples": ["none"]
         },
         "session_unshare": {
           "description": "Unshare current session\n\ndefault: `none`",
           "default": "none",
           "type": "string",
-          "examples": [
-            "none"
-          ]
+          "examples": ["none"]
         },
         "session_interrupt": {
           "description": "Interrupt current session\n\ndefault: `escape`",
           "default": "escape",
           "type": "string",
-          "examples": [
-            "escape"
-          ]
+          "examples": ["escape"]
         },
         "session_compact": {
           "description": "Compact the session\n\ndefault: `<leader>c`",
           "default": "<leader>c",
           "type": "string",
-          "examples": [
-            "<leader>c"
-          ]
+          "examples": ["<leader>c"]
         },
         "messages_page_up": {
           "description": "Scroll messages up by one page\n\ndefault: `pageup`",
           "default": "pageup",
           "type": "string",
-          "examples": [
-            "pageup"
-          ]
+          "examples": ["pageup"]
         },
         "messages_page_down": {
           "description": "Scroll messages down by one page\n\ndefault: `pagedown`",
           "default": "pagedown",
           "type": "string",
-          "examples": [
-            "pagedown"
-          ]
+          "examples": ["pagedown"]
         },
         "messages_half_page_up": {
           "description": "Scroll messages up by half page\n\ndefault: `ctrl+alt+u`",
           "default": "ctrl+alt+u",
           "type": "string",
-          "examples": [
-            "ctrl+alt+u"
-          ]
+          "examples": ["ctrl+alt+u"]
         },
         "messages_half_page_down": {
           "description": "Scroll messages down by half page\n\ndefault: `ctrl+alt+d`",
           "default": "ctrl+alt+d",
           "type": "string",
-          "examples": [
-            "ctrl+alt+d"
-          ]
+          "examples": ["ctrl+alt+d"]
         },
         "messages_first": {
           "description": "Navigate to first message\n\ndefault: `ctrl+g,home`",
           "default": "ctrl+g,home",
           "type": "string",
-          "examples": [
-            "ctrl+g,home"
-          ]
+          "examples": ["ctrl+g,home"]
         },
         "messages_last": {
           "description": "Navigate to last message\n\ndefault: `ctrl+alt+g,end`",
           "default": "ctrl+alt+g,end",
           "type": "string",
-          "examples": [
-            "ctrl+alt+g,end"
-          ]
+          "examples": ["ctrl+alt+g,end"]
         },
         "messages_copy": {
           "description": "Copy message\n\ndefault: `<leader>y`",
           "default": "<leader>y",
           "type": "string",
-          "examples": [
-            "<leader>y"
-          ]
+          "examples": ["<leader>y"]
         },
         "messages_undo": {
           "description": "Undo message\n\ndefault: `<leader>u`",
           "default": "<leader>u",
           "type": "string",
-          "examples": [
-            "<leader>u"
-          ]
+          "examples": ["<leader>u"]
         },
         "messages_redo": {
           "description": "Redo message\n\ndefault: `<leader>r`",
           "default": "<leader>r",
           "type": "string",
-          "examples": [
-            "<leader>r"
-          ]
+          "examples": ["<leader>r"]
         },
         "messages_toggle_conceal": {
           "description": "Toggle code block concealment in messages\n\ndefault: `<leader>h`",
           "default": "<leader>h",
           "type": "string",
-          "examples": [
-            "<leader>h"
-          ]
+          "examples": ["<leader>h"]
         },
         "model_list": {
           "description": "List available models\n\ndefault: `<leader>m`",
           "default": "<leader>m",
           "type": "string",
-          "examples": [
-            "<leader>m"
-          ]
+          "examples": ["<leader>m"]
         },
         "model_cycle_recent": {
           "description": "Next recently used model\n\ndefault: `f2`",
           "default": "f2",
           "type": "string",
-          "examples": [
-            "f2"
-          ]
+          "examples": ["f2"]
         },
         "model_cycle_recent_reverse": {
           "description": "Previous recently used model\n\ndefault: `shift+f2`",
           "default": "shift+f2",
           "type": "string",
-          "examples": [
-            "shift+f2"
-          ]
+          "examples": ["shift+f2"]
         },
         "command_list": {
           "description": "List available commands\n\ndefault: `ctrl+p`",
           "default": "ctrl+p",
           "type": "string",
-          "examples": [
-            "ctrl+p"
-          ]
+          "examples": ["ctrl+p"]
         },
         "agent_list": {
           "description": "List agents\n\ndefault: `<leader>a`",
           "default": "<leader>a",
           "type": "string",
-          "examples": [
-            "<leader>a"
-          ]
+          "examples": ["<leader>a"]
         },
         "agent_cycle": {
           "description": "Next agent\n\ndefault: `tab`",
           "default": "tab",
           "type": "string",
-          "examples": [
-            "tab"
-          ]
+          "examples": ["tab"]
         },
         "agent_cycle_reverse": {
           "description": "Previous agent\n\ndefault: `shift+tab`",
           "default": "shift+tab",
           "type": "string",
-          "examples": [
-            "shift+tab"
-          ]
+          "examples": ["shift+tab"]
         },
         "input_clear": {
           "description": "Clear input field\n\ndefault: `ctrl+c`",
           "default": "ctrl+c",
           "type": "string",
-          "examples": [
-            "ctrl+c"
-          ]
+          "examples": ["ctrl+c"]
         },
         "input_forward_delete": {
           "description": "Forward delete\n\ndefault: `ctrl+d`",
           "default": "ctrl+d",
           "type": "string",
-          "examples": [
-            "ctrl+d"
-          ]
+          "examples": ["ctrl+d"]
         },
         "input_paste": {
           "description": "Paste from clipboard\n\ndefault: `ctrl+v`",
           "default": "ctrl+v",
           "type": "string",
-          "examples": [
-            "ctrl+v"
-          ]
+          "examples": ["ctrl+v"]
         },
         "input_submit": {
           "description": "Submit input\n\ndefault: `return`",
           "default": "return",
           "type": "string",
-          "examples": [
-            "return"
-          ]
+          "examples": ["return"]
         },
         "input_newline": {
           "description": "Insert newline in input\n\ndefault: `shift+return,ctrl+j`",
           "default": "shift+return,ctrl+j",
           "type": "string",
-          "examples": [
-            "shift+return,ctrl+j"
-          ]
+          "examples": ["shift+return,ctrl+j"]
         },
         "history_previous": {
           "description": "Previous history item\n\ndefault: `up`",
           "default": "up",
           "type": "string",
-          "examples": [
-            "up"
-          ]
+          "examples": ["up"]
         },
         "history_next": {
           "description": "Next history item\n\ndefault: `down`",
           "default": "down",
           "type": "string",
-          "examples": [
-            "down"
-          ]
+          "examples": ["down"]
         },
         "session_child_cycle": {
           "description": "Next child session\n\ndefault: `ctrl+right`",
           "default": "ctrl+right",
           "type": "string",
-          "examples": [
-            "ctrl+right"
-          ]
+          "examples": ["ctrl+right"]
         },
         "session_child_cycle_reverse": {
           "description": "Previous child session\n\ndefault: `ctrl+left`",
           "default": "ctrl+left",
           "type": "string",
-          "examples": [
-            "ctrl+left"
-          ]
+          "examples": ["ctrl+left"]
         }
       },
       "additionalProperties": false
@@ -377,9 +297,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "template"
-        ],
+        "required": ["template"],
         "additionalProperties": false
       }
     },
@@ -407,11 +325,7 @@
     "share": {
       "description": "Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing",
       "type": "string",
-      "enum": [
-        "manual",
-        "auto",
-        "disabled"
-      ]
+      "enum": ["manual", "auto", "disabled"]
     },
     "autoshare": {
       "description": "@deprecated Use 'share' field instead. Share newly created sessions automatically",
@@ -652,10 +566,7 @@
                       "type": "number"
                     }
                   },
-                  "required": [
-                    "input",
-                    "output"
-                  ],
+                  "required": ["input", "output"],
                   "additionalProperties": false
                 },
                 "limit": {
@@ -668,10 +579,7 @@
                       "type": "number"
                     }
                   },
-                  "required": [
-                    "context",
-                    "output"
-                  ],
+                  "required": ["context", "output"],
                   "additionalProperties": false
                 },
                 "modalities": {
@@ -681,33 +589,18 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "enum": [
-                          "text",
-                          "audio",
-                          "image",
-                          "video",
-                          "pdf"
-                        ]
+                        "enum": ["text", "audio", "image", "video", "pdf"]
                       }
                     },
                     "output": {
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "enum": [
-                          "text",
-                          "audio",
-                          "image",
-                          "video",
-                          "pdf"
-                        ]
+                        "enum": ["text", "audio", "image", "video", "pdf"]
                       }
                     }
                   },
-                  "required": [
-                    "input",
-                    "output"
-                  ],
+                  "required": ["input", "output"],
                   "additionalProperties": false
                 },
                 "experimental": {
@@ -715,11 +608,7 @@
                 },
                 "status": {
                   "type": "string",
-                  "enum": [
-                    "alpha",
-                    "beta",
-                    "deprecated"
-                  ]
+                  "enum": ["alpha", "beta", "deprecated"]
                 },
                 "options": {
                   "type": "object",
@@ -744,9 +633,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "npm"
-                  ],
+                  "required": ["npm"],
                   "additionalProperties": false
                 }
               },
@@ -834,10 +721,7 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "type",
-              "command"
-            ],
+            "required": ["type", "command"],
             "additionalProperties": false
           },
           {
@@ -874,10 +758,7 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "type",
-              "url"
-            ],
+            "required": ["type", "url"],
             "additionalProperties": false
           }
         ]
@@ -934,9 +815,7 @@
                 "const": true
               }
             },
-            "required": [
-              "disabled"
-            ],
+            "required": ["disabled"],
             "additionalProperties": false
           },
           {
@@ -974,9 +853,7 @@
                 "additionalProperties": {}
               }
             },
-            "required": [
-              "command"
-            ],
+            "required": ["command"],
             "additionalProperties": false
           }
         ]
@@ -993,10 +870,7 @@
       "description": "@deprecated Always uses stretch layout.",
       "ref": "LayoutConfig",
       "type": "string",
-      "enum": [
-        "auto",
-        "stretch"
-      ]
+      "enum": ["auto", "stretch"]
     },
     "permission": {
       "type": "object",
@@ -1067,9 +941,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "command"
-                  ],
+                  "required": ["command"],
                   "additionalProperties": false
                 }
               }
@@ -1095,9 +967,7 @@
                     }
                   }
                 },
-                "required": [
-                  "command"
-                ],
+                "required": ["command"],
                 "additionalProperties": false
               }
             }

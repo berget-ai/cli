@@ -7,6 +7,7 @@ I en värld där AI-drivna kodassistenter blir standard, står svenska företag 
 OpenCode är en open source AI-kodassistent byggd för terminalen. Till skillnad från många kommersiella alternativ ger OpenCode dig full kontroll över din kod och dina data. Med över 26 000 GitHub-stjärnor och 200 000+ aktiva utvecklare varje månad har det blivit ett av de mest populära verktygen för AI-assisterad programmering.
 
 **Nödvändiga funktioner i OpenCode:**
+
 - 🎯 **Native TUI** – Responsivt terminalgränssnitt som fungerar i din befintliga workflow
 - 🔄 **Multi-session** – Köra flera agenter parallellt på samma projekt
 - 🔗 **Share links** – Dela sessioner för kodgranskning och felsökning
@@ -18,6 +19,7 @@ OpenCode är en open source AI-kodassistent byggd för terminalen. Till skillnad
 Berget AI är en svensk AI-infrastrukturleverantör som säkerställer att din data aldrig lämnar Sverige. Detta är särskilt viktigt för företag som hanterar känslig information, personuppgifter eller skyddad kod.
 
 **Fördelar med Berget AI:**
+
 - 🇸🇪 **Data-suveränitet** – All data bearbetas inom Sverige
 - ⚖️ **GDPR-kompatibilitet** – Full efterlevnad med EU:s dataskyddslagar
 - 🔒 **Säkerhet** – Industriell säkerhet med kryptering och isolering
@@ -49,6 +51,7 @@ För svenska företag, särskilt inom finans, vård och offentlig sektor, är ef
 ### 3. Säker hantering av känslig kod
 
 Många företag arbetar med kod som innehåller:
+
 - API-nycklar och hemligheter
 - Affärskritisk algoritmlogik
 - Känslig kunddata
@@ -80,6 +83,7 @@ Varje projekt får sin egen unika API-nyckel som skapas automatiskt:
 ```
 
 Detta ger:
+
 - 🔐 **Isolering** mellan projekt
 - 📊 **Spårbarhet** av användning
 - 🔄 **Enkel rotation** av nycklar
@@ -88,17 +92,20 @@ Detta ger:
 ## Kom igång på 2 minuter
 
 ### Steg 1: Installera OpenCode
+
 ```bash
 curl -fsSL https://opencode.ai/install | bash
 ```
 
 ### Steg 2: Initiera ditt projekt
+
 ```bash
 cd ditt-projekt
 berget code init
 ```
 
 ### Steg 3: Starta AI-assistenen
+
 ```bash
 berget code run
 ```
@@ -108,21 +115,25 @@ Det var allt! Du har nu en fullfjädrad AI-kodassistent med svensk datainfrastru
 ## Användningsfall för svenska företag
 
 ### Finans & Försäkring
+
 - Refaktorera transaktionslogik med full säkerhet
 - Hjälp med compliance-kod (KYC, AML)
 - Optimera riskberäkningsalgoritmer
 
 ### Vård & Hälsa
+
 - Utveckla patientdata-system med GDPR-säkerhet
 - Hjälp med medicinsk kod och integrationer
 - Säker hantering av journalsystem
 
 ### Offentlig Sektor
+
 - Utveckla e-tjänster med svensk data
 - Hjälp med myndighetsintegrationer
 - Säker hantering av medborgardata
 
 ### Industri & Tillverkning
+
 - Optimera PLC-kod och styrsystem
 - Hjälp med IoT-integrationer
 - Säker utveckling av produktionssystem
@@ -162,4 +173,4 @@ Med svensk datainfrastruktur, projektspecifika API-nycklar och en open source AI
 berget code init
 ```
 
-*Din kod, din data, ditt land – nu med AI-superkrafter.*
+_Din kod, din data, ditt land – nu med AI-superkrafter._

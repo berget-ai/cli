@@ -23,11 +23,11 @@ export function registerUserCommands(program: Command): void {
 
         console.log('Team Members:')
         console.log(
-          'NAME                     EMAIL                           ROLE'
+          'NAME                     EMAIL                           ROLE',
         )
         data.forEach((user: any) => {
           console.log(
-            `${user.name.padEnd(24)} ${user.email.padEnd(30)} ${user.role}`
+            `${user.name.padEnd(24)} ${user.email.padEnd(30)} ${user.role}`,
           )
         })
       } catch (error) {

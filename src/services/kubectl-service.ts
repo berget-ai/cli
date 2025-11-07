@@ -8,10 +8,10 @@ import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 export class KubectlService {
   private static instance: KubectlService
   private client = createAuthenticatedClient()
-  
+
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.KUBECTL
-  
+
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.KUBECTL
 
@@ -47,10 +47,7 @@ export class KubectlService {
    * Command: berget kubectl get
    * This endpoint is not available in the API
    */
-  public async get(
-    resource: string,
-    namespace?: string
-  ): Promise<any[]> {
+  public async get(resource: string, namespace?: string): Promise<any[]> {
     throw new Error('This functionality is not available in the API')
   }
 }

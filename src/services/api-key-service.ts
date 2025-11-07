@@ -108,7 +108,7 @@ export class ApiKeyService {
         '/v1/api-keys/{id}/rotate',
         {
           params: { path: { id } },
-        }
+        },
       )
       if (error) throw new Error(JSON.stringify(error))
       return data!

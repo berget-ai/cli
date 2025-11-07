@@ -15,7 +15,7 @@ let validateFunction: any
 try {
   const schemaContent = readFileSync(schemaPath, 'utf-8')
   openCodeSchema = JSON.parse(schemaContent)
-  
+
   // Initialize AJV with formats and options
   ajv = new Ajv({
     allErrors: true,
@@ -24,10 +24,10 @@ try {
     allowUnionTypes: true,
     removeAdditional: false,
   })
-  
+
   // Add JSON Schema formats
   addFormats(ajv)
-  
+
   // Compile the schema
   validateFunction = ajv.compile(openCodeSchema)
 } catch (error) {
@@ -40,14 +40,17 @@ export type OpenCodeConfig = any
 /**
  * Validate OpenCode configuration against the official JSON Schema
  */
-export function validateOpenCodeConfig(config: any): { valid: boolean; errors?: string[] } {
+export function validateOpenCodeConfig(config: any): {
+  valid: boolean
+  errors?: string[]
+} {
   try {
     if (!validateFunction) {
       return { valid: false, errors: ['Schema validator not initialized'] }
     }
 
     const isValid = validateFunction(config)
-    
+
     if (isValid) {
       return { valid: true }
     } else {
@@ -56,7 +59,7 @@ export function validateOpenCodeConfig(config: any): { valid: boolean; errors?: 
         const message = err.message || 'Unknown error'
         return `${path}: ${message}`
       }) || ['Unknown validation error']
-      
+
       return { valid: false, errors }
     }
   } catch (error) {
@@ -80,7 +83,7 @@ export function fixOpenCodeConfig(config: any): OpenCodeConfig {
 
   // Remove invalid properties
   const invalidProps = ['maxTokens', 'contextWindow']
-  invalidProps.forEach(prop => {
+  invalidProps.forEach((prop) => {
     if (fixed[prop] !== undefined) {
       console.warn(`⚠️  Removing invalid property: ${prop}`)
       delete fixed[prop]
@@ -96,25 +99,30 @@ export function fixOpenCodeConfig(config: any): OpenCodeConfig {
             // Move maxTokens/contextWindow to proper structure if needed
             if (model.maxTokens || model.contextWindow) {
               if (!model.limit) model.limit = {}
-              
+
               // Use the larger of maxTokens/contextWindow for context
-              const contextValues = [model.maxTokens, model.contextWindow].filter(Boolean)
+              const contextValues = [
+                model.maxTokens,
+                model.contextWindow,
+              ].filter(Boolean)
               if (contextValues.length > 0) {
                 const newContext = Math.max(...contextValues)
                 if (!model.limit.context || newContext > model.limit.context) {
                   model.limit.context = newContext
                 }
               }
-              
+
               // Set a reasonable default for output if not present
               // (typically 1/4 to 1/8 of context window)
               if (!model.limit.output && model.limit.context) {
                 model.limit.output = Math.floor(model.limit.context / 4)
               }
-              
+
               delete model.maxTokens
               delete model.contextWindow
-              console.warn('⚠️  Moved maxTokens/contextWindow to limit.context/output')
+              console.warn(
+                '⚠️  Moved maxTokens/contextWindow to limit.context/output',
+              )
             }
           }
         })

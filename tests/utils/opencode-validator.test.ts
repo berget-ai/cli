@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { validateOpenCodeConfig, fixOpenCodeConfig } from '../../src/utils/opencode-validator'
+import {
+  validateOpenCodeConfig,
+  fixOpenCodeConfig,
+} from '../../src/utils/opencode-validator'
 import { readFileSync } from 'fs'
 
 describe('OpenCode Validator', () => {
@@ -16,10 +19,10 @@ describe('OpenCode Validator', () => {
           permission: {
             edit: 'allow',
             bash: 'allow',
-            webfetch: 'allow'
-          }
-        }
-      }
+            webfetch: 'allow',
+          },
+        },
+      },
     }
 
     const result = validateOpenCodeConfig(validConfig)
@@ -39,10 +42,10 @@ describe('OpenCode Validator', () => {
           permission: {
             edit: 'invalid', // Should be enum value
             bash: 'allow',
-            webfetch: 'allow'
-          }
-        }
-      }
+            webfetch: 'allow',
+          },
+        },
+      },
     }
 
     const result = validateOpenCodeConfig(invalidConfig)
@@ -56,7 +59,7 @@ describe('OpenCode Validator', () => {
       username: 'test-user',
       model: 'gpt-4',
       tools: {
-        compact: { threshold: 80000 } // Should be boolean
+        compact: { threshold: 80000 }, // Should be boolean
       },
       maxTokens: 4000, // Invalid property
       provider: {
@@ -65,44 +68,46 @@ describe('OpenCode Validator', () => {
             'test-model': {
               name: 'Test Model',
               maxTokens: 4000, // Should be moved to limit.context
-              contextWindow: 8000 // Should be moved to limit.context
-            }
-          }
-        }
-      }
+              contextWindow: 8000, // Should be moved to limit.context
+            },
+          },
+        },
+      },
     }
 
     const fixed = fixOpenCodeConfig(configWithIssues)
-    
+
     // tools.compact should be boolean
     expect(typeof fixed.tools.compact).toBe('boolean')
-    
+
     // maxTokens should be removed
     expect(fixed.maxTokens).toBeUndefined()
-    
+
     // maxTokens and contextWindow should be moved to limit.context
     expect(fixed.provider.berget.models['test-model'].limit).toBeDefined()
     expect(fixed.provider.berget.models['test-model'].limit.context).toBe(8000)
     expect(fixed.provider.berget.models['test-model'].maxTokens).toBeUndefined()
-    expect(fixed.provider.berget.models['test-model'].contextWindow).toBeUndefined()
+    expect(
+      fixed.provider.berget.models['test-model'].contextWindow,
+    ).toBeUndefined()
   })
 
   it('should validate the current opencode.json file', () => {
     try {
       const currentConfig = JSON.parse(readFileSync('opencode.json', 'utf8'))
-      
+
       // Apply fixes to handle common issues
       const fixedConfig = fixOpenCodeConfig(currentConfig)
-      
+
       // Validate the fixed config
       const result = validateOpenCodeConfig(fixedConfig)
-      
+
       // The fixed config should be valid according to the JSON Schema
       expect(result.valid).toBe(true)
-      
+
       if (!result.valid) {
         console.log('Fixed opencode.json validation errors:')
-        result.errors?.forEach(err => console.log(`  - ${err}`))
+        result.errors?.forEach((err) => console.log(`  - ${err}`))
       }
     } catch (error) {
       // If we can't read the file, that's ok for this test

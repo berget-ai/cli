@@ -36,7 +36,7 @@ export function registerModelCommands(program: Command): void {
 
           console.log('Available Models:')
           console.log(
-            'ID                                                 OWNED BY                 CAPABILITIES'
+            'ID                                                 OWNED BY                 CAPABILITIES',
           )
           // Ensure response has the expected structure
           const modelData = response as { data?: any[] }
@@ -50,8 +50,8 @@ export function registerModelCommands(program: Command): void {
 
               console.log(
                 `${model.root.padEnd(50)} ${model.owned_by.padEnd(
-                  24
-                )} ${capabilities.join(', ')}`
+                  24,
+                )} ${capabilities.join(', ')}`,
               )
             })
           }

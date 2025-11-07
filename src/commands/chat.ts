@@ -2,7 +2,11 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import readline from 'readline'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
-import { ChatService, ChatMessage, ChatCompletionOptions } from '../services/chat-service'
+import {
+  ChatService,
+  ChatMessage,
+  ChatCompletionOptions,
+} from '../services/chat-service'
 import { ApiKeyService } from '../services/api-key-service'
 import { AuthService } from '../services/auth-service'
 import { handleError } from '../utils/error-handler'
@@ -45,9 +49,12 @@ export function registerChatCommands(program: Command): void {
     .option('-k, --api-key <key>', 'API key to use for this chat session')
     .option(
       '--api-key-id <id>',
-      'ID of the API key to use from your saved keys'
+      'ID of the API key to use from your saved keys',
     )
-    .option('--no-stream', 'Disable streaming (streaming is enabled by default)')
+    .option(
+      '--no-stream',
+      'Disable streaming (streaming is enabled by default)',
+    )
     .action(async (model, message, options) => {
       try {
         const chatService = ChatService.getInstance()
@@ -55,49 +62,54 @@ export function registerChatCommands(program: Command): void {
         // Check if we have an API key or need to get one
         let apiKey = options.apiKey
         let apiKeyId = options.apiKeyId
-        
+
         // Check for environment variable first
-        const envApiKey = process.env.BERGET_API_KEY;
+        const envApiKey = process.env.BERGET_API_KEY
         if (envApiKey) {
           console.log(
-            chalk.dim(`Using API key from BERGET_API_KEY environment variable`)
+            chalk.dim(`Using API key from BERGET_API_KEY environment variable`),
           )
-          apiKey = envApiKey;
-          
+          apiKey = envApiKey
+
           // Debug the API key (first few characters only)
           if (process.argv.includes('--debug')) {
             console.log(
-              chalk.yellow(`DEBUG: API key from env starts with: ${envApiKey.substring(0, 4)}...`)
+              chalk.yellow(
+                `DEBUG: API key from env starts with: ${envApiKey.substring(0, 4)}...`,
+              ),
             )
           }
         }
         // If API key is already provided via command line, use it
         else if (options.apiKey) {
-          console.log(
-            chalk.dim(`Using API key from command line argument`)
-          )
-          apiKey = options.apiKey;
+          console.log(chalk.dim(`Using API key from command line argument`))
+          apiKey = options.apiKey
         }
         // If no API key or API key ID provided and no env var, check for default API key
         else if (!apiKey && !apiKeyId) {
           try {
             const defaultApiKeyManager = DefaultApiKeyManager.getInstance()
-            const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData()
+            const defaultApiKeyData =
+              defaultApiKeyManager.getDefaultApiKeyData()
 
             if (defaultApiKeyData) {
               apiKeyId = defaultApiKeyData.id
               apiKey = defaultApiKeyData.key
-              
+
               if (apiKey) {
                 console.log(
-                  chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
+                  chalk.dim(`Using default API key: ${defaultApiKeyData.name}`),
                 )
               } else {
                 console.log(
-                  chalk.yellow(`Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`)
+                  chalk.yellow(
+                    `Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`,
+                  ),
                 )
                 console.log(
-                  chalk.yellow(`Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`)
+                  chalk.yellow(
+                    `Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`,
+                  ),
                 )
               }
             } else {
@@ -110,24 +122,24 @@ export function registerChatCommands(program: Command): void {
               if (!apiKey) {
                 console.log(
                   chalk.red(
-                    'Error: An API key is required to use the chat command.'
-                  )
+                    'Error: An API key is required to use the chat command.',
+                  ),
                 )
                 console.log(chalk.yellow('You can:'))
                 console.log(
                   chalk.yellow(
-                    '1. Create an API key with: berget api-keys create --name "My Key"'
-                  )
+                    '1. Create an API key with: berget api-keys create --name "My Key"',
+                  ),
                 )
                 console.log(
                   chalk.yellow(
-                    '2. Set a default API key with: berget api-keys set-default <id>'
-                  )
+                    '2. Set a default API key with: berget api-keys set-default <id>',
+                  ),
                 )
                 console.log(
                   chalk.yellow(
-                    '3. Provide an API key with the --api-key option'
-                  )
+                    '3. Provide an API key with the --api-key option',
+                  ),
                 )
                 return
               }
@@ -135,7 +147,7 @@ export function registerChatCommands(program: Command): void {
           } catch (error) {
             if (process.argv.includes('--debug')) {
               console.log(
-                chalk.yellow('DEBUG: Error checking default API key:')
+                chalk.yellow('DEBUG: Error checking default API key:'),
               )
               console.log(chalk.yellow(String(error)))
             }
@@ -148,14 +160,14 @@ export function registerChatCommands(program: Command): void {
             const apiKeyService = ApiKeyService.getInstance()
             const keys = await apiKeyService.list()
             const selectedKey = keys.find(
-              (key) => key.id.toString() === options.apiKeyId
+              (key) => key.id.toString() === options.apiKeyId,
             )
 
             if (!selectedKey) {
               console.log(
                 chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
-                )
+                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`,
+                ),
               )
             } else {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`))
@@ -164,37 +176,43 @@ export function registerChatCommands(program: Command): void {
               if (
                 await confirm(
                   chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`
-                  )
+                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`,
+                  ),
                 )
               ) {
                 const rotatedKey = await apiKeyService.rotate(options.apiKeyId)
                 apiKey = rotatedKey.key
                 console.log(
                   chalk.green(
-                    `API key "${selectedKey.name}" rotated successfully.`
-                  )
+                    `API key "${selectedKey.name}" rotated successfully.`,
+                  ),
                 )
               } else {
                 console.log(
-                  chalk.yellow('Using default authentication instead.')
+                  chalk.yellow('Using default authentication instead.'),
                 )
               }
             }
           } catch (error) {
             // Check if this is an authentication error
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            const isAuthError = errorMessage.includes('Unauthorized') || 
-                               errorMessage.includes('Authentication failed') ||
-                               errorMessage.includes('AUTH_FAILED');
-            
+            const errorMessage =
+              error instanceof Error ? error.message : String(error)
+            const isAuthError =
+              errorMessage.includes('Unauthorized') ||
+              errorMessage.includes('Authentication failed') ||
+              errorMessage.includes('AUTH_FAILED')
+
             if (isAuthError) {
-              console.log(chalk.yellow('Authentication required. Please run `berget auth login` first.'));
+              console.log(
+                chalk.yellow(
+                  'Authentication required. Please run `berget auth login` first.',
+                ),
+              )
             } else {
-              console.error(chalk.red('Error fetching API key:'));
-              console.error(error);
+              console.error(chalk.red('Error fetching API key:'))
+              console.error(error)
             }
-            console.log(chalk.yellow('Using default authentication instead.'));
+            console.log(chalk.yellow('Using default authentication instead.'))
           }
         }
 
@@ -208,12 +226,12 @@ export function registerChatCommands(program: Command): void {
             console.log(chalk.yellow('1. Log in with `berget auth login`'))
             console.log(chalk.yellow('2. Provide an API key with `--api-key`'))
             console.log(
-              chalk.yellow('3. Provide an API key ID with `--api-key-id`')
+              chalk.yellow('3. Provide an API key ID with `--api-key-id`'),
             )
             console.log(
               chalk.yellow(
-                '4. Set a default API key with `berget api-keys set-default <id>`'
-              )
+                '4. Set a default API key with `berget api-keys set-default <id>`',
+              ),
             )
             return
           }
@@ -233,7 +251,7 @@ export function registerChatCommands(program: Command): void {
         // Check if input is being piped in
         let inputMessage = message
         let stdinContent = ''
-        
+
         if (!process.stdin.isTTY) {
           // Read from stdin (piped input)
           const chunks = []
@@ -266,21 +284,26 @@ export function registerChatCommands(program: Command): void {
               temperature:
                 options.temperature !== undefined ? options.temperature : 0.7,
               max_tokens: options.maxTokens || 4096,
-              stream: options.stream !== false
+              stream: options.stream !== false,
             }
 
             // Only add apiKey if it actually exists
             if (apiKey) {
               completionOptions.apiKey = apiKey
             }
-            
+
             // Add streaming support (now default)
             if (completionOptions.stream) {
               let assistantResponse = ''
-              
+
               // Stream the response in real-time
               completionOptions.onChunk = (chunk: any) => {
-                if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
+                if (
+                  chunk.choices &&
+                  chunk.choices[0] &&
+                  chunk.choices[0].delta &&
+                  chunk.choices[0].delta.content
+                ) {
                   const content = chunk.choices[0].delta.content
                   try {
                     process.stdout.write(content)
@@ -295,20 +318,28 @@ export function registerChatCommands(program: Command): void {
                   assistantResponse += content
                 }
               }
-              
+
               try {
                 await chatService.createCompletion(completionOptions)
               } catch (streamError) {
                 console.error(chalk.red('\nStreaming error:'), streamError)
-                
+
                 // Fallback to non-streaming if streaming fails
-                console.log(chalk.yellow('Falling back to non-streaming mode...'))
+                console.log(
+                  chalk.yellow('Falling back to non-streaming mode...'),
+                )
                 completionOptions.stream = false
                 delete completionOptions.onChunk
-                
-                const response = await chatService.createCompletion(completionOptions)
-                
-                if (response && response.choices && response.choices[0] && response.choices[0].message) {
+
+                const response =
+                  await chatService.createCompletion(completionOptions)
+
+                if (
+                  response &&
+                  response.choices &&
+                  response.choices[0] &&
+                  response.choices[0].message
+                ) {
                   assistantResponse = response.choices[0].message.content
                   console.log(assistantResponse)
                 }
@@ -316,10 +347,9 @@ export function registerChatCommands(program: Command): void {
               console.log() // Add newline at the end
               return
             }
-            
-            const response = await chatService.createCompletion(
-              completionOptions
-            )
+
+            const response =
+              await chatService.createCompletion(completionOptions)
 
             // Check if response has the expected structure
             if (
@@ -329,10 +359,10 @@ export function registerChatCommands(program: Command): void {
               !response.choices[0].message
             ) {
               console.error(
-                chalk.red('Error: Unexpected response format from API')
+                chalk.red('Error: Unexpected response format from API'),
               )
               console.error(
-                chalk.red('Response:', JSON.stringify(response, null, 2))
+                chalk.red('Response:', JSON.stringify(response, null, 2)),
               )
               throw new Error('Unexpected response format from API')
             }
@@ -346,7 +376,7 @@ export function registerChatCommands(program: Command): void {
             } else {
               console.log(assistantMessage)
             }
-            
+
             return
           } catch (error) {
             console.error(chalk.red('Error: Failed to get response'))
@@ -390,22 +420,27 @@ export function registerChatCommands(program: Command): void {
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,
                 max_tokens: options.maxTokens || 4096,
-                stream: options.stream !== false
+                stream: options.stream !== false,
               }
 
               // Only add apiKey if it actually exists
               if (apiKey) {
                 completionOptions.apiKey = apiKey
               }
-              
+
               // Add streaming support (now default)
               if (completionOptions.stream) {
                 let assistantResponse = ''
                 console.log(chalk.blue('Assistant: '))
-                
+
                 // Stream the response in real-time
                 completionOptions.onChunk = (chunk: any) => {
-                  if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta && chunk.choices[0].delta.content) {
+                  if (
+                    chunk.choices &&
+                    chunk.choices[0] &&
+                    chunk.choices[0].delta &&
+                    chunk.choices[0].delta.content
+                  ) {
                     const content = chunk.choices[0].delta.content
                     try {
                       process.stdout.write(content)
@@ -420,40 +455,47 @@ export function registerChatCommands(program: Command): void {
                     assistantResponse += content
                   }
                 }
-                
+
                 try {
                   await chatService.createCompletion(completionOptions)
                 } catch (streamError) {
                   console.error(chalk.red('\nStreaming error:'), streamError)
-                  
+
                   // Fallback to non-streaming if streaming fails
-                  console.log(chalk.yellow('Falling back to non-streaming mode...'))
+                  console.log(
+                    chalk.yellow('Falling back to non-streaming mode...'),
+                  )
                   completionOptions.stream = false
                   delete completionOptions.onChunk
-                  
-                  const response = await chatService.createCompletion(completionOptions)
-                  
-                  if (response && response.choices && response.choices[0] && response.choices[0].message) {
+
+                  const response =
+                    await chatService.createCompletion(completionOptions)
+
+                  if (
+                    response &&
+                    response.choices &&
+                    response.choices[0] &&
+                    response.choices[0].message
+                  ) {
                     assistantResponse = response.choices[0].message.content
                     console.log(assistantResponse)
                   }
                 }
                 console.log('\n')
-                
+
                 // Add assistant response to messages
                 messages.push({
                   role: 'assistant',
-                  content: assistantResponse
+                  content: assistantResponse,
                 })
-                
+
                 // Continue the conversation
                 askQuestion()
                 return
               }
-              
-              const response = await chatService.createCompletion(
-                completionOptions
-              )
+
+              const response =
+                await chatService.createCompletion(completionOptions)
 
               // Debug output
               if (program.opts().debug) {
@@ -469,10 +511,10 @@ export function registerChatCommands(program: Command): void {
                 !response.choices[0].message
               ) {
                 console.error(
-                  chalk.red('Error: Unexpected response format from API')
+                  chalk.red('Error: Unexpected response format from API'),
                 )
                 console.error(
-                  chalk.red('Response:', JSON.stringify(response, null, 2))
+                  chalk.red('Response:', JSON.stringify(response, null, 2)),
                 )
                 throw new Error('Unexpected response format from API')
               }
@@ -488,14 +530,14 @@ export function registerChatCommands(program: Command): void {
 
               // Display the response
               console.log(chalk.blue('Assistant: '))
-              
+
               // Check if the response contains markdown and render it if it does
               if (containsMarkdown(assistantMessage)) {
                 console.log(renderMarkdown(assistantMessage))
               } else {
                 console.log(assistantMessage)
               }
-              
+
               console.log() // Empty line for better readability
 
               // Continue the conversation
@@ -524,7 +566,7 @@ export function registerChatCommands(program: Command): void {
     .option('-k, --api-key <key>', 'API key to use for this request')
     .option(
       '--api-key-id <id>',
-      'ID of the API key to use from your saved keys'
+      'ID of the API key to use from your saved keys',
     )
     .action(async (options) => {
       try {
@@ -540,7 +582,7 @@ export function registerChatCommands(program: Command): void {
           if (defaultApiKeyData) {
             apiKeyId = defaultApiKeyData.id
             console.log(
-              chalk.dim(`Using default API key: ${defaultApiKeyData.name}`)
+              chalk.dim(`Using default API key: ${defaultApiKeyData.name}`),
             )
           }
         }
@@ -550,14 +592,14 @@ export function registerChatCommands(program: Command): void {
             const apiKeyService = ApiKeyService.getInstance()
             const keys = await apiKeyService.list()
             const selectedKey = keys.find(
-              (key) => key.id.toString() === options.apiKeyId
+              (key) => key.id.toString() === options.apiKeyId,
             )
 
             if (!selectedKey) {
               console.log(
                 chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
-                )
+                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`,
+                ),
               )
             } else {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`))
@@ -566,20 +608,20 @@ export function registerChatCommands(program: Command): void {
               if (
                 await confirm(
                   chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`
-                  )
+                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`,
+                  ),
                 )
               ) {
                 const rotatedKey = await apiKeyService.rotate(options.apiKeyId)
                 apiKey = rotatedKey.key
                 console.log(
                   chalk.green(
-                    `API key "${selectedKey.name}" rotated successfully.`
-                  )
+                    `API key "${selectedKey.name}" rotated successfully.`,
+                  ),
                 )
               } else {
                 console.log(
-                  chalk.yellow('Using default authentication instead.')
+                  chalk.yellow('Using default authentication instead.'),
                 )
               }
             }
@@ -602,14 +644,15 @@ export function registerChatCommands(program: Command): void {
         console.log(chalk.bold('Available Chat Models:'))
         console.log(chalk.dim('─'.repeat(70)))
         console.log(
-          chalk.dim('MODEL ID'.padEnd(40)) +
-            chalk.dim('CAPABILITIES')
+          chalk.dim('MODEL ID'.padEnd(40)) + chalk.dim('CAPABILITIES'),
         )
         console.log(chalk.dim('─'.repeat(70)))
 
         // Filter to only show active models
-        const activeModels = models.data.filter((model: any) => model.active === true);
-        
+        const activeModels = models.data.filter(
+          (model: any) => model.active === true,
+        )
+
         activeModels.forEach((model: any) => {
           const capabilities = []
           if (model.capabilities.vision) capabilities.push('vision')
@@ -618,12 +661,11 @@ export function registerChatCommands(program: Command): void {
           if (model.capabilities.json_mode) capabilities.push('json_mode')
 
           // Format model ID in Huggingface compatible format (owner/model)
-          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(40)
-          
-          console.log(
-            modelId +
-            capabilities.join(', ')
+          const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(
+            40,
           )
+
+          console.log(modelId + capabilities.join(', '))
         })
       } catch (error) {
         handleError('Failed to list chat models', error)

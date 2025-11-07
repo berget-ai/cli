@@ -18,7 +18,7 @@ program
 \\____/ \\___|_|  \\__, |\\___|\\_\\_ \\_| |_/\\___/ 
                  __/ |                      
                 |___/   AI on European terms
-Version: ${version}`
+Version: ${version}`,
   )
   .version(version, '-v, --version')
   .option('--local', 'Use local API endpoint (hidden)', false)
@@ -35,32 +35,34 @@ if (process.argv.length <= 2) {
   console.log(chalk.blue('\nWelcome to the Berget CLI!'))
   console.log(chalk.blue('Common commands:'))
   console.log(
-    chalk.blue(`  ${chalk.bold('berget auth login')}      - Log in to Berget`)
+    chalk.blue(`  ${chalk.bold('berget auth login')}      - Log in to Berget`),
   )
   console.log(
     chalk.blue(
-      `  ${chalk.bold('berget models list')}     - List available AI models`
-    )
+      `  ${chalk.bold('berget models list')}     - List available AI models`,
+    ),
   )
   console.log(
     chalk.blue(
-      `  ${chalk.bold('berget chat run')}        - Start a chat session`
-    )
+      `  ${chalk.bold('berget chat run')}        - Start a chat session`,
+    ),
   )
   console.log(
     chalk.blue(
       `  ${chalk.bold(
-        'berget code init'
-      )}       - Initialize AI coding assistant`
-    )
-  )
-  console.log(
-    chalk.blue(`  ${chalk.bold('berget api-keys list')}   - List your API keys`)
+        'berget code init',
+      )}       - Initialize AI coding assistant`,
+    ),
   )
   console.log(
     chalk.blue(
-      `\nRun ${chalk.bold('berget --help')} for a complete list of commands.`
-    )
+      `  ${chalk.bold('berget api-keys list')}   - List your API keys`,
+    ),
+  )
+  console.log(
+    chalk.blue(
+      `\nRun ${chalk.bold('berget --help')} for a complete list of commands.`,
+    ),
   )
 }
 
@@ -87,15 +89,15 @@ program.on('command:*', (operands) => {
     console.log(
       chalk.yellow(
         `Did you mean? ${chalk.bold(
-          `berget ${commonMistakes[unknownCommand]}`
-        )}`
-      )
+          `berget ${commonMistakes[unknownCommand]}`,
+        )}`,
+      ),
     )
   } else {
     // Try to find similar commands
     const availableCommands = program.commands.map((cmd) => cmd.name())
     const similarCommands = availableCommands.filter(
-      (cmd) => cmd.includes(unknownCommand) || unknownCommand.includes(cmd)
+      (cmd) => cmd.includes(unknownCommand) || unknownCommand.includes(cmd),
     )
 
     if (similarCommands.length > 0) {
@@ -106,7 +108,7 @@ program.on('command:*', (operands) => {
     }
 
     console.log(
-      chalk.blue('\nRun `berget --help` for a list of available commands.')
+      chalk.blue('\nRun `berget --help` for a list of available commands.'),
     )
   }
 

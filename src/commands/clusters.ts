@@ -22,8 +22,8 @@ export function registerClusterCommands(program: Command): void {
         clusters.forEach((cluster: Cluster) => {
           console.log(
             `${cluster.name.padEnd(22)} ${cluster.status.padEnd(9)} ${String(
-              cluster.nodes
-            ).padEnd(8)} ${cluster.created}`
+              cluster.nodes,
+            ).padEnd(8)} ${cluster.created}`,
           )
         })
       } catch (error) {

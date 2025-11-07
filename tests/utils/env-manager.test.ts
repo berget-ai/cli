@@ -33,13 +33,13 @@ describe('env-manager', () => {
       await updateEnvFile({
         key: 'TEST_KEY',
         value: 'test_value',
-        comment: 'Test comment'
+        comment: 'Test comment',
       })
 
       expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvPath)
       expect(mockWriteFile).toHaveBeenCalledWith(
         testEnvPath,
-        '# Test comment\nTEST_KEY=test_value\n'
+        '# Test comment\nTEST_KEY=test_value\n',
       )
     })
 
@@ -51,17 +51,18 @@ describe('env-manager', () => {
       await updateEnvFile({
         key: 'NEW_KEY',
         value: 'new_value',
-        comment: 'Test comment'
+        comment: 'Test comment',
       })
 
       expect(mockWriteFile).toHaveBeenCalledWith(
         testEnvPath,
-        'EXISTING_KEY=existing_value\nNEW_KEY=new_value\n'
+        'EXISTING_KEY=existing_value\nNEW_KEY=new_value\n',
       )
     })
 
     it('should not update when key already exists and force is false', async () => {
-      const existingContent = 'EXISTING_KEY=existing_value\nTEST_KEY=old_value\n'
+      const existingContent =
+        'EXISTING_KEY=existing_value\nTEST_KEY=old_value\n'
       mockFs.existsSync.mockReturnValue(true)
       mockFs.readFileSync.mockReturnValue(existingContent)
 
@@ -69,31 +70,34 @@ describe('env-manager', () => {
 
       await updateEnvFile({
         key: 'TEST_KEY',
-        value: 'new_value'
+        value: 'new_value',
       })
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('TEST_KEY already exists in .env - leaving unchanged')
+        expect.stringContaining(
+          'TEST_KEY already exists in .env - leaving unchanged',
+        ),
       )
       expect(mockWriteFile).not.toHaveBeenCalled()
-      
+
       consoleSpy.mockRestore()
     })
 
     it('should update existing key when force is true', async () => {
-      const existingContent = 'EXISTING_KEY=existing_value\nTEST_KEY=old_value\n'
+      const existingContent =
+        'EXISTING_KEY=existing_value\nTEST_KEY=old_value\n'
       mockFs.existsSync.mockReturnValue(true)
       mockFs.readFileSync.mockReturnValue(existingContent)
 
       await updateEnvFile({
         key: 'TEST_KEY',
         value: 'new_value',
-        force: true
+        force: true,
       })
 
       expect(mockWriteFile).toHaveBeenCalledWith(
         testEnvPath,
-        'EXISTING_KEY=existing_value\nTEST_KEY=new_value\n'
+        'EXISTING_KEY=existing_value\nTEST_KEY=new_value\n',
       )
     })
 
@@ -103,12 +107,12 @@ describe('env-manager', () => {
       await updateEnvFile({
         key: 'COMPLEX_KEY',
         value: 'value with "quotes" and $special',
-        comment: 'Complex test'
+        comment: 'Complex test',
       })
 
       expect(mockWriteFile).toHaveBeenCalledWith(
         testEnvPath,
-        '# Complex test\nCOMPLEX_KEY=value with "quotes" and $special\n'
+        '# Complex test\nCOMPLEX_KEY=value with "quotes" and $special\n',
       )
     })
 
@@ -119,13 +123,13 @@ describe('env-manager', () => {
       await updateEnvFile({
         envPath: customPath,
         key: 'TEST_KEY',
-        value: 'test_value'
+        value: 'test_value',
       })
 
       expect(mockFs.existsSync).toHaveBeenCalledWith(customPath)
       expect(mockWriteFile).toHaveBeenCalledWith(
         customPath,
-        'TEST_KEY=test_value\n'
+        'TEST_KEY=test_value\n',
       )
     })
 
@@ -136,8 +140,8 @@ describe('env-manager', () => {
       await expect(
         updateEnvFile({
           key: 'TEST_KEY',
-          value: 'test_value'
-        })
+          value: 'test_value',
+        }),
       ).rejects.toThrow('Write error')
     })
   })

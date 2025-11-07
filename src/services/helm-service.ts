@@ -20,10 +20,10 @@ export interface HelmInstallOptions {
 export class HelmService {
   private static instance: HelmService
   private client = createAuthenticatedClient()
-  
+
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.HELM
-  
+
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.HELM
 

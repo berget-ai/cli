@@ -16,13 +16,15 @@ export interface EnvUpdateOptions {
  * Safely updates .env file without overwriting existing keys
  * Uses dotenv for proper parsing and formatting
  */
-export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean> {
+export async function updateEnvFile(
+  options: EnvUpdateOptions,
+): Promise<boolean> {
   const {
     envPath = path.join(process.cwd(), '.env'),
     key,
     value,
     comment,
-    force = false
+    force = false,
   } = options
 
   try {
@@ -37,7 +39,9 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
 
     // Check if key already exists and we're not forcing
     if (parsed[key] && !force) {
-      console.log(chalk.yellow(`⚠ ${key} already exists in .env - leaving unchanged`))
+      console.log(
+        chalk.yellow(`⚠ ${key} already exists in .env - leaving unchanged`),
+      )
       return false
     }
 
@@ -46,7 +50,7 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
 
     // Generate new .env content
     let newContent = ''
-    
+
     // Add comment at the top if this is a new file
     if (!existingContent && comment) {
       newContent += `# ${comment}\n`
@@ -67,7 +71,6 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
     }
 
     return true
-
   } catch (error) {
     console.error(chalk.red(`Failed to update .env file:`))
     throw error
@@ -77,7 +80,10 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
 /**
  * Checks if a .env file exists and contains a specific key
  */
-export function hasEnvKey(envPath: string = path.join(process.cwd(), '.env'), key: string): boolean {
+export function hasEnvKey(
+  envPath: string = path.join(process.cwd(), '.env'),
+  key: string,
+): boolean {
   if (!fs.existsSync(envPath)) {
     return false
   }
