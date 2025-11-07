@@ -12,6 +12,39 @@ import { spawn } from 'child_process'
 import { updateEnvFile } from '../utils/env-manager'
 import { createAuthenticatedClient } from '../client'
 
+// Centralized model configuration
+const MODEL_CONFIG = {
+  // Model names used in agent configurations (with provider prefix)
+  AGENT_MODELS: {
+    primary: 'berget/deepseek-r1',
+    small: 'berget/gpt-oss',
+  },
+  // Model definitions in provider configuration (without prefix)
+  PROVIDER_MODELS: {
+    'deepseek-r1': {
+      name: 'GLM-4.6',
+      limit: {
+        output: 4000,
+        context: 90000,
+      },
+    },
+    'gpt-oss': {
+      name: 'GPT-OSS',
+      limit: {
+        output: 4000,
+        context: 128000,
+      },
+    },
+    'llama-8b': {
+      name: 'llama-3.1-8b',
+      limit: {
+        output: 4000,
+        context: 128000,
+      },
+    },
+  },
+}
+
 /**
  * Check if current directory has git
  */
@@ -54,7 +87,7 @@ Return ONLY the merged JSON configuration, no explanations.`
 
     const response = await client.POST('/v1/chat/completions', {
       body: {
-        model: 'deepseek-r1',
+        model: MODEL_CONFIG.AGENT_MODELS.primary,
         messages: [
           {
             role: 'user',
@@ -415,22 +448,32 @@ export function registerCodeCommands(program: Command): void {
           return
         }
 
-        // Check if user is authenticated with Berget first
-        try {
-          const authService = AuthService.getInstance()
-          // This will throw if not authenticated
-          await authService.whoami()
-        } catch (error) {
-          console.log(chalk.red('❌ Not authenticated with Berget AI.'))
-          console.log(chalk.blue('Please login first to create API keys:'))
-          console.log(chalk.cyan('  berget auth login'))
-          console.log(chalk.blue('Then try again:'))
-          console.log(
-            chalk.cyan(
-              `  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`,
-            ),
-          )
-          return
+        // Check if we have an API key in environment first
+        if (process.env.BERGET_API_KEY) {
+          console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment - no authentication required'))
+        } else {
+          // Only require authentication if we don't have an API key
+          try {
+            const authService = AuthService.getInstance()
+            // This will throw if not authenticated
+            await authService.whoami()
+          } catch (error) {
+            console.log(chalk.red('❌ Not authenticated with Berget AI.'))
+            console.log(chalk.blue('To get started, you have two options:'))
+            console.log('')
+            console.log(chalk.yellow('Option 1: Use an existing API key (recommended)'))
+            console.log(chalk.cyan('  Set BERGET_API_KEY environment variable:'))
+            console.log(chalk.dim('    export BERGET_API_KEY=your_api_key_here'))
+            console.log(chalk.cyan('  Or create a .env file in your project:'))
+            console.log(chalk.dim('    echo "BERGET_API_KEY=your_api_key_here" > .env'))
+            console.log('')
+            console.log(chalk.yellow('Option 2: Login and create a new API key'))
+            console.log(chalk.cyan('  berget auth login'))
+            console.log(chalk.cyan(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`))
+            console.log('')
+            console.log(chalk.blue('Then try again.'))
+            return
+          }
         }
 
         console.log(
@@ -444,8 +487,8 @@ export function registerCodeCommands(program: Command): void {
         try {
           const apiKeyService = ApiKeyService.getInstance()
 
-          // For automation mode, check for environment variable first
-          if (options.yes && process.env.BERGET_API_KEY) {
+          // Check for environment variable first (regardless of automation mode)
+          if (process.env.BERGET_API_KEY) {
             console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
             apiKey = process.env.BERGET_API_KEY
             keyName = `env-key-${projectName}`
@@ -576,8 +619,21 @@ export function registerCodeCommands(program: Command): void {
             }
           }
         } catch (error) {
-          console.error(chalk.red('Failed to handle API keys:'))
-          handleError('API key operation failed', error)
+          if (process.env.BERGET_API_KEY) {
+            console.log(chalk.yellow('⚠️  Could not verify API key with Berget API, but continuing with environment key'))
+            console.log(chalk.dim('This might be due to network issues or an invalid key'))
+          } else {
+            console.error(chalk.red('❌ Failed to handle API keys:'))
+            console.log(chalk.blue('This could be due to:'))
+            console.log(chalk.dim('  • Network connectivity issues'))
+            console.log(chalk.dim('  • Invalid authentication credentials'))
+            console.log(chalk.dim('  • API service temporarily unavailable'))
+            console.log('')
+            console.log(chalk.blue('Try using an API key directly:'))
+            console.log(chalk.cyan('  export BERGET_API_KEY=your_api_key_here'))
+            console.log(chalk.cyan(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT} --yes`))
+            handleError('API key operation failed', error)
+          }
           return
         }
 
@@ -591,11 +647,11 @@ export function registerCodeCommands(program: Command): void {
           theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
-          model: 'deepseek-r1',
-          small_model: 'gpt-oss',
+          model: MODEL_CONFIG.AGENT_MODELS.primary,
+          small_model: MODEL_CONFIG.AGENT_MODELS.small,
           agent: {
             fullstack: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -606,7 +662,7 @@ export function registerCodeCommands(program: Command): void {
                 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             frontend: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -618,7 +674,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             backend: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -629,7 +685,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it. CRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             devops: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.8,
               mode: 'primary',
@@ -640,7 +696,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.',
             },
             app: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -652,7 +708,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.',
             },
             security: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.2,
               top_p: 0.8,
               mode: 'subagent',
@@ -663,7 +719,7 @@ export function registerCodeCommands(program: Command): void {
                 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.',
             },
             quality: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.1,
               top_p: 0.9,
               mode: 'subagent',
@@ -722,10 +778,7 @@ export function registerCodeCommands(program: Command): void {
               npm: '@ai-sdk/openai-compatible',
               name: 'Berget AI',
               options: { baseURL: 'https://api.berget.ai/v1' },
-              models: {
-                'deepseek-r1': { name: 'GLM-4.6' },
-                'gpt-oss': { name: 'GPT-OSS' },
-              },
+              models: MODEL_CONFIG.PROVIDER_MODELS,
             },
           },
         }
@@ -1147,11 +1200,11 @@ All agents follow these principles:
           theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
-          model: 'deepseek-r1',
-          small_model: 'gpt-oss',
+          model: MODEL_CONFIG.AGENT_MODELS.primary,
+          small_model: MODEL_CONFIG.AGENT_MODELS.small,
           agent: {
             fullstack: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -1162,7 +1215,7 @@ All agents follow these principles:
                 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             frontend: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -1174,7 +1227,7 @@ All agents follow these principles:
                 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             backend: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -1185,7 +1238,7 @@ All agents follow these principles:
                 'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it. CRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             devops: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.8,
               mode: 'primary',
@@ -1196,7 +1249,7 @@ All agents follow these principles:
                 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth. For testing, building, and PR management, use @quality subagent.',
             },
             app: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -1208,7 +1261,7 @@ All agents follow these principles:
                 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity. For testing, building, and PR management, use @quality subagent.',
             },
             security: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.2,
               top_p: 0.8,
               mode: 'subagent',
@@ -1219,7 +1272,7 @@ All agents follow these principles:
                 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels. Workflow: Always follow branch_strategy and commit_convention from workflow section. Never work directly in main. Agent awareness: Review code from all personas (frontend, backend, app, devops). If implementation changes are needed, suggest <tab> to switch to appropriate persona after security assessment.',
             },
             quality: {
-              model: 'deepseek-r1',
+              model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.1,
               top_p: 0.9,
               mode: 'subagent',
@@ -1287,16 +1340,7 @@ All agents follow these principles:
                 baseURL: 'https://api.berget.ai/v1',
                 apiKey: '{env:BERGET_API_KEY}',
               },
-              models: {
-                'deepseek-r1': {
-                  name: 'GLM-4.6',
-                  maxTokens: 85000,
-                  contextWindow: 128000,
-                },
-                'gpt-oss': {
-                  name: 'GPT-OSS',
-                },
-              },
+              models: MODEL_CONFIG.PROVIDER_MODELS,
             },
           },
         }
@@ -1342,7 +1386,7 @@ All agents follow these principles:
 
           // Check for GLM-4.6 optimizations
           if (
-            !currentConfig.provider?.berget?.models?.['deepseek-r1']?.maxTokens
+            !currentConfig.provider?.berget?.models?.[MODEL_CONFIG.AGENT_MODELS.primary.replace('berget/', '')]?.limit?.context
           ) {
             console.log(
               chalk.cyan('  • GLM-4.6 token limits and auto-compaction'),
