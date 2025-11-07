@@ -158,8 +158,10 @@
       "models": {
         "deepseek-r1": {
           "name": "GLM-4.6",
-          "maxTokens": 85000,
-          "contextWindow": 128000
+          "limit": {
+            "context": 90000,
+            "output": 90000
+          }
         },
         "gpt-oss": {
           "name": "GPT-OSS"
@@ -168,9 +170,6 @@
     }
   },
   "tools": {
-    "compact": {
-      "threshold": 80000,
-      "strategy": "recent_first"
-    }
+    "compact": true
   }
 }

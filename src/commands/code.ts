@@ -158,17 +158,53 @@ async function confirm(question: string, autoYes = false): Promise<boolean> {
     return true
   }
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
 
-  return new Promise<boolean>((resolve) => {
     rl.question(question, (answer) => {
       rl.close()
-      // Default to yes if user just presses enter
-      const cleanAnswer = answer.trim().toLowerCase()
-      resolve(cleanAnswer === '' || cleanAnswer === 'y' || cleanAnswer === 'yes')
+      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes' || answer === '')
+    })
+  })
+}
+
+/**
+ * Helper function to get user choice from options
+ */
+async function askChoice(question: string, options: string[], defaultChoice?: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+
+    rl.question(question, (answer) => {
+      rl.close()
+      
+      const trimmed = answer.trim().toLowerCase()
+      
+      // Handle numeric input (1, 2, etc.)
+      const numericIndex = parseInt(trimmed) - 1
+      if (numericIndex >= 0 && numericIndex < options.length) {
+        resolve(options[numericIndex])
+        return
+      }
+      
+      // Handle text input
+      const matchingOption = options.find(option => 
+        option.toLowerCase().startsWith(trimmed)
+      )
+      
+      if (matchingOption) {
+        resolve(matchingOption)
+      } else if (defaultChoice) {
+        resolve(defaultChoice)
+      } else {
+        resolve(options[0]) // Default to first option
+      }
     })
   })
 }
@@ -1087,12 +1123,7 @@ All agents follow these principles:
               }
             }
           },
-          "tools": {
-            "compact": {
-              "threshold": 80000,
-              "strategy": "recent_first"
-            }
-          }
+          
         }
 
         // Check if update is needed
@@ -1157,8 +1188,8 @@ All agents follow these principles:
         let mergeChoice: 'replace' | 'merge' = 'merge'
         
         if (!options.yes) {
-          const answer = await confirm('\nUse smart merge? (Y/n): ', true) // Default to merge
-          mergeChoice = answer ? 'merge' : 'replace'
+          const choice = await askChoice('\nYour choice (1-2, default: 2): ', ['replace', 'merge'], 'merge')
+          mergeChoice = choice as 'replace' | 'merge'
         }
 
         if (await confirm(`\nProceed with ${mergeChoice}? (Y/n): `, options.yes)) {
