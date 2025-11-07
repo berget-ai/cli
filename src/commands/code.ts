@@ -453,14 +453,14 @@ export function registerCodeCommands(program: Command): void {
           console.log(chalk.blue('\nAbout to create configuration files:'))
           console.log(chalk.dim(`Config: ${configPath}`))
           console.log(chalk.dim(`Environment: ${envPath}`))
-          console.log(chalk.dim(`Documentation: ${path.join(process.cwd(), 'AGENTS.md')}`))
-          console.log(chalk.dim(`Template: ${path.join(process.cwd(), '.env.example')}`))
+          console.log(chalk.dim(`Documentation: ${path.join(process.cwd(), 'AGENTS.md')} (if not exists)`))
+          console.log(chalk.dim(`Template: ${path.join(process.cwd(), '.env.example')} (if not exists)`))
           console.log(chalk.dim('This will configure OpenCode to use Berget AI models.'))
           console.log(chalk.cyan('\n💡 Benefits:'))
           console.log(chalk.cyan('  • API key stored separately in .env file (not committed to Git)'))
           console.log(chalk.cyan('  • Easy cost separation per project/customer'))
           console.log(chalk.cyan('  • Secure key management with environment variables'))
-          console.log(chalk.cyan('  • Project-specific agent documentation'))
+          console.log(chalk.cyan('  • Project-specific agent documentation (won\'t overwrite existing)'))
         }
         
         if (await confirm('\nCreate configuration files? (Y/n): ', options.yes)) {
@@ -481,9 +481,10 @@ export function registerCodeCommands(program: Command): void {
             console.log(chalk.dim(`  Theme: ${config.theme}`))
             console.log(chalk.dim(`  API Key: Stored in .env as BERGET_API_KEY`))
 
-            // Create AGENTS.md documentation
+            // Create AGENTS.md documentation only if it doesn't exist
             const agentsMdPath = path.join(process.cwd(), 'AGENTS.md')
-            const agentsMdContent = `# Berget Code Agents
+            if (!fs.existsSync(agentsMdPath)) {
+              const agentsMdContent = `# Berget Code Agents
 
 This document describes the specialized agents available in this project for use with OpenCode.
 
@@ -643,21 +644,28 @@ All agents follow these principles:
 `
 
             await writeFile(agentsMdPath, agentsMdContent)
-            console.log(chalk.green(`✓ Created AGENTS.md`))
-            console.log(chalk.dim(`  Documentation for available agents and usage`))
+              console.log(chalk.green(`✓ Created AGENTS.md`))
+              console.log(chalk.dim(`  Documentation for available agents and usage`))
+            } else {
+              console.log(chalk.yellow(`⚠ AGENTS.md already exists, skipping creation`))
+            }
 
-            // Create .env.example template
+            // Create .env.example template only if it doesn't exist
             const envExamplePath = path.join(process.cwd(), '.env.example')
-            const envExampleContent = `# OpenCode Configuration for ${projectName}
+            if (!fs.existsSync(envExamplePath)) {
+              const envExampleContent = `# OpenCode Configuration for ${projectName}
 # Copy this file to .env and adjust values as needed
 
 # Berget AI API Key - Required for authentication
 BERGET_API_KEY=your_api_key_here
 `
 
-            await writeFile(envExamplePath, envExampleContent)
-            console.log(chalk.green(`✓ Created .env.example`))
-            console.log(chalk.dim(`  Environment configuration template`))
+              await writeFile(envExamplePath, envExampleContent)
+              console.log(chalk.green(`✓ Created .env.example`))
+              console.log(chalk.dim(`  Environment configuration template`))
+            } else {
+              console.log(chalk.yellow(`⚠ .env.example already exists, skipping creation`))
+            }
             
             // Check if .gitignore exists and add .env if not already there
             const gitignorePath = path.join(process.cwd(), '.gitignore')
