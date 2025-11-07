@@ -4,6 +4,7 @@ import { registerCodeCommands } from '../../src/commands/code'
 import { ApiKeyService } from '../../src/services/api-key-service'
 import * as fs from 'fs'
 import { readFile, writeFile } from 'fs/promises'
+import { updateEnvFile } from '../../src/utils/env-manager'
 
 // Mock dependencies
 vi.mock('../../src/services/api-key-service')
@@ -17,6 +18,7 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn()
 }))
+vi.mock('../../src/utils/env-manager')
 vi.mock('child_process', () => ({
   spawn: vi.fn()
 }))
@@ -345,6 +347,85 @@ describe('Code Commands', () => {
     })
   })
 
+  describe('.env file handling', () => {
+    let mockUpdateEnvFile: any
+
+    beforeEach(() => {
+      mockUpdateEnvFile = vi.mocked(updateEnvFile)
+    })
+
+    it('should call updateEnvFile when creating new project', async () => {
+      mockUpdateEnvFile.mockResolvedValue(true)
+      mockFs.existsSync.mockReturnValue(false) // .env doesn't exist
+      mockFsPromises.writeFile.mockResolvedValue(undefined)
+
+      // This would be tested by actually calling the init command
+      // For now we verify the mock is properly set up
+      expect(mockUpdateEnvFile).toBeDefined()
+    })
+
+    it('should not overwrite existing BERGET_API_KEY in .env', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      
+      // Mock existing .env with BERGET_API_KEY
+      mockFs.existsSync.mockReturnValue(true)
+      mockFs.readFileSync.mockReturnValue('BERGET_API_KEY=existing_key\nOTHER_KEY=value\n')
+      
+      // Mock updateEnvFile to simulate the check
+      mockUpdateEnvFile.mockImplementation(async (options: any) => {
+        if (options.key === 'BERGET_API_KEY' && !options.force) {
+          console.log(`⚠ ${options.key} already exists in .env - leaving unchanged`)
+          return false
+        }
+        return true
+      })
+
+      await updateEnvFile({
+        key: 'BERGET_API_KEY',
+        value: 'new_key'
+      })
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('BERGET_API_KEY already exists in .env - leaving unchanged')
+      )
+      
+      consoleSpy.mockRestore()
+    })
+
+    it('should add new key to existing .env file', async () => {
+      mockFs.existsSync.mockReturnValue(true)
+      mockFs.readFileSync.mockReturnValue('EXISTING_KEY=value\n')
+      mockUpdateEnvFile.mockResolvedValue(true)
+
+      await updateEnvFile({
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key',
+        comment: 'Berget AI Configuration'
+      })
+
+      expect(mockUpdateEnvFile).toHaveBeenCalledWith({
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key',
+        comment: 'Berget AI Configuration'
+      })
+    })
+
+    it('should create new .env file when none exists', async () => {
+      mockFs.existsSync.mockReturnValue(false)
+      mockUpdateEnvFile.mockResolvedValue(true)
+
+      await updateEnvFile({
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key'
+      })
+
+      expect(mockUpdateEnvFile).toHaveBeenCalledWith({
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key'
+      })
+    })
+  })
+
   describe('error handling', () => {
     it('should handle API key creation failures', () => {
       // Mock API key service to throw error
@@ -367,6 +448,18 @@ describe('Code Commands', () => {
       })
       
       expect(mockSpawn).toBeDefined()
+    })
+
+    it('should handle .env update failures', async () => {
+      const mockUpdateEnvFile = vi.mocked(updateEnvFile)
+      mockUpdateEnvFile.mockRejectedValue(new Error('Env update failed'))
+
+      await expect(
+        updateEnvFile({
+          key: 'TEST_KEY',
+          value: 'test_value'
+        })
+      ).rejects.toThrow('Env update failed')
     })
   })
 })

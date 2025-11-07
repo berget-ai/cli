@@ -1,6 +1,6 @@
 {
   "name": "berget",
-  "version": "1.3.1",
+  "version": "2.0.0",
   "main": "dist/index.js",
   "bin": {
     "berget": "dist/index.js"
@@ -24,6 +24,7 @@
   "license": "MIT",
   "description": "This is a cli command for interacting with the AI infrastructure provider Berget",
   "devDependencies": {
+    "@types/dotenv": "^6.1.1",
     "@types/marked": "^5.0.2",
     "@types/marked-terminal": "^6.1.1",
     "@types/node": "^20.11.20",
@@ -34,6 +35,7 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^12.0.0",
+    "dotenv": "^17.2.3",
     "fs-extra": "^11.3.0",
     "marked": "^9.1.6",
     "marked-terminal": "^6.2.0",

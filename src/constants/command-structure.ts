@@ -38,6 +38,7 @@ export const SUBCOMMANDS = {
   CODE: {
     INIT: 'init',
     RUN: 'run',
+    UPDATE: 'update',
   },
   
   // API Keys commands
@@ -193,4 +194,5 @@ export const COMMAND_DESCRIPTIONS = {
   [COMMAND_GROUPS.CODE]: 'AI-powered coding assistant with OpenCode',
   [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`]: 'Initialize project for AI coding assistant',
   [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`]: 'Run AI coding assistant',
+  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.UPDATE}`]: 'Update OpenCode and agents to latest versions',
 }
