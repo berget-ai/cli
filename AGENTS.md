@@ -86,6 +86,21 @@ Security specialist for penetration testing, OWASP compliance, and vulnerability
 - Security best practices
 - Actionable remediation strategies
 
+#### quality
+Quality assurance specialist for testing, building, and PR management.
+
+**Use when:**
+- Need to run test suites and build processes
+- Creating or updating pull requests
+- Monitoring GitHub for reviewer comments
+- Ensuring code quality standards
+
+**Key features:**
+- Comprehensive testing and building workflows
+- PR creation and management
+- GitHub integration for reviewer feedback
+- CLI command expertise for quality assurance
+
 ## Usage
 
 ### Switching Agents
@@ -98,11 +113,13 @@ Use commands to switch to specific agents:
 - `/backend` - Switch to Backend agent
 - `/devops` - Switch to DevOps agent
 - `/app` - Switch to App agent
+- `/quality` - Switch to Quality agent for testing and PR management
 
 ### Using Subagents
 Mention subagents with `@` symbol:
 ```
 @security review this authentication implementation
+@quality run tests and create PR for these changes
 ```
 
 ## Routing Rules
