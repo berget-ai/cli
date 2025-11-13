@@ -11,6 +11,7 @@ import path from 'path'
 import { spawn } from 'child_process'
 import { updateEnvFile } from '../utils/env-manager'
 import { createAuthenticatedClient } from '../client'
+import dotenv from 'dotenv'
 
 // Centralized model configuration
 const MODEL_CONFIG = {
@@ -1101,9 +1102,29 @@ All agents follow these principles:
           return
         }
 
-        // Set environment variables for opencode
+        // Load environment variables from project .env file
+        const envPath = path.join(process.cwd(), '.env')
         const env = { ...process.env }
-        env.OPENCODE_API_KEY = config.apiKey
+        
+        // Load .env file if it exists
+        if (fs.existsSync(envPath)) {
+          try {
+            const envContent = fs.readFileSync(envPath, 'utf8')
+            const parsed = dotenv.parse(envContent)
+            
+            // Add parsed environment variables to env
+            Object.assign(env, parsed)
+            
+            console.log(chalk.dim('Loaded environment variables from .env'))
+          } catch (error) {
+            console.log(chalk.yellow('Warning: Failed to load .env file'))
+          }
+        }
+        
+        // Set OPENCODE_API_KEY if BERGET_API_KEY is available
+        if (env.BERGET_API_KEY) {
+          env.OPENCODE_API_KEY = env.BERGET_API_KEY
+        }
 
         // Prepare opencode command
         const opencodeArgs: string[] = []
