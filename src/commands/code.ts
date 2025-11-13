@@ -777,7 +777,10 @@ export function registerCodeCommands(program: Command): void {
             berget: {
               npm: '@ai-sdk/openai-compatible',
               name: 'Berget AI',
-              options: { baseURL: 'https://api.berget.ai/v1' },
+              options: { 
+                baseURL: 'https://api.berget.ai/v1',
+                apiKey: '{env:BERGET_API_KEY}',
+              },
               models: MODEL_CONFIG.PROVIDER_MODELS,
             },
           },
