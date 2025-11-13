@@ -82,6 +82,23 @@ export class ChatService {
 
       const headers: Record<string, string> = {}
 
+      // First try to use the authenticated client (with refresh token support)
+      // Only fall back to API key flow if explicitly requested or no auth tokens available
+      const { TokenManager } = await import('../utils/token-manager')
+      const tokenManagerInstance = TokenManager.getInstance()
+      const hasValidAuth = tokenManagerInstance.getAccessToken() && !tokenManagerInstance.isTokenExpired()
+      
+      const envApiKeyForAuth = process.env.BERGET_API_KEY
+      const hasExplicitApiKey = optionsCopy.apiKey || envApiKeyForAuth
+
+      // If we have valid auth tokens and no explicit API key, use authenticated client
+      if (hasValidAuth && !hasExplicitApiKey) {
+        logger.debug('Using authenticated client with refresh token support')
+        // Create a copy without apiKey to let the authenticated client handle auth automatically
+        const { apiKey, ...optionsWithoutKey } = optionsCopy
+        return this.executeCompletion(optionsWithoutKey, {})
+      }
+
       // Check for environment variables first - prioritize this over everything else
       const envApiKey = process.env.BERGET_API_KEY
       if (envApiKey) {
