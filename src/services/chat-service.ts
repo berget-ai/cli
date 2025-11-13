@@ -88,8 +88,7 @@ export class ChatService {
       const tokenManagerInstance = TokenManager.getInstance()
       const hasValidAuth = tokenManagerInstance.getAccessToken() && !tokenManagerInstance.isTokenExpired()
       
-      const envApiKeyForAuth = process.env.BERGET_API_KEY
-      const hasExplicitApiKey = optionsCopy.apiKey || envApiKeyForAuth
+      const hasExplicitApiKey = !!optionsCopy.apiKey
 
       // If we have valid auth tokens and no explicit API key, use authenticated client
       if (hasValidAuth && !hasExplicitApiKey) {
