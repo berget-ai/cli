@@ -152,7 +152,8 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "Berget AI",
       "options": {
-        "baseURL": "https://api.berget.ai/v1"
+        "baseURL": "https://api.berget.ai/v1",
+        "apiKey": "{env:BERGET_API_KEY}"
       },
       "models": {
         "deepseek-r1": {
