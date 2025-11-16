@@ -16,8 +16,38 @@ import {
   getModelConfig, 
   getProviderModels,
   type OpenCodeConfig,
-  type AgentConfig 
+  type AgentConfig,
+  type CommandConfig,
+  type WatcherConfig,
+  type ProviderConfig 
 } from '../utils/config-loader'
+
+// Extended type for merge operations (more flexible for merging)
+type MergeableConfig = {
+  [key: string]: any
+  $schema?: string
+  username?: string
+  theme?: string
+  share?: string
+  autoupdate?: boolean
+  model?: string
+  small_model?: string
+  agent?: Record<string, any>
+  command?: Record<string, any>
+  watcher?: Record<string, any>
+  provider?: Record<string, any>
+}
+
+// Options type for command actions
+interface CodeCommandOptions {
+  name?: string
+  force?: boolean
+  yes?: boolean
+  model?: string
+  analysis?: boolean
+  noConfig?: boolean
+  [key: string]: any
+}
 
 /**
  * Check if current directory has git
@@ -34,12 +64,12 @@ function hasGit(): boolean {
  * Merge opencode configurations using chat completions API
  */
 async function mergeConfigurations(
-  options: any,
+  options: CodeCommandOptions,
   configPath: string,
   envPath: string,
-  currentConfig: any,
-  latestConfig: any,
-): Promise<any> {
+  currentConfig: MergeableConfig,
+  latestConfig: MergeableConfig,
+): Promise<MergeableConfig> {
   try {
     const client = createAuthenticatedClient()
     const modelConfig = getModelConfig()
@@ -107,7 +137,7 @@ Return ONLY the merged JSON configuration, no explanations.`
 /**
  * Fallback merge logic when AI merge is unavailable
  */
-function fallbackMerge(currentConfig: any, latestConfig: any): any {
+function fallbackMerge(currentConfig: MergeableConfig, latestConfig: MergeableConfig): MergeableConfig {
   console.log(chalk.blue('🔀 Using fallback merge logic...'))
 
   const merged = { ...latestConfig }
@@ -122,43 +152,43 @@ function fallbackMerge(currentConfig: any, latestConfig: any): any {
   }
 
   // Merge custom agents while preserving new ones
-  if (currentConfig.agent) {
+  if (currentConfig.agent && latestConfig.agent) {
     merged.agent = { ...latestConfig.agent }
 
     // Add any custom agents from current config
     Object.keys(currentConfig.agent).forEach((agentName) => {
-      if (!latestConfig.agent[agentName]) {
-        merged.agent[agentName] = currentConfig.agent[agentName]
+      if (!latestConfig.agent![agentName]) {
+        merged.agent![agentName] = currentConfig.agent![agentName]
         console.log(chalk.cyan(`  • Preserved custom agent: ${agentName}`))
       }
     })
   }
 
   // Merge custom commands while preserving new ones
-  if (currentConfig.commands) {
-    merged.commands = { ...latestConfig.commands }
+  if (currentConfig.command && latestConfig.command) {
+    merged.command = { ...latestConfig.command }
 
-    Object.keys(currentConfig.commands).forEach((commandName) => {
-      if (!latestConfig.commands[commandName]) {
-        merged.commands[commandName] = currentConfig.commands[commandName]
+    Object.keys(currentConfig.command).forEach((commandName) => {
+      if (!latestConfig.command![commandName]) {
+        merged.command![commandName] = currentConfig.command![commandName]
         console.log(chalk.cyan(`  • Preserved custom command: ${commandName}`))
       }
     })
   }
 
   // Preserve custom provider settings if user has modified them
-  if (currentConfig.provider) {
+  if (currentConfig.provider && latestConfig.provider) {
     merged.provider = { ...latestConfig.provider }
 
     // Deep merge provider settings
     Object.keys(currentConfig.provider).forEach((providerName) => {
-      if (merged.provider[providerName]) {
-        merged.provider[providerName] = {
-          ...merged.provider[providerName],
-          ...currentConfig.provider[providerName],
+      if (merged.provider![providerName]) {
+        merged.provider![providerName] = {
+          ...merged.provider![providerName],
+          ...currentConfig.provider![providerName],
         }
       } else {
-        merged.provider[providerName] = currentConfig.provider[providerName]
+        merged.provider![providerName] = currentConfig.provider![providerName]
       }
     })
   }
@@ -278,7 +308,7 @@ function getProjectName(): string {
 /**
  * Load the latest agent configuration from opencode.json
  */
-async function loadLatestAgentConfig(): Promise<any> {
+async function loadLatestAgentConfig(): Promise<MergeableConfig> {
   try {
     const configPath = path.join(__dirname, '../../opencode.json')
     const configContent = await readFile(configPath, 'utf8')
@@ -1069,7 +1099,7 @@ All agents follow these principles:
       '-y, --yes',
       'Automatically answer yes to all prompts (for automation)',
     )
-    .action(async (prompt: string, options: any) => {
+    .action(async (prompt: string, options: CodeCommandOptions) => {
       try {
         const configPath = path.join(process.cwd(), 'opencode.json')
 
@@ -1078,17 +1108,17 @@ All agents follow these principles:
           return
         }
 
-        let config: any = null
+        let config: MergeableConfig | null = null
         if (!options.noConfig && fs.existsSync(configPath)) {
           try {
             const configContent = await readFile(configPath, 'utf8')
             config = JSON.parse(configContent)
             console.log(
-              chalk.dim(`Loaded config for project: ${config.projectName}`),
+              chalk.dim(`Loaded config for project: ${config?.projectName || 'unknown'}`),
             )
             console.log(
               chalk.dim(
-                `Models: Analysis=${config.analysisModel}, Build=${config.buildModel}`,
+                `Models: Analysis=${config?.analysisModel || 'default'}, Build=${config?.buildModel || 'default'}`,
               ),
             )
           } catch (error) {
@@ -1183,7 +1213,7 @@ All agents follow these principles:
         }
 
         // Read current configuration
-        let currentConfig: any
+        let currentConfig: MergeableConfig
         try {
           const configContent = await readFile(configPath, 'utf8')
           currentConfig = JSON.parse(configContent)
@@ -1465,7 +1495,7 @@ All agents follow these principles:
           await confirm(`\nProceed with ${mergeChoice}? (Y/n): `, options.yes)
         ) {
           try {
-            let finalConfig: any
+            let finalConfig: MergeableConfig
             let backupPath: string | null = null
 
             // Create backup if no git
