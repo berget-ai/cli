@@ -298,6 +298,21 @@ function getProjectName(): string {
 }
 
 /**
+ * Load the latest agent configuration from opencode.json
+ */
+async function loadLatestAgentConfig(): Promise<any> {
+  try {
+    const configPath = path.join(__dirname, '../../opencode.json')
+    const configContent = await readFile(configPath, 'utf8')
+    const config = JSON.parse(configContent)
+    return config.agent || {}
+  } catch (error) {
+    console.warn(chalk.yellow('⚠️  Could not load latest agent config, using fallback'))
+    return {}
+  }
+}
+
+/**
  * Check if opencode is installed
  */
 function checkOpencodeInstalled(): Promise<boolean> {
@@ -640,6 +655,9 @@ export function registerCodeCommands(program: Command): void {
         // Prepare .env file path for safe update
         const envPath = path.join(process.cwd(), '.env')
 
+        // Load latest agent configuration to ensure consistency
+        const latestAgentConfig = await loadLatestAgentConfig()
+
         // Create opencode.json config with optimized agent-based format
         const config = {
           $schema: 'https://opencode.ai/config.json',
@@ -684,7 +702,8 @@ export function registerCodeCommands(program: Command): void {
               prompt:
                 'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it. CRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
-            devops: {
+            // Use centralized devops configuration with Helm guidelines
+            devops: latestAgentConfig.devops || {
               model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.8,
@@ -907,6 +926,12 @@ Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
 - GitOps workflows
 - Operator-first approach
 - SemVer with release candidates
+
+**Helm Values Configuration Process:**
+1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.
+2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.
+3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.
+4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.
 
 #### app
 Expo + React Native applications with props-first architecture and offline awareness.
@@ -1196,6 +1221,9 @@ All agents follow these principles:
           ),
         )
 
+        // Load latest agent configuration to ensure consistency
+        const latestAgentConfig = await loadLatestAgentConfig()
+
         // Create latest configuration with all improvements
         const latestConfig = {
           $schema: 'https://opencode.ai/config.json',
@@ -1240,7 +1268,8 @@ All agents follow these principles:
               prompt:
                 'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it. CRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
-            devops: {
+            // Use centralized devops configuration with Helm guidelines
+            devops: latestAgentConfig.devops || {
               model: MODEL_CONFIG.AGENT_MODELS.primary,
               temperature: 0.3,
               top_p: 0.8,
@@ -1555,6 +1584,12 @@ Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
 - GitOps workflows
 - Operator-first approach
 - SemVer with release candidates
+
+**Helm Values Configuration Process:**
+1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.
+2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.
+3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.
+4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.
 
 #### app
 Expo + React Native applications with props-first architecture and offline awareness.

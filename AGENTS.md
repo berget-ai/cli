@@ -70,6 +70,35 @@ Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
 - Operator-first approach
 - SemVer with release candidates
 
+**Helm Values Configuration Process:**
+
+1. **Documentation First Approach:**
+   - Always fetch official documentation for the specific chart version before writing values
+   - Search Artifact Hub for the exact chart version documentation
+   - Check the chart's GitHub repository for official docs and examples
+   - Verify the exact version being used in the deployment
+
+2. **Validation Requirements:**
+   - Check for available validation schemas before committing YAML files
+   - Use Helm's built-in validation tools (`helm lint`, `helm template`)
+   - Validate against JSON schema if available for the chart
+   - Ensure YAML syntax correctness with linters
+
+3. **Standard Workflow:**
+   - Identify chart name and exact version
+   - Fetch official documentation from Artifact Hub/GitHub
+   - Check for available schemas and validation tools
+   - Write values according to official documentation
+   - Validate against schema (if available)
+   - Test with `helm template` or `helm lint`
+   - Commit validated YAML files
+
+4. **Quality Assurance:**
+   - Never commit unvalidated Helm values
+   - Use `helm dependency update` when adding new charts
+   - Test rendering with `helm template --dry-run` before deployment
+   - Document any custom values with comments referencing official docs
+
 #### app
 
 Expo + React Native applications with props-first architecture and offline awareness.
