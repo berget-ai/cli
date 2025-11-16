@@ -11,39 +11,13 @@ import path from 'path'
 import { spawn } from 'child_process'
 import { updateEnvFile } from '../utils/env-manager'
 import { createAuthenticatedClient } from '../client'
-
-// Centralized model configuration
-const MODEL_CONFIG = {
-  // Model names used in agent configurations (with provider prefix)
-  AGENT_MODELS: {
-    primary: 'berget/deepseek-r1',
-    small: 'berget/gpt-oss',
-  },
-  // Model definitions in provider configuration (without prefix)
-  PROVIDER_MODELS: {
-    'deepseek-r1': {
-      name: 'GLM-4.6',
-      limit: {
-        output: 4000,
-        context: 90000,
-      },
-    },
-    'gpt-oss': {
-      name: 'GPT-OSS',
-      limit: {
-        output: 4000,
-        context: 128000,
-      },
-    },
-    'llama-8b': {
-      name: 'llama-3.1-8b',
-      limit: {
-        output: 4000,
-        context: 128000,
-      },
-    },
-  },
-}
+import { 
+  getConfigLoader, 
+  getModelConfig, 
+  getProviderModels,
+  type OpenCodeConfig,
+  type AgentConfig 
+} from '../utils/config-loader'
 
 /**
  * Check if current directory has git
@@ -65,6 +39,7 @@ async function mergeConfigurations(
 ): Promise<any> {
   try {
     const client = createAuthenticatedClient()
+    const modelConfig = getModelConfig()
 
     console.log(chalk.blue('🤖 Using AI to merge configurations...'))
 
@@ -87,7 +62,7 @@ Return ONLY the merged JSON configuration, no explanations.`
 
     const response = await client.POST('/v1/chat/completions', {
       body: {
-        model: MODEL_CONFIG.AGENT_MODELS.primary,
+        model: modelConfig.primary,
         messages: [
           {
             role: 'user',
