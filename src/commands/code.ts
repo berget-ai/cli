@@ -16,8 +16,38 @@ import {
   getModelConfig, 
   getProviderModels,
   type OpenCodeConfig,
-  type AgentConfig 
+  type AgentConfig,
+  type CommandConfig,
+  type WatcherConfig,
+  type ProviderConfig 
 } from '../utils/config-loader'
+
+// Extended type for merge operations (more flexible for merging)
+type MergeableConfig = {
+  [key: string]: any
+  $schema?: string
+  username?: string
+  theme?: string
+  share?: string
+  autoupdate?: boolean
+  model?: string
+  small_model?: string
+  agent?: Record<string, any>
+  command?: Record<string, any>
+  watcher?: Record<string, any>
+  provider?: Record<string, any>
+}
+
+// Options type for command actions
+interface CodeCommandOptions {
+  name?: string
+  force?: boolean
+  yes?: boolean
+  model?: string
+  analysis?: boolean
+  noConfig?: boolean
+  [key: string]: any
+}
 
 /**
  * Check if current directory has git
@@ -34,9 +64,12 @@ function hasGit(): boolean {
  * Merge opencode configurations using chat completions API
  */
 async function mergeConfigurations(
-  currentConfig: any,
-  latestConfig: any,
-): Promise<any> {
+  options: CodeCommandOptions,
+  configPath: string,
+  envPath: string,
+  currentConfig: MergeableConfig,
+  latestConfig: MergeableConfig,
+): Promise<MergeableConfig> {
   try {
     const client = createAuthenticatedClient()
     const modelConfig = getModelConfig()
@@ -104,7 +137,7 @@ Return ONLY the merged JSON configuration, no explanations.`
 /**
  * Fallback merge logic when AI merge is unavailable
  */
-function fallbackMerge(currentConfig: any, latestConfig: any): any {
+function fallbackMerge(currentConfig: MergeableConfig, latestConfig: MergeableConfig): MergeableConfig {
   console.log(chalk.blue('🔀 Using fallback merge logic...'))
 
   const merged = { ...latestConfig }
@@ -119,43 +152,43 @@ function fallbackMerge(currentConfig: any, latestConfig: any): any {
   }
 
   // Merge custom agents while preserving new ones
-  if (currentConfig.agent) {
+  if (currentConfig.agent && latestConfig.agent) {
     merged.agent = { ...latestConfig.agent }
 
     // Add any custom agents from current config
     Object.keys(currentConfig.agent).forEach((agentName) => {
-      if (!latestConfig.agent[agentName]) {
-        merged.agent[agentName] = currentConfig.agent[agentName]
+      if (!latestConfig.agent![agentName]) {
+        merged.agent![agentName] = currentConfig.agent![agentName]
         console.log(chalk.cyan(`  • Preserved custom agent: ${agentName}`))
       }
     })
   }
 
   // Merge custom commands while preserving new ones
-  if (currentConfig.commands) {
-    merged.commands = { ...latestConfig.commands }
+  if (currentConfig.command && latestConfig.command) {
+    merged.command = { ...latestConfig.command }
 
-    Object.keys(currentConfig.commands).forEach((commandName) => {
-      if (!latestConfig.commands[commandName]) {
-        merged.commands[commandName] = currentConfig.commands[commandName]
+    Object.keys(currentConfig.command).forEach((commandName) => {
+      if (!latestConfig.command![commandName]) {
+        merged.command![commandName] = currentConfig.command![commandName]
         console.log(chalk.cyan(`  • Preserved custom command: ${commandName}`))
       }
     })
   }
 
   // Preserve custom provider settings if user has modified them
-  if (currentConfig.provider) {
+  if (currentConfig.provider && latestConfig.provider) {
     merged.provider = { ...latestConfig.provider }
 
     // Deep merge provider settings
     Object.keys(currentConfig.provider).forEach((providerName) => {
-      if (merged.provider[providerName]) {
-        merged.provider[providerName] = {
-          ...merged.provider[providerName],
-          ...currentConfig.provider[providerName],
+      if (merged.provider![providerName]) {
+        merged.provider![providerName] = {
+          ...merged.provider![providerName],
+          ...currentConfig.provider![providerName],
         }
       } else {
-        merged.provider[providerName] = currentConfig.provider[providerName]
+        merged.provider![providerName] = currentConfig.provider![providerName]
       }
     })
   }
@@ -275,7 +308,7 @@ function getProjectName(): string {
 /**
  * Load the latest agent configuration from opencode.json
  */
-async function loadLatestAgentConfig(): Promise<any> {
+async function loadLatestAgentConfig(): Promise<MergeableConfig> {
   try {
     const configPath = path.join(__dirname, '../../opencode.json')
     const configContent = await readFile(configPath, 'utf8')
@@ -632,6 +665,8 @@ export function registerCodeCommands(program: Command): void {
 
         // Load latest agent configuration to ensure consistency
         const latestAgentConfig = await loadLatestAgentConfig()
+        const modelConfig = getModelConfig()
+        const providerModels = getProviderModels()
 
         // Create opencode.json config with optimized agent-based format
         const config = {
@@ -640,11 +675,11 @@ export function registerCodeCommands(program: Command): void {
           theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
-          model: MODEL_CONFIG.AGENT_MODELS.primary,
-          small_model: MODEL_CONFIG.AGENT_MODELS.small,
+          model: modelConfig.primary,
+          small_model: modelConfig.small,
           agent: {
             fullstack: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -655,7 +690,7 @@ export function registerCodeCommands(program: Command): void {
                 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             frontend: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -667,7 +702,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             backend: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -679,7 +714,7 @@ export function registerCodeCommands(program: Command): void {
             },
             // Use centralized devops configuration with Helm guidelines
             devops: latestAgentConfig.devops || {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.8,
               mode: 'primary',
@@ -690,7 +725,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.',
             },
             app: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -702,7 +737,7 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.',
             },
             security: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.2,
               top_p: 0.8,
               mode: 'subagent',
@@ -713,7 +748,7 @@ export function registerCodeCommands(program: Command): void {
                 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.',
             },
             quality: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.1,
               top_p: 0.9,
               mode: 'subagent',
@@ -775,7 +810,7 @@ export function registerCodeCommands(program: Command): void {
                 baseURL: 'https://api.berget.ai/v1',
                 apiKey: '{env:BERGET_API_KEY}',
               },
-              models: MODEL_CONFIG.PROVIDER_MODELS,
+              models: providerModels,
             },
           },
         }
@@ -1064,7 +1099,7 @@ All agents follow these principles:
       '-y, --yes',
       'Automatically answer yes to all prompts (for automation)',
     )
-    .action(async (prompt: string, options: any) => {
+    .action(async (prompt: string, options: CodeCommandOptions) => {
       try {
         const configPath = path.join(process.cwd(), 'opencode.json')
 
@@ -1073,17 +1108,17 @@ All agents follow these principles:
           return
         }
 
-        let config: any = null
+        let config: MergeableConfig | null = null
         if (!options.noConfig && fs.existsSync(configPath)) {
           try {
             const configContent = await readFile(configPath, 'utf8')
             config = JSON.parse(configContent)
             console.log(
-              chalk.dim(`Loaded config for project: ${config.projectName}`),
+              chalk.dim(`Loaded config for project: ${config?.projectName || 'unknown'}`),
             )
             console.log(
               chalk.dim(
-                `Models: Analysis=${config.analysisModel}, Build=${config.buildModel}`,
+                `Models: Analysis=${config?.analysisModel || 'default'}, Build=${config?.buildModel || 'default'}`,
               ),
             )
           } catch (error) {
@@ -1164,6 +1199,7 @@ All agents follow these principles:
         }
 
         const configPath = path.join(process.cwd(), 'opencode.json')
+        const envPath = path.join(process.cwd(), '.env')
 
         // Check if project is initialized
         if (!fs.existsSync(configPath)) {
@@ -1177,7 +1213,7 @@ All agents follow these principles:
         }
 
         // Read current configuration
-        let currentConfig: any
+        let currentConfig: MergeableConfig
         try {
           const configContent = await readFile(configPath, 'utf8')
           currentConfig = JSON.parse(configContent)
@@ -1198,6 +1234,8 @@ All agents follow these principles:
 
         // Load latest agent configuration to ensure consistency
         const latestAgentConfig = await loadLatestAgentConfig()
+        const modelConfig = getModelConfig()
+        const providerModels = getProviderModels()
 
         // Create latest configuration with all improvements
         const latestConfig = {
@@ -1206,11 +1244,11 @@ All agents follow these principles:
           theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
-          model: MODEL_CONFIG.AGENT_MODELS.primary,
-          small_model: MODEL_CONFIG.AGENT_MODELS.small,
+          model: modelConfig.primary,
+          small_model: modelConfig.small,
           agent: {
             fullstack: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -1221,7 +1259,7 @@ All agents follow these principles:
                 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             frontend: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -1233,7 +1271,7 @@ All agents follow these principles:
                 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             backend: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -1245,7 +1283,7 @@ All agents follow these principles:
             },
             // Use centralized devops configuration with Helm guidelines
             devops: latestAgentConfig.devops || {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.8,
               mode: 'primary',
@@ -1256,7 +1294,7 @@ All agents follow these principles:
                 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth. For testing, building, and PR management, use @quality subagent.',
             },
             app: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -1268,7 +1306,7 @@ All agents follow these principles:
                 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity. For testing, building, and PR management, use @quality subagent.',
             },
             security: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.2,
               top_p: 0.8,
               mode: 'subagent',
@@ -1279,7 +1317,7 @@ All agents follow these principles:
                 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels. Workflow: Always follow branch_strategy and commit_convention from workflow section. Never work directly in main. Agent awareness: Review code from all personas (frontend, backend, app, devops). If implementation changes are needed, suggest <tab> to switch to appropriate persona after security assessment.',
             },
             quality: {
-              model: MODEL_CONFIG.AGENT_MODELS.primary,
+              model: modelConfig.primary,
               temperature: 0.1,
               top_p: 0.9,
               mode: 'subagent',
@@ -1347,7 +1385,7 @@ All agents follow these principles:
                 baseURL: 'https://api.berget.ai/v1',
                 apiKey: '{env:BERGET_API_KEY}',
               },
-              models: MODEL_CONFIG.PROVIDER_MODELS,
+              models: providerModels,
             },
           },
         }
@@ -1393,7 +1431,7 @@ All agents follow these principles:
 
           // Check for GLM-4.6 optimizations
           if (
-            !currentConfig.provider?.berget?.models?.[MODEL_CONFIG.AGENT_MODELS.primary.replace('berget/', '')]?.limit?.context
+            !currentConfig.provider?.berget?.models?.[modelConfig.primary.replace('berget/', '')]?.limit?.context
           ) {
             console.log(
               chalk.cyan('  • GLM-4.6 token limits and auto-compaction'),
@@ -1457,7 +1495,7 @@ All agents follow these principles:
           await confirm(`\nProceed with ${mergeChoice}? (Y/n): `, options.yes)
         ) {
           try {
-            let finalConfig: any
+            let finalConfig: MergeableConfig
             let backupPath: string | null = null
 
             // Create backup if no git
@@ -1477,6 +1515,9 @@ All agents follow these principles:
             if (mergeChoice === 'merge') {
               // Merge configurations
               finalConfig = await mergeConfigurations(
+                options,
+                configPath,
+                envPath,
                 currentConfig,
                 latestConfig,
               )
