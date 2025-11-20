@@ -34,7 +34,7 @@ export function registerApiKeyCommands(program: Command): void {
 
         // Create a table-like format with headers
         console.log(
-          chalk.dim('ID'.padEnd(10)) +
+          chalk.dim('ID (8)'.padEnd(8)) +
             chalk.dim('NAME'.padEnd(25)) +
             chalk.dim('PREFIX'.padEnd(12)) +
             chalk.dim('STATUS'.padEnd(12)) +
@@ -52,6 +52,9 @@ export function registerApiKeyCommands(program: Command): void {
             ? chalk.green('● Active')
             : chalk.red('● Inactive')
 
+          // Show only first 8 characters of ID for easier reading
+          const shortId = String(key.id).substring(0, 8)
+
           // Format the prefix to ensure it's not too long
           const prefixStr =
             key.prefix.length > 12
@@ -59,7 +62,7 @@ export function registerApiKeyCommands(program: Command): void {
               : key.prefix
 
           console.log(
-            String(key.id).padEnd(10) +
+            shortId.padEnd(8) +
               key.name.padEnd(25) +
               prefixStr.padEnd(15) +
               status.padEnd(12) +
@@ -90,6 +93,7 @@ export function registerApiKeyCommands(program: Command): void {
     .description('Create a new API key')
     .option('--name <name>', 'Name of the API key')
     .option('--description <description>', 'Description of the API key')
+
     .action(async (options) => {
       try {
         if (!options.name) {
@@ -149,15 +153,96 @@ export function registerApiKeyCommands(program: Command): void {
   apiKey
     .command(ApiKeyService.COMMANDS.DELETE)
     .description('Delete an API key')
-    .argument('<id>', 'ID of the API key to delete')
-    .action(async (id) => {
+    .argument(
+      '<identifier>',
+      'ID (first 8 chars), full ID, or name of the API key to delete',
+    )
+    .action(async (identifier) => {
       try {
-        console.log(chalk.blue(`Deleting API key ${id}...`))
-
         const apiKeyService = ApiKeyService.getInstance()
-        await apiKeyService.delete(id)
 
-        console.log(chalk.green(`✓ API key ${id} has been deleted`))
+        // First, get all API keys to find the matching one
+        const keys = await apiKeyService.list()
+
+        // Try to find the key by:
+        // 1. Full ID match
+        // 2. Short ID (first 8 chars) match
+        // 3. Exact name match
+        // 4. Partial name match
+
+        // Check for exact matches first (full ID or exact name)
+        let exactMatches = keys.filter(
+          (key) => String(key.id) === identifier || key.name === identifier,
+        )
+
+        // If no exact matches, check for short ID matches
+        if (exactMatches.length === 0) {
+          exactMatches = keys.filter(
+            (key) => String(key.id).substring(0, 8) === identifier,
+          )
+        }
+
+        // If still no matches, check for partial name matches
+        if (exactMatches.length === 0) {
+          exactMatches = keys.filter((key) =>
+            key.name.toLowerCase().includes(identifier.toLowerCase()),
+          )
+        }
+
+        // Handle multiple matches
+        if (exactMatches.length > 1) {
+          console.error(
+            chalk.red(
+              `Error: Multiple API keys found matching "${identifier}"`,
+            ),
+          )
+          console.log('')
+          console.log('Please be more specific. Matching keys:')
+          exactMatches.forEach((key) => {
+            const shortId = String(key.id).substring(0, 8)
+            console.log(`  ${shortId.padEnd(8)} ${key.name}`)
+          })
+          console.log('')
+          console.log(
+            'Use the first 8 characters of the ID to specify which key to delete.',
+          )
+          return
+        }
+
+        // Handle no matches
+        if (exactMatches.length === 0) {
+          console.error(
+            chalk.red(`Error: No API key found matching "${identifier}"`),
+          )
+          console.log('')
+          console.log('Available API keys:')
+          keys.forEach((key) => {
+            const shortId = String(key.id).substring(0, 8)
+            console.log(`  ${shortId.padEnd(8)} ${key.name}`)
+          })
+          console.log('')
+          console.log(
+            'Use the first 8 characters of the ID, full ID, or name to delete.',
+          )
+          return
+        }
+
+        const matchingKey = exactMatches[0]
+
+        const keyId = String(matchingKey.id)
+        const shortId = keyId.substring(0, 8)
+
+        console.log(
+          chalk.blue(`Deleting API key ${shortId} (${matchingKey.name})...`),
+        )
+
+        await apiKeyService.delete(keyId)
+
+        console.log(
+          chalk.green(
+            `✓ API key ${shortId} (${matchingKey.name}) has been deleted`,
+          ),
+        )
         console.log('')
         console.log(
           chalk.dim(
