@@ -11,7 +11,7 @@ import * as path from 'path'
 
 const envPath = path.join(process.cwd(), '.env')
 if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath })
+  dotenv.config({ path: envPath, override: true })
 }
 
 // Set version and description
