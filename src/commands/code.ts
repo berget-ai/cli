@@ -1104,7 +1104,6 @@ All agents follow these principles:
 
         // Set environment variables for opencode
         const env = { ...process.env }
-        env.OPENCODE_API_KEY = config.apiKey
 
         // Prepare opencode command
         const opencodeArgs: string[] = []

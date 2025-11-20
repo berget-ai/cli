@@ -5,6 +5,14 @@ import { registerCommands } from './src/commands'
 import { checkBergetConfig } from './src/utils/config-checker'
 import chalk from 'chalk'
 import { version } from './package.json'
+import dotenv from 'dotenv'
+import * as fs from 'fs'
+import * as path from 'path'
+
+const envPath = path.join(process.cwd(), '.env')
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath })
+}
 
 // Set version and description
 program
