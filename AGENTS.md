@@ -206,8 +206,12 @@ BERGET_API_KEY=your_api_key_here
 
 All agents follow these principles:
 
-- Never work directly in main branch
+- **NEVER work directly in main branch** - ALWAYS use pull requests
+- **NEVER use 'git add .'** - ALWAYS add specific files with 'git add path/to/file'
+- **ALWAYS clean up test files, documentation files, and temporary artifacts before committing**
+- **ALWAYS ensure git history maintains production quality** - no test commits, no debugging code
+- **ALWAYS create descriptive commit messages following project conventions**
+- **ALWAYS run tests and build before creating PR**
 - Follow branch strategy and commit conventions
 - Create PRs for new functionality
-- Run tests before committing
 - Address reviewer feedback promptly
