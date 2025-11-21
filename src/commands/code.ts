@@ -39,7 +39,18 @@ async function mergeConfigurations(
 ): Promise<any> {
   try {
     const client = createAuthenticatedClient()
-    const modelConfig = getModelConfig()
+    
+    // Get model config with fallback for init scenario
+    let modelConfig: { primary: string; small: string }
+    try {
+      modelConfig = getModelConfig()
+    } catch (error) {
+      // Fallback to defaults when no config exists (init scenario)
+      modelConfig = {
+        primary: 'berget/deepseek-r1',
+        small: 'berget/gpt-oss'
+      }
+    }
 
     console.log(chalk.blue('🤖 Using AI to merge configurations...'))
 
@@ -632,7 +643,18 @@ export function registerCodeCommands(program: Command): void {
 
         // Load latest agent configuration to ensure consistency
         const latestAgentConfig = await loadLatestAgentConfig()
-        const modelConfig = getModelConfig()
+        
+        // Get model config with fallback for init scenario
+        let modelConfig: { primary: string; small: string }
+        try {
+          modelConfig = getModelConfig()
+        } catch (error) {
+          // Fallback to defaults when no config exists (init scenario)
+          modelConfig = {
+            primary: 'berget/deepseek-r1',
+            small: 'berget/gpt-oss'
+          }
+        }
 
         // Create opencode.json config with optimized agent-based format
         const config = {
@@ -1248,7 +1270,18 @@ All agents follow these principles:
 
         // Load latest agent configuration to ensure consistency
         const latestAgentConfig = await loadLatestAgentConfig()
-        const modelConfig = getModelConfig()
+        
+        // Get model config with fallback for init scenario
+        let modelConfig: { primary: string; small: string }
+        try {
+          modelConfig = getModelConfig()
+        } catch (error) {
+          // Fallback to defaults when no config exists (init scenario)
+          modelConfig = {
+            primary: 'berget/deepseek-r1',
+            small: 'berget/gpt-oss'
+          }
+        }
 
         // Create latest configuration with all improvements
         const latestConfig = {
