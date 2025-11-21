@@ -41,11 +41,11 @@ export function registerChatCommands(program: Command): void {
   chat
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
-    .argument('[model]', 'Model to use (default: openai/gpt-oss)')
     .argument('[message]', 'Message to send directly (skips interactive mode)')
-    .option('-s, --system <message>', 'System message')
+.option('-m, --model <model>', 'Model to use (default: deepseek-r1)')
+    .option('--no-reasoning', 'Disable reasoning mode (adds </think> to messages)')
     .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
-    .option('-m, --max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
+    .option('--max-tokens <tokens>', 'Maximum tokens to generate', parseInt)
     .option('-k, --api-key <key>', 'API key to use for this chat session')
     .option(
       '--api-key-id <id>',
@@ -55,7 +55,7 @@ export function registerChatCommands(program: Command): void {
       '--no-stream',
       'Disable streaming (streaming is enabled by default)',
     )
-    .action(async (model, message, options) => {
+    .action(async (message, options) => {
       try {
         const chatService = ChatService.getInstance()
 
@@ -279,7 +279,7 @@ export function registerChatCommands(program: Command): void {
           try {
             // Call the API
             const completionOptions: ChatCompletionOptions = {
-              model: model || 'openai/gpt-oss',
+              model: options.model || 'openai/gpt-oss',
               messages: messages,
               temperature:
                 options.temperature !== undefined ? options.temperature : 0.7,
@@ -415,7 +415,7 @@ export function registerChatCommands(program: Command): void {
             try {
               // Call the API
               const completionOptions: ChatCompletionOptions = {
-                model: model || 'openai/gpt-oss',
+                model: options.model || 'openai/gpt-oss',
                 messages: messages,
                 temperature:
                   options.temperature !== undefined ? options.temperature : 0.7,

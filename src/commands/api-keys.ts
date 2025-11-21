@@ -4,6 +4,35 @@ import { ApiKeyService, ApiKey } from '../services/api-key-service'
 import { handleError } from '../utils/error-handler'
 import { DefaultApiKeyManager } from '../utils/default-api-key'
 
+// Helper functions for better date formatting
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - date.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return chalk.green('Today')
+  if (diffDays === 1) return chalk.yellow('Yesterday')
+  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`)
+  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`)
+  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`)
+  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`)
+}
+
+function formatLastUsed(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - date.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return chalk.green('Today')
+  if (diffDays === 1) return chalk.yellow('Yesterday')
+  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`)
+  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`)
+  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`)
+  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`)
+}
+
 /**
  * Register API key commands
  */
@@ -29,45 +58,59 @@ export function registerApiKeyCommands(program: Command): void {
           return
         }
 
-        console.log(chalk.bold('Your API keys:'))
+        console.log(chalk.bold('🔑 Your API keys:'))
         console.log('')
 
-        // Create a table-like format with headers
+        // Create a more readable table with better spacing and colors
+        const idWidth = 10
+        const nameWidth = 30
+        const prefixWidth = 20
+        const statusWidth = 12
+        const createdWidth = 12
+        const usedWidth = 15
+
         console.log(
-          chalk.dim('ID (8)'.padEnd(8)) +
-            chalk.dim('NAME'.padEnd(25)) +
-            chalk.dim('PREFIX'.padEnd(12)) +
-            chalk.dim('STATUS'.padEnd(12)) +
-            chalk.dim('CREATED'.padEnd(12)) +
-            chalk.dim('LAST USED'),
+          chalk.dim('ID'.padEnd(idWidth)) +
+            chalk.dim('NAME'.padEnd(nameWidth)) +
+            chalk.dim('PREFIX'.padEnd(prefixWidth)) +
+            chalk.dim('STATUS'.padEnd(statusWidth)) +
+            chalk.dim('CREATED'.padEnd(createdWidth)) +
+            chalk.dim('LAST USED')
         )
 
-        console.log(chalk.dim('─'.repeat(85)))
+        console.log(chalk.dim('─'.repeat(idWidth + nameWidth + prefixWidth + statusWidth + createdWidth + usedWidth + 5)))
 
         keys.forEach((key: ApiKey) => {
           const lastUsed = key.lastUsed
-            ? key.lastUsed.substring(0, 10)
-            : 'Never'
+            ? formatLastUsed(key.lastUsed)
+            : chalk.yellow('Never used')
           const status = key.active
             ? chalk.green('● Active')
             : chalk.red('● Inactive')
 
           // Show only first 8 characters of ID for easier reading
-          const shortId = String(key.id).substring(0, 8)
+          const shortId = chalk.cyan(String(key.id).substring(0, 8))
 
-          // Format the prefix to ensure it's not too long
-          const prefixStr =
-            key.prefix.length > 12
-              ? key.prefix.substring(0, 12) + '...'
-              : key.prefix
+          // Format the prefix with better truncation
+          const prefixStr = key.prefix.length > prefixWidth
+            ? key.prefix.substring(0, prefixWidth - 3) + '...'
+            : chalk.gray(key.prefix)
+
+          // Truncate name if too long
+          const nameStr = key.name.length > nameWidth
+            ? key.name.substring(0, nameWidth - 3) + '...'
+            : key.name
+
+          // Format created date
+          const createdDate = formatDate(key.created)
 
           console.log(
-            shortId.padEnd(8) +
-              key.name.padEnd(25) +
-              prefixStr.padEnd(15) +
-              status.padEnd(12) +
-              key.created.substring(0, 10).padEnd(12) +
-              lastUsed,
+            shortId.padEnd(idWidth) +
+              nameStr.padEnd(nameWidth) +
+              prefixStr.padEnd(prefixWidth) +
+              status.padEnd(statusWidth) +
+              createdDate.padEnd(createdWidth) +
+              lastUsed
           )
         })
 
