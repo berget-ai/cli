@@ -64,6 +64,9 @@ if (process.argv.length <= 2) {
       `\nRun ${chalk.bold('berget --help')} for a complete list of commands.`
     )
   )
+  
+  // Exit to prevent commander from showing help again
+  process.exit(0)
 }
 
 // Add helpful suggestions for common command mistakes
