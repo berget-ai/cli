@@ -73,7 +73,7 @@ Varje projekt får sin egen unika API-nyckel som skapas automatiskt:
 
 ```json
 {
-  "model": "berget/deepseek-r1",
+  "model": "berget/glm-4-6",
   "apiKey": "projekt-specifik-nyckel",
   "projectName": "mitt-svenska-projekt",
   "provider": "berget",

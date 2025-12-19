@@ -33,6 +33,10 @@ export interface ProviderModelConfig {
     output: number
     context: number
   }
+  modalities?: {
+    input: string[]
+    output: string[]
+  }
 }
 
 export interface OpenCodeConfig {
@@ -113,7 +117,7 @@ export class ConfigLoader {
     const config = this.loadConfig()
     
     // Extract from config or fall back to defaults
-    const primary = config.model || 'berget/deepseek-r1'
+    const primary = config.model || 'berget/glm-4-6'
     const small = config.small_model || 'berget/gpt-oss'
     
     return { primary, small }
@@ -132,13 +136,17 @@ export class ConfigLoader {
     
     // Fallback to defaults
     return {
-      'deepseek-r1': {
+      'glm-4-6': {
         name: 'GLM-4.6',
         limit: { output: 4000, context: 90000 }
       },
-      'gpt-oss': {
+'gpt-oss': {
         name: 'GPT-OSS',
-        limit: { output: 4000, context: 128000 }
+        limit: { output: 4000, context: 128000 },
+        modalities: {
+          input: ['text', 'image'],
+          output: ['text']
+        }
       },
       'llama-8b': {
         name: 'llama-3.1-8b',
