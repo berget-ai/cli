@@ -42,7 +42,7 @@ export function registerChatCommands(program: Command): void {
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
     .argument('[message]', 'Message to send directly (skips interactive mode)')
-.option('-m, --model <model>', 'Model to use (default: deepseek-r1)')
+.option('-m, --model <model>', 'Model to use (default: glm-4-6)')
     .option('--no-reasoning', 'Disable reasoning mode (adds </think> to messages)')
     .option('-t, --temperature <temp>', 'Temperature (0-1)', parseFloat)
     .option('--max-tokens <tokens>', 'Maximum tokens to generate', parseInt)

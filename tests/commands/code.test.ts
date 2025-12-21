@@ -194,7 +194,7 @@ describe('Code Commands', () => {
     it('should create opencode.json with correct structure', async () => {
       // This tests the expected config structure
       const expectedConfig = {
-        model: 'berget/deepseek-r1',
+        model: 'berget/glm-4-6',
         apiKey: 'test-api-key',
         projectName: 'testproject',
         provider: 'berget',
@@ -202,7 +202,7 @@ describe('Code Commands', () => {
         version: '1.0.0',
       }
 
-      expect(expectedConfig.model).toBe('berget/deepseek-r1')
+      expect(expectedConfig.model).toBe('berget/glm-4-6')
       expect(expectedConfig.provider).toBe('berget')
       expect(expectedConfig.version).toBe('1.0.0')
     })
@@ -259,7 +259,7 @@ describe('Code Commands', () => {
 
     it('should load configuration from opencode.json', async () => {
       const mockConfig = {
-        model: 'berget/deepseek-r1',
+        model: 'berget/glm-4-6',
         apiKey: 'test-api-key',
         projectName: 'testproject',
         provider: 'berget',
@@ -284,7 +284,7 @@ describe('Code Commands', () => {
       })
 
       // Verify config structure expectations
-      expect(mockConfig.model).toBe('berget/deepseek-r1')
+      expect(mockConfig.model).toBe('berget/glm-4-6')
       expect(mockConfig.apiKey).toBe('test-api-key')
       expect(mockConfig.projectName).toBe('testproject')
     })
