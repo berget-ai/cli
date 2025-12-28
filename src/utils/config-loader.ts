@@ -71,6 +71,13 @@ export class ConfigLoader {
   }
 
   /**
+   * Clear the singleton instance (for testing purposes)
+   */
+  public static clearInstance(): void {
+    ConfigLoader.instance = null as any
+  }
+
+  /**
    * Load configuration from opencode.json
    */
   public loadConfig(): OpenCodeConfig {
@@ -98,40 +105,62 @@ export class ConfigLoader {
    * Get agent configuration by name
    */
   public getAgentConfig(agentName: string): AgentConfig | null {
-    const config = this.loadConfig()
-    return config.agent?.[agentName] || null
+    try {
+      const config = this.loadConfig()
+      return config.agent?.[agentName] || null
+    } catch (error) {
+      // Config file doesn't exist, return null
+      return null
+    }
   }
 
   /**
    * Get all agent configurations
    */
   public getAllAgentConfigs(): Record<string, AgentConfig> {
-    const config = this.loadConfig()
-    return config.agent || {}
+    try {
+      const config = this.loadConfig()
+      return config.agent || {}
+    } catch (error) {
+      // Config file doesn't exist, return empty object
+      return {}
+    }
   }
 
   /**
    * Get model configuration
    */
   public getModelConfig(): ModelConfig {
-    const config = this.loadConfig()
-    
-    // Extract from config or fall back to defaults
-    const primary = config.model || 'berget/glm-4-6'
-    const small = config.small_model || 'berget/gpt-oss'
-    
-    return { primary, small }
+    try {
+      const config = this.loadConfig()
+      
+      // Extract from config or fall back to defaults
+      const primary = config.model || 'berget/glm-4-6'
+      const small = config.small_model || 'berget/gpt-oss'
+      
+      return { primary, small }
+    } catch (error) {
+      // Fallback to defaults when no config exists (init scenario)
+      return {
+        primary: 'berget/glm-4-6',
+        small: 'berget/gpt-oss'
+      }
+    }
   }
 
-  /**
+/**
    * Get provider model configuration
    */
   public getProviderModels(): Record<string, ProviderModelConfig> {
-    const config = this.loadConfig()
-    
-    // Extract from provider configuration
-    if (config.provider?.berget?.models) {
-      return config.provider.berget.models as Record<string, ProviderModelConfig>
+    try {
+      const config = this.loadConfig()
+      
+      // Extract from provider configuration
+      if (config.provider?.berget?.models) {
+        return config.provider.berget.models as Record<string, ProviderModelConfig>
+      }
+    } catch (error) {
+      // Config file doesn't exist, use fallback defaults
     }
     
     // Fallback to defaults
@@ -140,7 +169,7 @@ export class ConfigLoader {
         name: 'GLM-4.6',
         limit: { output: 4000, context: 90000 }
       },
-'gpt-oss': {
+      'gpt-oss': {
         name: 'GPT-OSS',
         limit: { output: 4000, context: 128000 },
         modalities: {
@@ -159,24 +188,39 @@ export class ConfigLoader {
    * Get command configurations
    */
   public getCommandConfigs(): Record<string, any> {
-    const config = this.loadConfig()
-    return config.command || {}
+    try {
+      const config = this.loadConfig()
+      return config.command || {}
+    } catch (error) {
+      // Config file doesn't exist, return empty object
+      return {}
+    }
   }
 
   /**
    * Get watcher configuration
    */
   public getWatcherConfig(): Record<string, any> {
-    const config = this.loadConfig()
-    return config.watcher || { ignore: ['node_modules', 'dist', '.git', 'coverage'] }
+    try {
+      const config = this.loadConfig()
+      return config.watcher || { ignore: ['node_modules', 'dist', '.git', 'coverage'] }
+    } catch (error) {
+      // Config file doesn't exist, return default watcher config
+      return { ignore: ['node_modules', 'dist', '.git', 'coverage'] }
+    }
   }
 
   /**
    * Get provider configuration
    */
   public getProviderConfig(): Record<string, any> {
-    const config = this.loadConfig()
-    return config.provider || {}
+    try {
+      const config = this.loadConfig()
+      return config.provider || {}
+    } catch (error) {
+      // Config file doesn't exist, return empty object
+      return {}
+    }
   }
 
   /**

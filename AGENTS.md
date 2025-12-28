@@ -56,6 +56,10 @@ Functional, modular Koa + TypeScript services with schema-first approach and cod
 
 #### devops
 
+# ⚠️ ABSOLUTE RULE: kubectl apply NEVER
+
+**THIS RULE HAS NO EXCEPTIONS - APPLIES TO ALL ENVIRONMENTS: DEV, STAGING, PRODUCTION**
+
 Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
 
 **Use when:**
@@ -69,6 +73,159 @@ Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
 - GitOps workflows
 - Operator-first approach
 - SemVer with release candidates
+
+## 🚨 CRITICAL: WHY kubectl apply DESTROYS GITOPS
+
+**kubectl apply is fundamentally incompatible with GitOps because it:**
+
+1. **Overwrites FluxCD metadata** - The `kubectl.kubernetes.io/last-applied-configuration` annotation gets replaced with kubectl's version, breaking FluxCD's tracking
+2. **Breaks the single source of truth** - Your cluster state diverges from Git state, making Git no longer authoritative
+3. **Creates synchronization conflicts** - FluxCD cannot reconcile differences between Git and cluster state
+4. **Makes debugging impossible** - Manual changes are invisible in Git history
+5. **Undermines the entire GitOps model** - The promise of "Git as source of truth" is broken
+
+## 📋 EXACTLY WHAT GETS DESTROYED
+
+When you run `kubectl apply`, these critical metadata fields are corrupted:
+
+```yaml
+# BEFORE: FluxCD-managed resource
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"app","namespace":"default"},"spec":{"template":{"spec":{"containers":[{"image":"nginx:1.21","name":"nginx"}]}}}}
+    kustomize.toolkit.fluxcd.io/checksum: a1b2c3d4e5f6
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+
+# AFTER: kubectl apply destroys this
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"app","namespace":"default"},"spec":{"template":{"spec":{"containers":[{"image":"nginx:1.22","name":"nginx"}]}}}}
+    # kustomize.toolkit.fluxcd.io/checksum: GONE!
+    # kustomize.toolkit.fluxcd.io/ssa: GONE!
+```
+
+## 🔥 CONSEQUENCES OF USING kubectl apply
+
+**Immediate Impact:**
+- FluxCD loses track of the resource
+- Future Git commits may not apply correctly
+- Resource becomes "orphaned" from GitOps control
+
+**Long-term Damage:**
+- Cluster drift becomes undetectable
+- Rollback capabilities are compromised
+- Audit trail is broken
+- Team loses trust in GitOps process
+
+**Recovery Required:**
+- Manual intervention to restore FluxCD metadata
+- Potential resource recreation
+- Downtime during recovery
+- Complete audit of affected resources
+
+## 🚨 KRITISKA REGLER FÖR FLUXCD-kluster
+
+# ⚠️ ABSOLUT ALDRIG: kubectl apply
+
+**DENNA REGLER HAR INGA UNDTAG - GÄLLER ALLTID: DEV, STAGING, PRODUCTION**
+
+**ABSOLUT ALDRIG använd `kubectl apply` i FluxCD-hanterade kluster!**
+
+### ❌ FORBUDNA OPERATIONER
+
+```bash
+# ❌ ALDRIG GÖR DETTA!
+kubectl apply -f deployment.yaml
+kubectl apply -f kustomization.yaml
+kubectl apply -f flux-system/  # SPECIELT INTE FLUXCD-MANIFEST!
+kubectl create -f ...
+kubectl replace -f ...
+kubectl edit deployment/...
+kubectl patch deployment/...
+```
+
+### ✅ TILLÅTNA OPERATIONER (Read-Only)
+
+```bash
+# ✅ SÄKERT FÖR DIAGNOSTIK
+kubectl get pods
+kubectl describe deployment/app
+kubectl logs -f pod/name
+kubectl get events
+kubectl top nodes
+```
+
+### 🔄 RÄTT SÄTT ATT GÖRA ÄNDRINGAR
+
+1. **Git är sanningens källa** - alla ändringar måste gå via Git repository
+2. **FluxCD synkroniserar automatiskt** - ändra YAML-filer, inte klustret direkt
+3. **Använd PR workflow** - commit ändringar, skapa PR, låt FluxCD hantera deployment
+
+### 🚨 VAD HÄNDER OM DU ÄNDÅ ANVÄNDER kubectl apply?
+
+**DET HÄNDER OM DU ANVÄNDER kubectl apply:**
+
+- **Förstör FluxCD-metadata** - `kubectl.kubernetes.io/last-applied-configuration` skrivs över
+- **Breakar GitOps-modellen** - klustret divergerar från Git-repository
+- **FluxCD kan inte synkronisera** - konflikter mellan Git-state och kluster-state
+- **Svår att diagnostisera** - manuella ändringar är osynliga i Git-historiken
+
+**RESULTATET: FluxCD FÖRLORAR KONTROLLEN OCH KLUSTRET BLIR O-SYNKRONISERAT FRÅN GIT!**
+
+### 🆘 NÖDSITUATIONER
+
+```bash
+# Pausa FluxCD temporärt
+flux suspend kustomization app-name
+
+# Gör nödvändiga ändringar i Git
+git commit -m "emergency fix"
+git push
+
+# Återuppta FluxCD
+flux resume kustomization app-name
+```
+
+### 💡 MINNESREGEL
+
+> **"Git first, kubectl never"**
+> 
+> Om du måste använda `kubectl apply` - gör det inte. Gör en ändring i Git istället.
+
+### 📋 CHECKLIST FÖR ÄNDRINGAR
+
+- [ ] Ändring gjord i Git repository?
+- [ ] PR skapad och granskad?
+- [ ] FluxCD synkroniserar korrekt?
+- [ ] Ingen `kubectl apply` använd?
+- [ ] Kluster-state matchar Git-state?
+
+**VIKTIGT:** Dessa regler gäller ALLTID, även i utvecklingsmiljöer och tester!
+
+### 💡 MINNESREGEL
+
+> **"Git first, kubectl never"**
+> 
+> Om du måste använda `kubectl apply` - gör det inte. Gör en ändring i Git istället.
+
+### 📋 CHECKLIST FÖR ÄNDRINGAR
+
+- [ ] Ändring gjord i Git repository?
+- [ ] PR skapad och granskad?
+- [ ] FluxCD synkroniserar korrekt?
+- [ ] Ingen `kubectl apply` använd?
+- [ ] Kluster-state matchar Git-state?
+
+**VIKTIGT:** Dessa regler gäller ALLTID, även i utvecklingsmiljöer och tester!
+
+---
+
+## ⚠️ ABSOLUT SLUTREGEL: INGA UNDTAG
+
+**kubectl apply är FÖRBJUDET i ALLA FluxCD-kluster, ALLTID, utan undantag.**
+**Detta inkluderar: dev, staging, production, testmiljöer, lokala kluster, ALLT.**
 
 **Helm Values Configuration Process:**
 
