@@ -852,7 +852,7 @@ export function registerCodeCommands(program: Command): void {
                 apiKey: '{env:BERGET_API_KEY}',
               },
               models: {
-                'deepseek-r1': {
+                'glm-4-6': {
                   name: 'GLM-4.6',
                   limit: { output: 4000, context: 90000 }
                 },
