@@ -858,7 +858,8 @@ export function registerCodeCommands(program: Command): void {
                 },
                 'gpt-oss': {
                   name: 'GPT-OSS',
-                  limit: { output: 4000, context: 128000 }
+                  limit: { output: 4000, context: 128000 },
+                  modalities: ['text', 'image'],
                 },
                 'llama-8b': {
                   name: 'llama-3.1-8b',
