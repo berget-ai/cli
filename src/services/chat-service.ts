@@ -386,6 +386,7 @@ export class ChatService {
       const decoder = new TextDecoder()
       let fullContent = ''
       let fullResponse: any = null
+      let buffer = '' // Buffer to accumulate partial JSON data
 
       while (true) {
         const { done, value } = await reader.read()
@@ -394,17 +395,76 @@ export class ChatService {
         const chunk = decoder.decode(value, { stream: true })
         logger.debug(`Received chunk: ${chunk.length} bytes`)
 
-        // Process the chunk - it may contain multiple SSE events
-        const lines = chunk.split('\n')
-        for (const line of lines) {
+        // Add chunk to buffer
+        buffer += chunk
+        logger.debug(`Added chunk to buffer. Buffer length: ${buffer.length}`)
+
+        // Process the buffer - it may contain multiple SSE events
+        const lines = buffer.split('\n')
+        logger.debug(`Processing ${lines.length} lines from buffer`)
+        
+        // Keep track of processed lines to update buffer
+        let processedLines = 0
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          logger.debug(`Line ${i}: "${line}"`)
+          
           if (line.startsWith('data:')) {
             const jsonData = line.slice(5).trim()
+            logger.debug(`Extracted JSON data: "${jsonData}"`)
 
             // Skip empty data or [DONE] marker
-            if (jsonData === '' || jsonData === '[DONE]') continue
+            if (jsonData === '' || jsonData === '[DONE]') {
+              logger.debug(`Skipping empty data or [DONE] marker`)
+              processedLines = i + 1
+              continue
+            }
+
+            // Check if JSON looks complete (basic validation)
+            if (!jsonData.startsWith('{')) {
+              logger.warn(`JSON data doesn't start with '{', might be partial: "${jsonData.substring(0, 50)}..."`)
+              // Don't process this line yet, keep it in buffer
+              break
+            }
+
+            // Count braces to check if JSON is complete
+            let braceCount = 0
+            let inString = false
+            let escaped = false
+            
+            for (let j = 0; j < jsonData.length; j++) {
+              const char = jsonData[j]
+              if (escaped) {
+                escaped = false
+                continue
+              }
+              if (char === '\\') {
+                escaped = true
+                continue
+              }
+              if (char === '"') {
+                inString = !inString
+                continue
+              }
+              if (!inString && char === '{') {
+                braceCount++
+              } else if (!inString && char === '}') {
+                braceCount--
+              }
+            }
+            
+            if (braceCount !== 0) {
+              logger.warn(`JSON braces don't balance (${braceCount}), treating as partial: "${jsonData.substring(0, 50)}..."`)
+              // Don't process this line yet, keep it in buffer
+              break
+            }
 
             try {
+              logger.debug(`Attempting to parse JSON of length: ${jsonData.length}`)
               const parsedData = JSON.parse(jsonData)
+              logger.debug(`Successfully parsed JSON: ${JSON.stringify(parsedData, null, 2)}`)
+              processedLines = i + 1 // Mark this line as processed
 
               // Call the onChunk callback with the parsed data
               if (options.onChunk) {
@@ -426,9 +486,30 @@ export class ChatService {
               }
             } catch (e) {
               logger.error(`Error parsing chunk: ${e}`)
-              logger.debug(`Problematic chunk: ${jsonData}`)
+              logger.error(`JSON parse error at position ${(e as any).message?.match(/position (\d+)/)?.[1] || 'unknown'}`)
+              logger.error(`Problematic chunk length: ${jsonData.length}`)
+              logger.error(`Problematic chunk content: "${jsonData}"`)
+              logger.error(`Chunk starts with: "${jsonData.substring(0, 50)}..."`)
+              logger.error(`Chunk ends with: "...${jsonData.substring(jsonData.length - 50)}"`)
+              
+              // Show character codes around the error position
+              const errorPos = parseInt((e as any).message?.match(/position (\d+)/)?.[1] || '0')
+              if (errorPos > 0) {
+                const start = Math.max(0, errorPos - 20)
+                const end = Math.min(jsonData.length, errorPos + 20)
+                logger.error(`Context around error position ${errorPos}:`)
+                logger.error(`"${jsonData.substring(start, end)}"`)
+                logger.error(`Character codes: ${Array.from(jsonData.substring(start, end)).map(c => c.charCodeAt(0)).join(' ')}`)
+              }
             }
           }
+        }
+        
+        // Update buffer to only contain unprocessed lines
+        if (processedLines > 0) {
+          const remainingLines = lines.slice(processedLines)
+          buffer = remainingLines.join('\n')
+          logger.debug(`Updated buffer. Remaining lines: ${remainingLines.length}, Buffer length: ${buffer.length}`)
         }
       }
 
