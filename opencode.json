@@ -125,7 +125,7 @@
       },
       "models": {
         "glm-4.7": {
-          "name": "GLM-4.6",
+          "name": "GLM-4.7",
           "limit": {
             "output": 4000,
             "context": 90000

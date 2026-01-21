@@ -401,7 +401,6 @@ async function installOpencode(): Promise<boolean> {
     await new Promise<void>((resolve, reject) => {
       const install = spawn('npm', ['install', '-g', 'opencode-ai'], {
         stdio: 'inherit',
-        shell: true,
       })
 
       install.on('close', (code) => {
@@ -435,7 +434,7 @@ async function installOpencode(): Promise<boolean> {
     console.error(chalk.red('Failed to install OpenCode:'))
     console.error(error instanceof Error ? error.message : String(error))
     console.log(chalk.blue('\nAlternative installation methods:'))
-    console.log(chalk.blue('  curl -fsSL https://opencode.ai/install | bash'))
+    console.log(chalk.blue('  curl -fsSL https://opencode.ai/install | sh'))
     console.log(chalk.blue('  Or visit: https://opencode.ai/docs'))
     return false
   }
@@ -901,7 +900,7 @@ export function registerCodeCommands(program: Command): void {
               },
               models: {
                 'glm-4.7': {
-                  name: 'GLM-4.6',
+                  name: 'GLM-4.7',
                   limit: { output: 4000, context: 90000 },
                 },
                 'gpt-oss': {
@@ -1600,14 +1599,14 @@ All agents follow these principles:
             )
           }
 
-          // Check for GLM-4.6 optimizations
+          // Check for GLM-4.7 optimizations
           if (
             !currentConfig.provider?.berget?.models?.[
               modelConfig.primary.replace('berget/', '')
             ]?.limit?.context
           ) {
             console.log(
-              chalk.cyan('  • GLM-4.6 token limits and auto-compaction')
+              chalk.cyan('  • GLM-4.7 token limits and auto-compaction')
             )
           }
 
@@ -1889,7 +1888,7 @@ All agents follow these principles:
               chalk.cyan('  • @security subagent for security reviews')
             )
             console.log(chalk.cyan('  • Improved agent prompts and routing'))
-            console.log(chalk.cyan('  • GLM-4.6 token optimizations'))
+            console.log(chalk.cyan('  • GLM-4.7 token optimizations'))
             console.log(chalk.blue('\nTry these new commands:'))
             console.log(chalk.cyan('  @quality run tests and create PR'))
             console.log(chalk.cyan('  @security review this code'))

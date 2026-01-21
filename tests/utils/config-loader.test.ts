@@ -44,7 +44,7 @@ describe('ConfigLoader', () => {
         const modelConfig = configLoader.getModelConfig()
         
         expect(modelConfig).toEqual({
-          primary: 'berget/glm-4-6',
+          primary: 'berget/glm-4.7',
           small: 'berget/gpt-oss'
         })
       })
@@ -53,7 +53,7 @@ describe('ConfigLoader', () => {
         const modelConfig = getModelConfig(testConfigPath)
         
         expect(modelConfig).toEqual({
-          primary: 'berget/glm-4-6',
+          primary: 'berget/glm-4.7',
           small: 'berget/gpt-oss'
         })
       })
@@ -64,8 +64,8 @@ describe('ConfigLoader', () => {
         const models = configLoader.getProviderModels()
         
         expect(models).toEqual({
-          'glm-4-6': {
-            name: 'GLM-4.6',
+          'glm-4.7': {
+            name: 'GLM-4.7',
             limit: { output: 4000, context: 90000 }
           },
           'gpt-oss': {
@@ -87,8 +87,8 @@ describe('ConfigLoader', () => {
         const models = getProviderModels(testConfigPath)
         
         expect(models).toEqual({
-          'glm-4-6': {
-            name: 'GLM-4.6',
+          'glm-4.7': {
+            name: 'GLM-4.7',
             limit: { output: 4000, context: 90000 }
           },
           'gpt-oss': {
@@ -227,20 +227,20 @@ describe('ConfigLoader', () => {
     it('should fall back to defaults for getModelConfig', () => {
       const modelConfig = configLoader.getModelConfig()
       
-      expect(modelConfig).toEqual({
-        primary: 'berget/glm-4-6',
-        small: 'berget/gpt-oss'
-      })
+expect(modelConfig).toEqual({
+          primary: 'berget/glm-4.7',
+          small: 'berget/gpt-oss'
+        })
     })
 
     it('should fall back to defaults for getProviderModels', () => {
       const models = configLoader.getProviderModels()
       
-      expect(models).toEqual({
-        'glm-4-6': {
-          name: 'GLM-4.6',
-          limit: { output: 4000, context: 90000 }
-        },
+expect(models).toEqual({
+          'glm-4.7': {
+            name: 'GLM-4.7',
+            limit: { output: 4000, context: 90000 }
+          },
         'gpt-oss': {
           name: 'GPT-OSS',
           limit: { output: 4000, context: 128000 },
@@ -295,7 +295,7 @@ describe('ConfigLoader', () => {
       
       // And return sensible defaults
       expect(configLoader.getModelConfig()).toEqual({
-        primary: 'berget/glm-4-6',
+        primary: 'berget/glm-4.7',
         small: 'berget/gpt-oss'
       })
       expect(configLoader.getAllAgentConfigs()).toEqual({})
@@ -311,7 +311,7 @@ describe('ConfigLoader', () => {
       expect(() => getAllAgentConfigs(testConfigPath)).not.toThrow()
       
       expect(getModelConfig(testConfigPath)).toEqual({
-        primary: 'berget/glm-4-6',
+        primary: 'berget/glm-4.7',
         small: 'berget/gpt-oss'
       })
       expect(getAllAgentConfigs(testConfigPath)).toEqual({})
