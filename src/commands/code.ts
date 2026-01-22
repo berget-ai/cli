@@ -378,7 +378,6 @@ function checkOpencodeInstalled(): Promise<boolean> {
   return new Promise((resolve) => {
     const child = spawn('opencode', ['--version'], {
       stdio: 'pipe',
-      shell: true,
     })
 
     child.on('close', (code) => {
@@ -1204,7 +1203,6 @@ All agents follow these principles:
         const opencode = spawn('opencode', opencodeArgs, {
           stdio: 'inherit',
           env: env,
-          shell: true,
         })
 
         opencode.on('close', (code) => {
@@ -1257,7 +1255,6 @@ All agents follow these principles:
         // Spawn opencode serve process
         const opencode = spawn('opencode', serveArgs, {
           stdio: 'inherit',
-          shell: true,
         })
 
         opencode.on('close', (code) => {
