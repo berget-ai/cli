@@ -577,104 +577,39 @@ export function registerCodeCommands(program: Command): void {
         try {
           const apiKeyService = ApiKeyService.getInstance()
 
-          // Check for environment variable first (regardless of automation mode)
           if (process.env.BERGET_API_KEY) {
-            console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
-            apiKey = process.env.BERGET_API_KEY
-            keyName = `env-key-${projectName}`
-          } else {
-            // List existing API keys
-            if (!options.yes) {
-              console.log(chalk.blue('\n📋 Checking existing API keys...'))
-            }
-            const existingKeys = await apiKeyService.list()
-
-            if (existingKeys.length > 0 && !options.yes) {
-              console.log(chalk.blue('Found existing API keys:'))
-              console.log(chalk.dim('─'.repeat(60)))
-              existingKeys.forEach((key, index) => {
-                console.log(
-                  `${chalk.cyan((index + 1).toString())}. ${chalk.bold(
-                    key.name
-                  )} (${key.prefix}...)`
-                )
-                console.log(
-                  chalk.dim(
-                    `   Created: ${new Date(key.created).toLocaleDateString(
-                      'sv-SE'
-                    )}`
-                  )
-                )
-                console.log(
-                  chalk.dim(
-                    `   Last used: ${
-                      key.lastUsed
-                        ? new Date(key.lastUsed).toLocaleDateString('sv-SE')
-                        : 'Never'
-                    }`
-                  )
-                )
-                if (index < existingKeys.length - 1) console.log()
-              })
+            if (options.yes) {
+              console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
+              apiKey = process.env.BERGET_API_KEY
+              keyName = `env-key-${projectName}`
+            } else {
+              console.log(chalk.blue('\n📋 API key setup:'))
               console.log(chalk.dim('─'.repeat(60)))
               console.log(
-                chalk.cyan(`${existingKeys.length + 1}. Create a new API key`)
+                `${chalk.cyan('1')} ${chalk.bold('Use existing API key')}`
               )
+              console.log(chalk.dim('   Uses BERGET_API_KEY from environment'))
+              console.log(
+                `${chalk.cyan('2')} ${chalk.bold('Create a new API key')}`
+              )
+              console.log(chalk.dim('─'.repeat(60)))
 
-              // Get user choice
               const choice = await new Promise<string>((resolve) => {
                 const rl = readline.createInterface({
                   input: process.stdin,
                   output: process.stdout,
                 })
-                rl.question(
-                  chalk.blue(
-                    '\nSelect an option (1-' + (existingKeys.length + 1) + '): '
-                  ),
-                  (answer) => {
-                    rl.close()
-                    resolve(answer.trim())
-                  }
-                )
+                rl.question(chalk.blue('\nSelect an option (1-2, default: 1): '), (answer) => {
+                  rl.close()
+                  resolve(answer.trim() || '1')
+                })
               })
 
-              const choiceIndex = parseInt(choice) - 1
-
-              if (choiceIndex >= 0 && choiceIndex < existingKeys.length) {
-                // Use existing key
-                const selectedKey = existingKeys[choiceIndex]
-                keyName = selectedKey.name
-
-                // We need to rotate the key to get the actual key value
-                console.log(
-                  chalk.yellow(
-                    `\n🔄 Rotating API key "${selectedKey.name}" to get the key value...`
-                  )
-                )
-
-                if (
-                  await confirm(
-                    chalk.yellow(
-                      'This will invalidate the current key. Continue? (Y/n): '
-                    ),
-                    options.yes
-                  )
-                ) {
-                  const rotatedKey = await apiKeyService.rotate(
-                    selectedKey.id.toString()
-                  )
-                  apiKey = rotatedKey.key
-                  console.log(chalk.green(`✓ API key rotated successfully`))
-                } else {
-                  console.log(
-                    chalk.yellow(
-                      'Cancelled. Please select a different option or create a new key.'
-                    )
-                  )
-                  return
-                }
-              } else if (choiceIndex === existingKeys.length) {
-                // Create new key
+              if (choice === '1') {
+                console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
+                apiKey = process.env.BERGET_API_KEY
+                keyName = `env-key-${projectName}`
+              } else if (choice === '2') {
                 console.log(chalk.blue('\n🔑 Creating new API key...'))
 
                 const defaultKeyName = `opencode-${projectName}-${Date.now()}`
@@ -693,26 +628,27 @@ export function registerCodeCommands(program: Command): void {
                 console.log(chalk.red('Invalid selection.'))
                 return
               }
-            } else {
-              // No existing keys or automation mode - create new one
-              if (!options.yes) {
-                console.log(chalk.yellow('No existing API keys found.'))
-                console.log(chalk.blue('Creating a new API key...'))
-              }
-
-              const defaultKeyName = `opencode-${projectName}-${Date.now()}`
-              const customName = await getInput(
-                chalk.blue(`Enter key name (default: ${defaultKeyName}): `),
-                defaultKeyName,
-                options.yes
-              )
-
-              keyName = customName
-              const createOptions: CreateApiKeyOptions = { name: keyName }
-              const keyData = await apiKeyService.create(createOptions)
-              apiKey = keyData.key
-              console.log(chalk.green(`✓ Created new API key: ${keyName}`))
             }
+          } else {
+            if (!options.yes) {
+              console.log(chalk.yellow('No BERGET_API_KEY environment variable found.'))
+              console.log(chalk.blue('Creating a new API key...'))
+              console.log(chalk.dim('\n💡 Tip: Set BERGET_API_KEY environment variable to reuse an existing key:'))
+              console.log(chalk.dim('   export BERGET_API_KEY=your_api_key_here'))
+            }
+
+            const defaultKeyName = `opencode-${projectName}-${Date.now()}`
+            const customName = await getInput(
+              chalk.blue(`Enter key name (default: ${defaultKeyName}): `),
+              defaultKeyName,
+              options.yes
+            )
+
+            keyName = customName
+            const createOptions: CreateApiKeyOptions = { name: keyName }
+            const keyData = await apiKeyService.create(createOptions)
+            apiKey = keyData.key
+            console.log(chalk.green(`✓ Created new API key: ${keyName}`))
           }
         } catch (error) {
           if (process.env.BERGET_API_KEY) {
