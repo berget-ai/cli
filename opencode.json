@@ -9,8 +9,6 @@
   "agent": {
     "fullstack": {
       "model": "berget/glm-4.7",
-      "temperature": 0.3,
-      "top_p": 0.9,
       "mode": "primary",
       "permission": {
         "edit": "allow",
@@ -22,8 +20,6 @@
     },
     "frontend": {
       "model": "berget/glm-4.7",
-      "temperature": 0.4,
-      "top_p": 0.9,
       "mode": "primary",
       "permission": {
         "edit": "allow",
@@ -36,8 +32,6 @@
     },
     "backend": {
       "model": "berget/glm-4.7",
-      "temperature": 0.3,
-      "top_p": 0.9,
       "mode": "primary",
       "permission": {
         "edit": "allow",
@@ -49,8 +43,6 @@
     },
     "devops": {
       "model": "berget/glm-4.7",
-      "temperature": 0.3,
-      "top_p": 0.8,
       "mode": "primary",
       "permission": {
         "edit": "allow",
@@ -62,8 +54,6 @@
     },
     "app": {
       "model": "berget/glm-4.7",
-      "temperature": 0.4,
-      "top_p": 0.9,
       "mode": "primary",
       "permission": {
         "edit": "allow",
@@ -76,8 +66,6 @@
     },
     "security": {
       "model": "berget/glm-4.7",
-      "temperature": 0.2,
-      "top_p": 0.8,
       "mode": "subagent",
       "permission": {
         "edit": "deny",
@@ -89,8 +77,6 @@
     },
     "quality": {
       "model": "berget/glm-4.7",
-      "temperature": 0.1,
-      "top_p": 0.9,
       "mode": "subagent",
       "permission": {
         "edit": "allow",
