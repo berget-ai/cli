@@ -36,13 +36,10 @@ export class AuthService {
     try {
       const { data: profile, error } = await this.client.GET('/v1/users/me')
       if (error) {
-        throw new Error(
-          error ? JSON.stringify(error) : 'Failed to get user profile',
-        )
+        return null
       }
       return profile
     } catch (error) {
-      handleError('Failed to get user profile', error)
       return null
     }
   }

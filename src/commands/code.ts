@@ -530,11 +530,10 @@ export function registerCodeCommands(program: Command): void {
           )
         } else {
           // Only require authentication if we don't have an API key
-          try {
-            const authService = AuthService.getInstance()
-            // This will throw if not authenticated
-            await authService.whoami()
-          } catch (error) {
+          const authService = AuthService.getInstance()
+          const profile = await authService.whoami()
+
+          if (!profile) {
             console.log(chalk.red('❌ Not authenticated with Berget AI.'))
             console.log(chalk.blue('To get started, you have two options:'))
             console.log('')
