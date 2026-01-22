@@ -92,12 +92,19 @@ export class ConfigLoader {
 
       const configContent = fs.readFileSync(this.configPath, 'utf8')
       this.config = JSON.parse(configContent) as OpenCodeConfig
-      
+
       logger.debug(`Loaded configuration from ${this.configPath}`)
       return this.config
     } catch (error) {
-      logger.error(`Failed to load configuration from ${this.configPath}:`, error)
-      throw new Error(`Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`)
+      logger.error(
+        `Failed to load configuration from ${this.configPath}:`,
+        error
+      )
+      throw new Error(
+        `Failed to load configuration: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
     }
   }
 
@@ -133,54 +140,57 @@ export class ConfigLoader {
   public getModelConfig(): ModelConfig {
     try {
       const config = this.loadConfig()
-      
+
       // Extract from config or fall back to defaults
-      const primary = config.model || 'berget/glm-4-6'
+      const primary = config.model || 'berget/glm-4.7'
       const small = config.small_model || 'berget/gpt-oss'
-      
+
       return { primary, small }
     } catch (error) {
       // Fallback to defaults when no config exists (init scenario)
       return {
-        primary: 'berget/glm-4-6',
-        small: 'berget/gpt-oss'
+        primary: 'berget/glm-4.7',
+        small: 'berget/gpt-oss',
       }
     }
   }
 
-/**
+  /**
    * Get provider model configuration
    */
   public getProviderModels(): Record<string, ProviderModelConfig> {
     try {
       const config = this.loadConfig()
-      
+
       // Extract from provider configuration
       if (config.provider?.berget?.models) {
-        return config.provider.berget.models as Record<string, ProviderModelConfig>
+        return config.provider.berget.models as Record<
+          string,
+          ProviderModelConfig
+        >
       }
     } catch (error) {
       // Config file doesn't exist, use fallback defaults
     }
-    
+
     // Fallback to defaults
     return {
-      'glm-4-6': {
-        name: 'GLM-4.6',
-        limit: { output: 4000, context: 90000 }
+      'glm-4.7': {
+        name: 'GLM-4.7',
+        limit: { output: 4000, context: 90000 },
       },
       'gpt-oss': {
         name: 'GPT-OSS',
         limit: { output: 4000, context: 128000 },
         modalities: {
           input: ['text', 'image'],
-          output: ['text']
-        }
+          output: ['text'],
+        },
       },
       'llama-8b': {
         name: 'llama-3.1-8b',
-        limit: { output: 4000, context: 128000 }
-      }
+        limit: { output: 4000, context: 128000 },
+      },
     }
   }
 
@@ -203,7 +213,11 @@ export class ConfigLoader {
   public getWatcherConfig(): Record<string, any> {
     try {
       const config = this.loadConfig()
-      return config.watcher || { ignore: ['node_modules', 'dist', '.git', 'coverage'] }
+      return (
+        config.watcher || {
+          ignore: ['node_modules', 'dist', '.git', 'coverage'],
+        }
+      )
     } catch (error) {
       // Config file doesn't exist, return default watcher config
       return { ignore: ['node_modules', 'dist', '.git', 'coverage'] }
@@ -242,7 +256,7 @@ export class ConfigLoader {
    */
   public getPrimaryAgentNames(): string[] {
     const agents = this.getAllAgentConfigs()
-    return Object.keys(agents).filter(name => agents[name].mode === 'primary')
+    return Object.keys(agents).filter((name) => agents[name].mode === 'primary')
   }
 
   /**
@@ -250,7 +264,9 @@ export class ConfigLoader {
    */
   public getSubagentNames(): string[] {
     const agents = this.getAllAgentConfigs()
-    return Object.keys(agents).filter(name => agents[name].mode === 'subagent')
+    return Object.keys(agents).filter(
+      (name) => agents[name].mode === 'subagent'
+    )
   }
 
   /**
@@ -287,14 +303,19 @@ export function getConfigLoader(configPath?: string): ConfigLoader {
 /**
  * Convenience function to get agent configuration
  */
-export function getAgentConfig(agentName: string, configPath?: string): AgentConfig | null {
+export function getAgentConfig(
+  agentName: string,
+  configPath?: string
+): AgentConfig | null {
   return getConfigLoader(configPath).getAgentConfig(agentName)
 }
 
 /**
  * Convenience function to get all agent configurations
  */
-export function getAllAgentConfigs(configPath?: string): Record<string, AgentConfig> {
+export function getAllAgentConfigs(
+  configPath?: string
+): Record<string, AgentConfig> {
   return getConfigLoader(configPath).getAllAgentConfigs()
 }
 
@@ -308,6 +329,8 @@ export function getModelConfig(configPath?: string): ModelConfig {
 /**
  * Convenience function to get provider models
  */
-export function getProviderModels(configPath?: string): Record<string, ProviderModelConfig> {
+export function getProviderModels(
+  configPath?: string
+): Record<string, ProviderModelConfig> {
   return getConfigLoader(configPath).getProviderModels()
 }

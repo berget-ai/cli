@@ -11,12 +11,12 @@ import path from 'path'
 import { spawn } from 'child_process'
 import { updateEnvFile } from '../utils/env-manager'
 import { createAuthenticatedClient } from '../client'
-import { 
-  getConfigLoader, 
-  getModelConfig, 
+import {
+  getConfigLoader,
+  getModelConfig,
   getProviderModels,
   type OpenCodeConfig,
-  type AgentConfig 
+  type AgentConfig,
 } from '../utils/config-loader'
 
 /**
@@ -35,11 +35,11 @@ function hasGit(): boolean {
  */
 async function mergeConfigurations(
   currentConfig: any,
-  latestConfig: any,
+  latestConfig: any
 ): Promise<any> {
   try {
     const client = createAuthenticatedClient()
-    
+
     // Get model config with fallback for init scenario
     let modelConfig: { primary: string; small: string }
     try {
@@ -47,8 +47,8 @@ async function mergeConfigurations(
     } catch (error) {
       // Fallback to defaults when no config exists (init scenario)
       modelConfig = {
-        primary: 'berget/glm-4-6',
-        small: 'berget/gpt-oss'
+        primary: 'berget/glm-4.7',
+        small: 'berget/gpt-oss',
       }
     }
 
@@ -102,7 +102,7 @@ Return ONLY the merged JSON configuration, no explanations.`
       return mergedConfig
     } catch (parseError) {
       console.warn(
-        chalk.yellow('⚠️  AI response invalid, using fallback merge'),
+        chalk.yellow('⚠️  AI response invalid, using fallback merge')
       )
       return fallbackMerge(currentConfig, latestConfig)
     }
@@ -193,7 +193,7 @@ async function confirm(question: string, autoYes = false): Promise<boolean> {
       resolve(
         answer.toLowerCase() === 'y' ||
           answer.toLowerCase() === 'yes' ||
-          answer === '',
+          answer === ''
       )
     })
   })
@@ -205,7 +205,7 @@ async function confirm(question: string, autoYes = false): Promise<boolean> {
 async function askChoice(
   question: string,
   options: string[],
-  defaultChoice?: string,
+  defaultChoice?: string
 ): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
@@ -227,7 +227,7 @@ async function askChoice(
 
       // Handle text input
       const matchingOption = options.find((option) =>
-        option.toLowerCase().startsWith(trimmed),
+        option.toLowerCase().startsWith(trimmed)
       )
 
       if (matchingOption) {
@@ -247,7 +247,7 @@ async function askChoice(
 async function getInput(
   question: string,
   defaultValue: string,
-  autoYes = false,
+  autoYes = false
 ): Promise<string> {
   if (autoYes) {
     return defaultValue
@@ -290,70 +290,84 @@ async function loadLatestAgentConfig(): Promise<any> {
   // Return the latest agent configuration directly - no file reading needed
   return {
     fullstack: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.3,
       top_p: 0.9,
       mode: 'primary',
       permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description: 'Router/coordinator agent for full-stack development with schema-driven architecture',
-      prompt: 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use \'git add .\' - ALWAYS add specific files with \'git add path/to/file\'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.'
+      description:
+        'Router/coordinator agent for full-stack development with schema-driven architecture',
+      prompt:
+        "Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
     },
     frontend: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.4,
       top_p: 0.9,
       mode: 'primary',
       permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
       note: 'Bash access is denied for frontend persona to prevent shell command execution in UI environments. This restriction enforces security and architectural boundaries.',
-      description: 'Builds Scandinavian, type-safe UIs with React, Tailwind, Shadcn.',
-      prompt: 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion.\n\nIMPORTANT: You have NO bash access and cannot run git commands. When your frontend implementation tasks are complete, inform the user that changes are ready and suggest using /pr command to create a pull request with proper testing and quality checks.\n\nCODE QUALITY RULES:\n- Write clean, production-ready code\n- Follow React and TypeScript best practices\n- Ensure accessibility and responsive design\n- Use semantic tokens from design system\n- Test your components manually when possible\n- Document any complex logic with comments\n\nCRITICAL: When frontend implementation is complete, ALWAYS inform the user to use "/pr" command to handle testing, building, and pull request creation.'
+      description:
+        'Builds Scandinavian, type-safe UIs with React, Tailwind, Shadcn.',
+      prompt:
+        'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion.\n\nIMPORTANT: You have NO bash access and cannot run git commands. When your frontend implementation tasks are complete, inform the user that changes are ready and suggest using /pr command to create a pull request with proper testing and quality checks.\n\nCODE QUALITY RULES:\n- Write clean, production-ready code\n- Follow React and TypeScript best practices\n- Ensure accessibility and responsive design\n- Use semantic tokens from design system\n- Test your components manually when possible\n- Document any complex logic with comments\n\nCRITICAL: When frontend implementation is complete, ALWAYS inform the user to use "/pr" command to handle testing, building, and pull request creation.',
     },
     backend: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.3,
       top_p: 0.9,
       mode: 'primary',
       permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description: 'Functional, modular Koa + TypeScript services; schema-first with code quality focus.',
-      prompt: 'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use \'git add .\' - ALWAYS add specific files with \'git add path/to/file\'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.'
+      description:
+        'Functional, modular Koa + TypeScript services; schema-first with code quality focus.',
+      prompt:
+        "You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
     },
     devops: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.3,
       top_p: 0.8,
       mode: 'primary',
       permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description: 'Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.',
-      prompt: 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use \'git add .\' - ALWAYS add specific files with \'git add path/to/file\'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nHelm Values Configuration Process:\n1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart\'s GitHub repository for official docs and examples, verify the exact version being used in the deployment.\n2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm\'s built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.\n3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.\n4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.'
+      description:
+        'Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.',
+      prompt:
+        "You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nHelm Values Configuration Process:\n1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.\n2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.\n3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.\n4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.",
     },
     app: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.4,
       top_p: 0.9,
       mode: 'primary',
       permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
       note: 'Bash access is denied for app persona to prevent shell command execution in mobile/Expo environments. This restriction enforces security and architectural boundaries.',
-      description: 'Expo + React Native apps; props-first, offline-aware, shared tokens.',
-      prompt: 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use \'git add .\' - ALWAYS add specific files with \'git add path/to/file\'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all app implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.'
+      description:
+        'Expo + React Native apps; props-first, offline-aware, shared tokens.',
+      prompt:
+        "You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all app implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
     },
     security: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.2,
       top_p: 0.8,
       mode: 'subagent',
       permission: { edit: 'deny', bash: 'allow', webfetch: 'allow' },
-      description: 'Security specialist for pentesting, OWASP compliance, and vulnerability assessments.',
-      prompt: 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use \'git add .\' - ALWAYS add specific files with \'git add path/to/file\'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR'
+      description:
+        'Security specialist for pentesting, OWASP compliance, and vulnerability assessments.',
+      prompt:
+        "Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR",
     },
     quality: {
-      model: 'berget/glm-4-6',
+      model: 'berget/glm-4.7',
       temperature: 0.1,
       top_p: 0.9,
       mode: 'subagent',
       permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description: 'Quality assurance specialist for testing, building, and PR management.',
-      prompt: 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Quality agent. Specialist in code quality assurance, testing, building, and pull request management.\\n\\nCore responsibilities:\\n  - Run comprehensive test suites (npm test, npm run test, jest, vitest)\\n  - Execute build processes (npm run build, webpack, vite, tsc)\\n  - Create and manage pull requests with proper descriptions\\n  - Monitor GitHub for Copilot/reviewer comments\\n  - Ensure code quality standards are met\\n  - Validate linting and formatting (npm run lint, prettier)\\n  - Check test coverage and performance benchmarks\\n  - Handle CI/CD pipeline validation\\n\\nGIT WORKFLOW RULES (CRITICAL - ENFORCE STRICTLY):\\n  - NEVER push directly to main branch - ALWAYS use pull requests\\n  - NEVER use \'git add .\' - ALWAYS add specific files with \'git add path/to/file\'\\n  - ALWAYS clean up test files, documentation files, and temporary artifacts before committing\\n  - ALWAYS ensure git history maintains production quality - no test commits, no debugging code\\n  - ALWAYS create descriptive commit messages following project conventions\\n  - ALWAYS run tests and build before creating PR\\n\\nCommon CLI commands:\\n  - npm test or npm run test (run test suite)\\n  - npm run build (build project)\\n  - npm run lint (run linting)\\n  - npm run format (format code)\\n  - npm run test:coverage (check coverage)\\n  - gh pr create (create pull request)\\n  - gh pr view --comments (check PR comments)\\n  - git add specific/files && git commit -m \\"message\\" && git push (NEVER use git add .)\\n\\nPR Workflow:\\n  1. Ensure all tests pass: npm test\\n  2. Build successfully: npm run build\\n  3. Create/update PR with clear description\\n  4. Monitor for reviewer comments\\n  5. Address feedback promptly\\n  6. Update PR with fixes\\n  7. Ensure CI checks pass\\n\\nAlways provide specific command examples and wait for processes to complete before proceeding.'
-    }
+      description:
+        'Quality assurance specialist for testing, building, and PR management.',
+      prompt:
+        "Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Quality agent. Specialist in code quality assurance, testing, building, and pull request management.\\n\\nCore responsibilities:\\n  - Run comprehensive test suites (npm test, npm run test, jest, vitest)\\n  - Execute build processes (npm run build, webpack, vite, tsc)\\n  - Create and manage pull requests with proper descriptions\\n  - Monitor GitHub for Copilot/reviewer comments\\n  - Ensure code quality standards are met\\n  - Validate linting and formatting (npm run lint, prettier)\\n  - Check test coverage and performance benchmarks\\n  - Handle CI/CD pipeline validation\\n\\nGIT WORKFLOW RULES (CRITICAL - ENFORCE STRICTLY):\\n  - NEVER push directly to main branch - ALWAYS use pull requests\\n  - NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\\n  - ALWAYS clean up test files, documentation files, and temporary artifacts before committing\\n  - ALWAYS ensure git history maintains production quality - no test commits, no debugging code\\n  - ALWAYS create descriptive commit messages following project conventions\\n  - ALWAYS run tests and build before creating PR\\n\\nCommon CLI commands:\\n  - npm test or npm run test (run test suite)\\n  - npm run build (build project)\\n  - npm run lint (run linting)\\n  - npm run format (format code)\\n  - npm run test:coverage (check coverage)\\n  - gh pr create (create pull request)\\n  - gh pr view --comments (check PR comments)\\n  - git add specific/files && git commit -m \\\"message\\\" && git push (NEVER use git add .)\\n\\nPR Workflow:\\n  1. Ensure all tests pass: npm test\\n  2. Build successfully: npm run build\\n  3. Create/update PR with clear description\\n  4. Monitor for reviewer comments\\n  5. Address feedback promptly\\n  6. Update PR with fixes\\n  7. Ensure CI checks pass\\n\\nAlways provide specific command examples and wait for processes to complete before proceeding.",
+    },
   }
 }
 
@@ -387,7 +401,6 @@ async function installOpencode(): Promise<boolean> {
     await new Promise<void>((resolve, reject) => {
       const install = spawn('npm', ['install', '-g', 'opencode-ai'], {
         stdio: 'inherit',
-        shell: true,
       })
 
       install.on('close', (code) => {
@@ -406,12 +419,12 @@ async function installOpencode(): Promise<boolean> {
     const opencodeInstalled = await checkOpencodeInstalled()
     if (!opencodeInstalled) {
       console.log(
-        chalk.yellow('Installation completed but opencode command not found.'),
+        chalk.yellow('Installation completed but opencode command not found.')
       )
       console.log(
         chalk.yellow(
-          'You may need to restart your terminal or check your PATH.',
-        ),
+          'You may need to restart your terminal or check your PATH.'
+        )
       )
       return false
     }
@@ -421,7 +434,7 @@ async function installOpencode(): Promise<boolean> {
     console.error(chalk.red('Failed to install OpenCode:'))
     console.error(error instanceof Error ? error.message : String(error))
     console.log(chalk.blue('\nAlternative installation methods:'))
-    console.log(chalk.blue('  curl -fsSL https://opencode.ai/install | bash'))
+    console.log(chalk.blue('  curl -fsSL https://opencode.ai/install | sh'))
     console.log(chalk.blue('  Or visit: https://opencode.ai/docs'))
     return false
   }
@@ -436,14 +449,14 @@ async function ensureOpencodeInstalled(autoYes = false): Promise<boolean> {
     if (!autoYes) {
       console.log(chalk.red('OpenCode is not installed.'))
       console.log(
-        chalk.blue('OpenCode is required for the AI coding assistant.'),
+        chalk.blue('OpenCode is required for the AI coding assistant.')
       )
     }
 
     if (
       await confirm(
         'Would you like to install OpenCode automatically? (Y/n): ',
-        autoYes,
+        autoYes
       )
     ) {
       opencodeInstalled = await installOpencode()
@@ -452,8 +465,8 @@ async function ensureOpencodeInstalled(autoYes = false): Promise<boolean> {
         console.log(chalk.blue('\nInstallation cancelled.'))
         console.log(
           chalk.blue(
-            'To install manually: curl -fsSL https://opencode.ai/install | bash',
-          ),
+            'To install manually: curl -fsSL https://opencode.ai/install | bash'
+          )
         )
         console.log(chalk.blue('Or visit: https://opencode.ai/docs'))
       }
@@ -478,7 +491,7 @@ export function registerCodeCommands(program: Command): void {
     .option('-f, --force', 'Overwrite existing configuration')
     .option(
       '-y, --yes',
-      'Automatically answer yes to all prompts (for automation)',
+      'Automatically answer yes to all prompts (for automation)'
     )
     .action(async (options) => {
       try {
@@ -489,7 +502,7 @@ export function registerCodeCommands(program: Command): void {
         if (fs.existsSync(configPath) && !options.force) {
           if (!options.yes) {
             console.log(
-              chalk.yellow('Project already initialized for OpenCode.'),
+              chalk.yellow('Project already initialized for OpenCode.')
             )
             console.log(chalk.dim(`Config file: ${configPath}`))
           }
@@ -510,7 +523,11 @@ export function registerCodeCommands(program: Command): void {
 
         // Check if we have an API key in environment first
         if (process.env.BERGET_API_KEY) {
-          console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment - no authentication required'))
+          console.log(
+            chalk.blue(
+              '🔑 Using BERGET_API_KEY from environment - no authentication required'
+            )
+          )
         } else {
           // Only require authentication if we don't have an API key
           try {
@@ -521,15 +538,29 @@ export function registerCodeCommands(program: Command): void {
             console.log(chalk.red('❌ Not authenticated with Berget AI.'))
             console.log(chalk.blue('To get started, you have two options:'))
             console.log('')
-            console.log(chalk.yellow('Option 1: Use an existing API key (recommended)'))
-            console.log(chalk.cyan('  Set BERGET_API_KEY environment variable:'))
-            console.log(chalk.dim('    export BERGET_API_KEY=your_api_key_here'))
+            console.log(
+              chalk.yellow('Option 1: Use an existing API key (recommended)')
+            )
+            console.log(
+              chalk.cyan('  Set BERGET_API_KEY environment variable:')
+            )
+            console.log(
+              chalk.dim('    export BERGET_API_KEY=your_api_key_here')
+            )
             console.log(chalk.cyan('  Or create a .env file in your project:'))
-            console.log(chalk.dim('    echo "BERGET_API_KEY=your_api_key_here" > .env'))
+            console.log(
+              chalk.dim('    echo "BERGET_API_KEY=your_api_key_here" > .env')
+            )
             console.log('')
-            console.log(chalk.yellow('Option 2: Login and create a new API key'))
+            console.log(
+              chalk.yellow('Option 2: Login and create a new API key')
+            )
             console.log(chalk.cyan('  berget auth login'))
-            console.log(chalk.cyan(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`))
+            console.log(
+              chalk.cyan(
+                `  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`
+              )
+            )
             console.log('')
             console.log(chalk.blue('Then try again.'))
             return
@@ -537,7 +568,7 @@ export function registerCodeCommands(program: Command): void {
         }
 
         console.log(
-          chalk.cyan(`Initializing OpenCode for project: ${projectName}`),
+          chalk.cyan(`Initializing OpenCode for project: ${projectName}`)
         )
 
         // Handle API key selection or creation
@@ -564,23 +595,31 @@ export function registerCodeCommands(program: Command): void {
               console.log(chalk.dim('─'.repeat(60)))
               existingKeys.forEach((key, index) => {
                 console.log(
-                  `${chalk.cyan((index + 1).toString())}. ${chalk.bold(key.name)} (${key.prefix}...)`,
+                  `${chalk.cyan((index + 1).toString())}. ${chalk.bold(
+                    key.name
+                  )} (${key.prefix}...)`
                 )
                 console.log(
                   chalk.dim(
-                    `   Created: ${new Date(key.created).toLocaleDateString('sv-SE')}`,
-                  ),
+                    `   Created: ${new Date(key.created).toLocaleDateString(
+                      'sv-SE'
+                    )}`
+                  )
                 )
                 console.log(
                   chalk.dim(
-                    `   Last used: ${key.lastUsed ? new Date(key.lastUsed).toLocaleDateString('sv-SE') : 'Never'}`,
-                  ),
+                    `   Last used: ${
+                      key.lastUsed
+                        ? new Date(key.lastUsed).toLocaleDateString('sv-SE')
+                        : 'Never'
+                    }`
+                  )
                 )
                 if (index < existingKeys.length - 1) console.log()
               })
               console.log(chalk.dim('─'.repeat(60)))
               console.log(
-                chalk.cyan(`${existingKeys.length + 1}. Create a new API key`),
+                chalk.cyan(`${existingKeys.length + 1}. Create a new API key`)
               )
 
               // Get user choice
@@ -591,14 +630,12 @@ export function registerCodeCommands(program: Command): void {
                 })
                 rl.question(
                   chalk.blue(
-                    '\nSelect an option (1-' +
-                      (existingKeys.length + 1) +
-                      '): ',
+                    '\nSelect an option (1-' + (existingKeys.length + 1) + '): '
                   ),
                   (answer) => {
                     rl.close()
                     resolve(answer.trim())
-                  },
+                  }
                 )
               })
 
@@ -612,28 +649,28 @@ export function registerCodeCommands(program: Command): void {
                 // We need to rotate the key to get the actual key value
                 console.log(
                   chalk.yellow(
-                    `\n🔄 Rotating API key "${selectedKey.name}" to get the key value...`,
-                  ),
+                    `\n🔄 Rotating API key "${selectedKey.name}" to get the key value...`
+                  )
                 )
 
                 if (
                   await confirm(
                     chalk.yellow(
-                      'This will invalidate the current key. Continue? (Y/n): ',
+                      'This will invalidate the current key. Continue? (Y/n): '
                     ),
-                    options.yes,
+                    options.yes
                   )
                 ) {
                   const rotatedKey = await apiKeyService.rotate(
-                    selectedKey.id.toString(),
+                    selectedKey.id.toString()
                   )
                   apiKey = rotatedKey.key
                   console.log(chalk.green(`✓ API key rotated successfully`))
                 } else {
                   console.log(
                     chalk.yellow(
-                      'Cancelled. Please select a different option or create a new key.',
-                    ),
+                      'Cancelled. Please select a different option or create a new key.'
+                    )
                   )
                   return
                 }
@@ -645,7 +682,7 @@ export function registerCodeCommands(program: Command): void {
                 const customName = await getInput(
                   chalk.blue(`Enter key name (default: ${defaultKeyName}): `),
                   defaultKeyName,
-                  options.yes,
+                  options.yes
                 )
 
                 keyName = customName
@@ -668,7 +705,7 @@ export function registerCodeCommands(program: Command): void {
               const customName = await getInput(
                 chalk.blue(`Enter key name (default: ${defaultKeyName}): `),
                 defaultKeyName,
-                options.yes,
+                options.yes
               )
 
               keyName = customName
@@ -680,8 +717,14 @@ export function registerCodeCommands(program: Command): void {
           }
         } catch (error) {
           if (process.env.BERGET_API_KEY) {
-            console.log(chalk.yellow('⚠️  Could not verify API key with Berget API, but continuing with environment key'))
-            console.log(chalk.dim('This might be due to network issues or an invalid key'))
+            console.log(
+              chalk.yellow(
+                '⚠️  Could not verify API key with Berget API, but continuing with environment key'
+              )
+            )
+            console.log(
+              chalk.dim('This might be due to network issues or an invalid key')
+            )
           } else {
             console.error(chalk.red('❌ Failed to handle API keys:'))
             console.log(chalk.blue('This could be due to:'))
@@ -691,7 +734,11 @@ export function registerCodeCommands(program: Command): void {
             console.log('')
             console.log(chalk.blue('Try using an API key directly:'))
             console.log(chalk.cyan('  export BERGET_API_KEY=your_api_key_here'))
-            console.log(chalk.cyan(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT} --yes`))
+            console.log(
+              chalk.cyan(
+                `  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT} --yes`
+              )
+            )
             handleError('API key operation failed', error)
           }
           return
@@ -702,11 +749,11 @@ export function registerCodeCommands(program: Command): void {
 
         // Load latest agent configuration from our own codebase
         const latestAgentConfig = await loadLatestAgentConfig()
-        
+
         // Use hardcoded defaults for init - never try to load from project
         const modelConfig = {
-          primary: 'berget/glm-4-6',
-          small: 'berget/gpt-oss'
+          primary: 'berget/glm-4.7',
+          small: 'berget/gpt-oss',
         }
 
         // Create opencode.json config with optimized agent-based format
@@ -847,14 +894,14 @@ export function registerCodeCommands(program: Command): void {
             berget: {
               npm: '@ai-sdk/openai-compatible',
               name: 'Berget AI',
-              options: { 
+              options: {
                 baseURL: 'https://api.berget.ai/v1',
                 apiKey: '{env:BERGET_API_KEY}',
               },
               models: {
-                'glm-4-6': {
-                  name: 'GLM-4.6',
-                  limit: { output: 4000, context: 90000 }
+                'glm-4.7': {
+                  name: 'GLM-4.7',
+                  limit: { output: 4000, context: 90000 },
                 },
                 'gpt-oss': {
                   name: 'GPT-OSS',
@@ -863,8 +910,8 @@ export function registerCodeCommands(program: Command): void {
                 },
                 'llama-8b': {
                   name: 'llama-3.1-8b',
-                  limit: { output: 4000, context: 128000 }
-                }
+                  limit: { output: 4000, context: 128000 },
+                },
               },
             },
           },
@@ -877,33 +924,36 @@ export function registerCodeCommands(program: Command): void {
           console.log(chalk.dim(`Environment: ${envPath}`))
           console.log(
             chalk.dim(
-              `Documentation: ${path.join(process.cwd(), 'AGENTS.md')} (if not exists)`,
-            ),
+              `Documentation: ${path.join(
+                process.cwd(),
+                'AGENTS.md'
+              )} (if not exists)`
+            )
           )
           console.log(
             chalk.dim(
-              `Environment: ${path.join(process.cwd(), '.env')} will be updated`,
-            ),
+              `Environment: ${path.join(process.cwd(), '.env')} will be updated`
+            )
           )
           console.log(
-            chalk.dim('This will configure OpenCode to use Berget AI models.'),
+            chalk.dim('This will configure OpenCode to use Berget AI models.')
           )
           console.log(chalk.cyan('\n💡 Benefits:'))
           console.log(
             chalk.cyan(
-              '  • API key stored separately in .env file (not committed to Git)',
-            ),
+              '  • API key stored separately in .env file (not committed to Git)'
+            )
           )
           console.log(
-            chalk.cyan('  • Easy cost separation per project/customer'),
+            chalk.cyan('  • Easy cost separation per project/customer')
           )
           console.log(
-            chalk.cyan('  • Secure key management with environment variables'),
+            chalk.cyan('  • Secure key management with environment variables')
           )
           console.log(
             chalk.cyan(
-              "  • Project-specific agent documentation (won't overwrite existing)",
-            ),
+              "  • Project-specific agent documentation (won't overwrite existing)"
+            )
           )
         }
 
@@ -926,7 +976,7 @@ export function registerCodeCommands(program: Command): void {
             console.log(chalk.dim(`  Small Model: ${config.small_model}`))
             console.log(chalk.dim(`  Theme: ${config.theme}`))
             console.log(
-              chalk.dim(`  API Key: Stored in .env as BERGET_API_KEY`),
+              chalk.dim(`  API Key: Stored in .env as BERGET_API_KEY`)
             )
 
             // Create AGENTS.md documentation only if it doesn't exist
@@ -1100,11 +1150,11 @@ All agents follow these principles:
               await writeFile(agentsMdPath, agentsMdContent)
               console.log(chalk.green(`✓ Created AGENTS.md`))
               console.log(
-                chalk.dim(`  Documentation for available agents and usage`),
+                chalk.dim(`  Documentation for available agents and usage`)
               )
             } else {
               console.log(
-                chalk.yellow(`⚠ AGENTS.md already exists, skipping creation`),
+                chalk.yellow(`⚠ AGENTS.md already exists, skipping creation`)
               )
             }
 
@@ -1135,7 +1185,7 @@ All agents follow these principles:
         console.log(chalk.green('\n✅ Project initialized successfully!'))
         console.log(chalk.blue('Next steps:'))
         console.log(
-          chalk.blue(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`),
+          chalk.blue(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`)
         )
         console.log(chalk.blue('  Or run: opencode'))
       } catch (error) {
@@ -1152,7 +1202,7 @@ All agents follow these principles:
     .option('--no-config', 'Run without loading project config')
     .option(
       '-y, --yes',
-      'Automatically answer yes to all prompts (for automation)',
+      'Automatically answer yes to all prompts (for automation)'
     )
     .action(async (prompt: string, options: any) => {
       try {
@@ -1169,12 +1219,12 @@ All agents follow these principles:
             const configContent = await readFile(configPath, 'utf8')
             config = JSON.parse(configContent)
             console.log(
-              chalk.dim(`Loaded config for project: ${config.projectName}`),
+              chalk.dim(`Loaded config for project: ${config.projectName}`)
             )
             console.log(
               chalk.dim(
-                `Models: Analysis=${config.analysisModel}, Build=${config.buildModel}`,
-              ),
+                `Models: Analysis=${config.analysisModel}, Build=${config.buildModel}`
+              )
             )
           } catch (error) {
             console.log(chalk.yellow('Warning: Failed to load opencode.json'))
@@ -1185,8 +1235,10 @@ All agents follow these principles:
           console.log(chalk.yellow('No project configuration found.'))
           console.log(
             chalk.blue(
-              `Run ${chalk.bold(`berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`)} first.`,
-            ),
+              `Run ${chalk.bold(
+                `berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`
+              )} first.`
+            )
           )
           return
         }
@@ -1239,10 +1291,13 @@ All agents follow these principles:
     .command(SUBCOMMANDS.CODE.SERVE)
     .description('Start OpenCode web server')
     .option('-p, --port <port>', 'Port to run the server on (default: 3000)')
-    .option('-h, --host <host>', 'Host to bind the server to (default: localhost)')
+    .option(
+      '-h, --host <host>',
+      'Host to bind the server to (default: localhost)'
+    )
     .option(
       '-y, --yes',
-      'Automatically answer yes to all prompts (for automation)',
+      'Automatically answer yes to all prompts (for automation)'
     )
     .action(async (options) => {
       try {
@@ -1291,7 +1346,7 @@ All agents follow these principles:
     .option('-f, --force', 'Force update even if already latest')
     .option(
       '-y, --yes',
-      'Automatically answer yes to all prompts (for automation)',
+      'Automatically answer yes to all prompts (for automation)'
     )
     .action(async (options) => {
       try {
@@ -1309,8 +1364,10 @@ All agents follow these principles:
           console.log(chalk.red('❌ No OpenCode configuration found.'))
           console.log(
             chalk.blue(
-              `Run ${chalk.bold(`berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`)} first.`,
-            ),
+              `Run ${chalk.bold(
+                `berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`
+              )} first.`
+            )
           )
           return
         }
@@ -1331,13 +1388,15 @@ All agents follow these principles:
         console.log(chalk.dim(`  Theme: ${currentConfig.theme}`))
         console.log(
           chalk.dim(
-            `  Agents: ${Object.keys(currentConfig.agent || {}).length} configured`,
-          ),
+            `  Agents: ${
+              Object.keys(currentConfig.agent || {}).length
+            } configured`
+          )
         )
 
         // Load latest agent configuration to ensure consistency
         const latestAgentConfig = await loadLatestAgentConfig()
-        
+
         // Get model config with fallback for init scenario
         let modelConfig: { primary: string; small: string }
         try {
@@ -1345,8 +1404,8 @@ All agents follow these principles:
         } catch (error) {
           // Fallback to defaults when no config exists (init scenario)
           modelConfig = {
-            primary: 'berget/glm-4-6',
-            small: 'berget/gpt-oss'
+            primary: 'berget/glm-4.7',
+            small: 'berget/gpt-oss',
           }
         }
 
@@ -1519,7 +1578,7 @@ All agents follow these principles:
           const currentAgents = Object.keys(currentConfig.agent || {})
           const latestAgents = Object.keys(latestConfig.agent)
           const newAgents = latestAgents.filter(
-            (agent) => !currentAgents.includes(agent),
+            (agent) => !currentAgents.includes(agent)
           )
 
           if (newAgents.length > 0) {
@@ -1529,25 +1588,25 @@ All agents follow these principles:
           // Check for quality agent specifically
           if (!currentConfig.agent?.quality && latestConfig.agent.quality) {
             console.log(
-              chalk.cyan('  • Quality subagent for testing and PR management'),
+              chalk.cyan('  • Quality subagent for testing and PR management')
             )
           }
 
           // Check for security subagent mode
           if (currentConfig.agent?.security?.mode !== 'subagent') {
             console.log(
-              chalk.cyan(
-                '  • Security agent converted to subagent (read-only)',
-              ),
+              chalk.cyan('  • Security agent converted to subagent (read-only)')
             )
           }
 
-          // Check for GLM-4.6 optimizations
+          // Check for GLM-4.7 optimizations
           if (
-            !currentConfig.provider?.berget?.models?.[modelConfig.primary.replace('berget/', '')]?.limit?.context
+            !currentConfig.provider?.berget?.models?.[
+              modelConfig.primary.replace('berget/', '')
+            ]?.limit?.context
           ) {
             console.log(
-              chalk.cyan('  • GLM-4.6 token limits and auto-compaction'),
+              chalk.cyan('  • GLM-4.7 token limits and auto-compaction')
             )
           }
 
@@ -1561,8 +1620,8 @@ All agents follow these principles:
         if (!options.yes) {
           console.log(
             chalk.blue(
-              '\nThis will update your OpenCode configuration with the latest improvements.',
-            ),
+              '\nThis will update your OpenCode configuration with the latest improvements.'
+            )
           )
 
           // Check if user has git for backup
@@ -1570,12 +1629,12 @@ All agents follow these principles:
           if (!hasGitRepo) {
             console.log(
               chalk.yellow(
-                '⚠️  No .git repository detected - backup will be created',
-              ),
+                '⚠️  No .git repository detected - backup will be created'
+              )
             )
           } else {
             console.log(
-              chalk.green('✓ Git repository detected - changes are tracked'),
+              chalk.green('✓ Git repository detected - changes are tracked')
             )
           }
         }
@@ -1584,13 +1643,13 @@ All agents follow these principles:
         console.log(chalk.blue('\nChoose update strategy:'))
         console.log(
           chalk.cyan(
-            '1) Replace - Use latest configuration (your customizations will be lost)',
-          ),
+            '1) Replace - Use latest configuration (your customizations will be lost)'
+          )
         )
         console.log(
           chalk.cyan(
-            '2) Merge  - Combine latest updates with your customizations (recommended)',
-          ),
+            '2) Merge  - Combine latest updates with your customizations (recommended)'
+          )
         )
 
         let mergeChoice: 'replace' | 'merge' = 'merge'
@@ -1599,7 +1658,7 @@ All agents follow these principles:
           const choice = await askChoice(
             '\nYour choice (1-2, default: 2): ',
             ['replace', 'merge'],
-            'merge',
+            'merge'
           )
           mergeChoice = choice as 'replace' | 'merge'
         }
@@ -1616,12 +1675,12 @@ All agents follow these principles:
               backupPath = `${configPath}.backup.${Date.now()}`
               await writeFile(
                 backupPath,
-                JSON.stringify(currentConfig, null, 2),
+                JSON.stringify(currentConfig, null, 2)
               )
               console.log(
                 chalk.green(
-                  `✓ Backed up current config to ${path.basename(backupPath)}`,
-                ),
+                  `✓ Backed up current config to ${path.basename(backupPath)}`
+                )
               )
             }
 
@@ -1629,10 +1688,10 @@ All agents follow these principles:
               // Merge configurations
               finalConfig = await mergeConfigurations(
                 currentConfig,
-                latestConfig,
+                latestConfig
               )
               console.log(
-                chalk.green('✓ Merged configurations with latest updates'),
+                chalk.green('✓ Merged configurations with latest updates')
               )
             } else {
               // Replace with latest
@@ -1644,8 +1703,8 @@ All agents follow these principles:
             await writeFile(configPath, JSON.stringify(finalConfig, null, 2))
             console.log(
               chalk.green(
-                `✓ Updated opencode.json with ${mergeChoice} strategy`,
-              ),
+                `✓ Updated opencode.json with ${mergeChoice} strategy`
+              )
             )
 
             // Update AGENTS.md if it doesn't exist
@@ -1823,13 +1882,13 @@ All agents follow these principles:
             console.log(chalk.green('\n✅ Update completed successfully!'))
             console.log(chalk.blue('New features available:'))
             console.log(
-              chalk.cyan('  • @quality subagent for testing and PR management'),
+              chalk.cyan('  • @quality subagent for testing and PR management')
             )
             console.log(
-              chalk.cyan('  • @security subagent for security reviews'),
+              chalk.cyan('  • @security subagent for security reviews')
             )
             console.log(chalk.cyan('  • Improved agent prompts and routing'))
-            console.log(chalk.cyan('  • GLM-4.6 token optimizations'))
+            console.log(chalk.cyan('  • GLM-4.7 token optimizations'))
             console.log(chalk.blue('\nTry these new commands:'))
             console.log(chalk.cyan('  @quality run tests and create PR'))
             console.log(chalk.cyan('  @security review this code'))
@@ -1841,10 +1900,10 @@ All agents follow these principles:
             try {
               await writeFile(
                 configPath,
-                JSON.stringify(currentConfig, null, 2),
+                JSON.stringify(currentConfig, null, 2)
               )
               console.log(
-                chalk.yellow('📁 Restored original configuration from backup'),
+                chalk.yellow('📁 Restored original configuration from backup')
               )
             } catch (restoreError) {
               console.error(chalk.red('Failed to restore backup:'))
