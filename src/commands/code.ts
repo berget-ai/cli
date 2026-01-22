@@ -376,7 +376,7 @@ async function loadLatestAgentConfig(): Promise<any> {
  */
 function checkOpencodeInstalled(): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn('opencode', ['--version'], {
+    const child = spawn('which', ['opencode'], {
       stdio: 'pipe',
     })
 
