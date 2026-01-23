@@ -115,6 +115,12 @@ export class ApiKeyService {
             throw new Error(detailedMessage)
           }
 
+          if (errorObj.error?.code === 'USER_NOT_FOUND') {
+            throw new Error(
+              'Your account is still being set up. Please wait a moment and try again.\n\nIf this issue persists, please contact support at support@berget.ai',
+            )
+          }
+
           if (errorObj.error?.code === 'QUOTA_EXCEEDED') {
             throw new Error(
               'You have reached your API key limit. Please delete existing keys or contact support to increase your quota.',
