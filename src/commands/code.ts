@@ -835,12 +835,13 @@ export function registerCodeCommands(program: Command): void {
               models: {
                 'glm-4.7': {
                   name: 'GLM-4.7',
-                  limit: { output: 4000, context: 90000 },
+                  limit: { output: 4000, context: 200000 },
+                  modalities: { input: ['text'], output: ['text'] },
                 },
                 'gpt-oss': {
                   name: 'GPT-OSS',
                   limit: { output: 4000, context: 128000 },
-                  modalities: ['text', 'image'],
+                  modalities: { input: ['text', 'image'], output: ['text'] },
                 },
                 'llama-8b': {
                   name: 'llama-3.1-8b',
