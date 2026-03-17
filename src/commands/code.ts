@@ -10,7 +10,7 @@ import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { spawn } from 'child_process'
 import { updateEnvFile } from '../utils/env-manager'
-import { createAuthenticatedClient } from '../client'
+import { createAuthenticatedClient, getAuthToken } from '../client'
 import {
   getConfigLoader,
   getModelConfig,
@@ -1180,6 +1180,32 @@ All agents follow these principles:
 
         // Set environment variables for opencode
         const env = { ...process.env }
+
+        // Set API base URL based on flags (default to production)
+        const isLocalMode = process.argv.includes('--local')
+        const isStageMode = process.argv.includes('--stage')
+        if (isLocalMode) {
+          env.BERGET_API_URL = 'http://localhost:3000/v1'
+          console.log(chalk.dim('Using local API: http://localhost:3000/v1'))
+        } else if (isStageMode) {
+          env.BERGET_API_URL = 'https://api.stage.berget.ai/v1'
+          console.log(chalk.dim('Using stage API: https://api.stage.berget.ai/v1'))
+        } else {
+          env.BERGET_API_URL = 'https://api.berget.ai/v1'
+        }
+
+        // Auth resolution: JWT first (if valid), then API-key
+        // This ensures seat-based users get proper tracking
+        const jwtToken = getAuthToken()
+        if (jwtToken) {
+          env.BERGET_API_KEY = jwtToken
+          console.log(chalk.dim('Using JWT token for authentication'))
+        } else if (env.BERGET_API_KEY) {
+          console.log(chalk.dim('Using API key for authentication'))
+        } else {
+          console.log(chalk.yellow('Warning: No authentication found'))
+          console.log(chalk.dim('  Run `berget auth login` or set BERGET_API_KEY'))
+        }
 
         // Prepare opencode command
         const opencodeArgs: string[] = []
