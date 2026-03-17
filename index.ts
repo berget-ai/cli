@@ -24,6 +24,7 @@ Version: ${version}`
   )
   .version(version, '-v, --version')
   .option('--local', 'Use local API endpoint (hidden)', false)
+  .option('--stage', 'Use stage API endpoint', false)
   .option('--debug', 'Enable debug output', false)
 
 // Register all commands

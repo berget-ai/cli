@@ -9,13 +9,20 @@ import { logger } from './utils/logger'
 
 // API Base URL
 // Use --local flag to test against local API
+// Use --stage flag to test against stage API
 const isLocalMode = process.argv.includes('--local')
+const isStageMode = process.argv.includes('--stage')
+
 export const API_BASE_URL =
   process.env.BERGET_API_URL ||
-  (isLocalMode ? 'http://localhost:3000' : 'https://api.berget.ai')
+  (isLocalMode ? 'http://localhost:3000' :
+   isStageMode ? 'https://api.stage.berget.ai' :
+   'https://api.berget.ai') // production default
 
 if (isLocalMode && !process.env.BERGET_API_URL) {
   logger.debug('Using local API endpoint: http://localhost:3000')
+} else if (isStageMode && !process.env.BERGET_API_URL) {
+  logger.debug('Using stage API endpoint: https://api.stage.berget.ai')
 }
 
 // Create a typed client for the Berget API
