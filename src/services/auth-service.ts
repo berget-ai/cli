@@ -114,49 +114,167 @@ export class AuthService {
             const code = parsedUrl.query.code as string
             const error = parsedUrl.query.error as string
 
-            if (error) {
-              res.writeHead(200, { 'Content-Type': 'text/html' })
-              res.end(`
-                <html>
-                  <body style="font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e;">
-                    <div style="text-align: center; color: #ff6b6b;">
-                      <h1>Authentication Failed</h1>
-                      <p>${parsedUrl.query.error_description || error}</p>
-                      <p style="color: #666;">You can close this window.</p>
+            const errorPage = (title: string, message: string) => `
+              <!DOCTYPE html>
+              <html lang="en">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Berget - Authentication Failed</title>
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      min-height: 100vh;
+                      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+                      color: #fff;
+                    }
+                    .container {
+                      text-align: center;
+                      padding: 3rem;
+                      max-width: 400px;
+                    }
+                    .icon {
+                      width: 80px;
+                      height: 80px;
+                      background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      margin: 0 auto 1.5rem;
+                      box-shadow: 0 4px 20px rgba(248, 113, 113, 0.3);
+                    }
+                    .icon svg {
+                      width: 40px;
+                      height: 40px;
+                      stroke: #fff;
+                      stroke-width: 3;
+                    }
+                    h1 {
+                      font-size: 1.5rem;
+                      font-weight: 600;
+                      margin-bottom: 0.75rem;
+                      color: #fff;
+                    }
+                    p {
+                      color: #94a3b8;
+                      font-size: 0.95rem;
+                      line-height: 1.5;
+                    }
+                    .brand {
+                      margin-top: 2rem;
+                      opacity: 0.5;
+                      font-size: 0.8rem;
+                      letter-spacing: 0.05em;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
                     </div>
-                  </body>
-                </html>
-              `)
+                    <h1>${title}</h1>
+                    <p>${message}</p>
+                    <div class="brand">BERGET</div>
+                  </div>
+                </body>
+              </html>
+            `
+
+            if (error) {
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+              res.end(errorPage('Authentication Failed', String(parsedUrl.query.error_description || error)))
               server.close()
               resolve({ success: false, error })
               return
             }
 
             if (receivedState !== state) {
-              res.writeHead(200, { 'Content-Type': 'text/html' })
-              res.end(`
-                <html>
-                  <body style="font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e;">
-                    <div style="text-align: center; color: #ff6b6b;">
-                      <h1>Authentication Failed</h1>
-                      <p>Invalid state parameter. Please try again.</p>
-                      <p style="color: #666;">You can close this window.</p>
-                    </div>
-                  </body>
-                </html>
-              `)
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+              res.end(errorPage('Authentication Failed', 'Invalid state parameter. Please try again.'))
               server.close()
               resolve({ success: false, error: 'Invalid state parameter' })
               return
             }
 
-            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
             res.end(`
-              <html>
-                <body style="font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e;">
-                  <div style="text-align: center; color: #4ade80;">
-                    <h1>✓ Authentication Successful</h1>
-                    <p style="color: #a0a0a0;">You can close this window and return to the terminal.</p>
+              <!DOCTYPE html>
+              <html lang="en">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Berget - Authentication Successful</title>
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      min-height: 100vh;
+                      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+                      color: #fff;
+                    }
+                    .container {
+                      text-align: center;
+                      padding: 3rem;
+                      max-width: 400px;
+                    }
+                    .icon {
+                      width: 80px;
+                      height: 80px;
+                      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      margin: 0 auto 1.5rem;
+                      box-shadow: 0 4px 20px rgba(74, 222, 128, 0.3);
+                    }
+                    .icon svg {
+                      width: 40px;
+                      height: 40px;
+                      stroke: #fff;
+                      stroke-width: 3;
+                    }
+                    h1 {
+                      font-size: 1.5rem;
+                      font-weight: 600;
+                      margin-bottom: 0.75rem;
+                      color: #fff;
+                    }
+                    p {
+                      color: #94a3b8;
+                      font-size: 0.95rem;
+                      line-height: 1.5;
+                    }
+                    .brand {
+                      margin-top: 2rem;
+                      opacity: 0.5;
+                      font-size: 0.8rem;
+                      letter-spacing: 0.05em;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                    <h1>Authentication Successful</h1>
+                    <p>You can close this window and return to your terminal.</p>
+                    <div class="brand">BERGET</div>
                   </div>
                 </body>
               </html>
