@@ -829,7 +829,7 @@ export function registerCodeCommands(program: Command): void {
               npm: '@ai-sdk/openai-compatible',
               name: 'Berget AI',
               options: {
-                baseURL: 'https://api.berget.ai/v1',
+                baseURL: '{env:BERGET_API_URL}',
                 apiKey: '{env:BERGET_API_KEY}',
               },
               models: {
@@ -1513,7 +1513,7 @@ All agents follow these principles:
               npm: '@ai-sdk/openai-compatible',
               name: 'Berget AI',
               options: {
-                baseURL: 'https://api.berget.ai/v1',
+                baseURL: '{env:BERGET_API_URL}',
                 apiKey: '{env:BERGET_API_KEY}',
               },
               models: getProviderModels(),
