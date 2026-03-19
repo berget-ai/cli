@@ -216,6 +216,13 @@ export const createAuthenticatedClient = () => {
   })
 }
 
+// Keycloak configuration for token refresh (must match auth-service.ts)
+const KEYCLOAK_URL = (isStageMode || isLocalMode)
+  ? 'https://keycloak.stage.berget.ai'
+  : 'https://keycloak.berget.ai'
+const KEYCLOAK_REALM = 'berget'
+const KEYCLOAK_CLIENT_ID = 'berget-code'
+
 // Helper function to refresh the access token
 async function refreshAccessToken(
   tokenManager: TokenManager,
@@ -226,16 +233,22 @@ async function refreshAccessToken(
 
     logger.debug('Attempting to refresh access token')
 
-    // Use fetch directly since this endpoint might not be in the OpenAPI spec
+    // Refresh directly against Keycloak (berget-code is a public PKCE client)
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+      const response = await fetch(
+        `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: KEYCLOAK_CLIENT_ID,
+            refresh_token: refreshToken,
+          }),
         },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      })
+      )
 
       // Handle HTTP errors
       if (!response.ok) {
