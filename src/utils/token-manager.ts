@@ -93,21 +93,27 @@ export class TokenManager {
 
   /**
    * Check if the access token is expired
-   * @returns true if expired or about to expire (within 5 minutes), false otherwise
+   * @returns true if expired or about to expire (within 10% of lifetime or 30 seconds), false otherwise
    */
   public isTokenExpired(): boolean {
     if (!this.tokenData || !this.tokenData.expires_at) return true
 
     try {
-      // Consider token expired if it's within 10 minutes of expiration
-      // Using a larger buffer to be more proactive about refreshing
-      const expirationBuffer = 10 * 60 * 1000 // 10 minutes in milliseconds
-      const isExpired =
-        Date.now() + expirationBuffer >= this.tokenData.expires_at
+      const now = Date.now()
+      const expiresAt = this.tokenData.expires_at
+      const timeUntilExpiry = expiresAt - now
+
+      // Use 10% of remaining lifetime or 30 seconds, whichever is smaller
+      // This ensures we don't refresh tokens that were just issued
+      const minBuffer = 30 * 1000 // 30 seconds minimum
+      const percentBuffer = timeUntilExpiry * 0.1 // 10% of lifetime
+      const expirationBuffer = Math.min(minBuffer, percentBuffer)
+
+      const isExpired = now + expirationBuffer >= expiresAt
 
       if (isExpired) {
         logger.debug(
-          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(this.tokenData.expires_at).toISOString()}`,
+          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(expiresAt).toISOString()}`,
         )
       }
 
