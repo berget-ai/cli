@@ -224,7 +224,7 @@ const KEYCLOAK_REALM = 'berget'
 const KEYCLOAK_CLIENT_ID = 'berget-code'
 
 // Helper function to refresh the access token
-async function refreshAccessToken(
+export async function refreshAccessToken(
   tokenManager: TokenManager,
 ): Promise<boolean> {
   try {
@@ -287,7 +287,8 @@ async function refreshAccessToken(
       const data = await response.json()
 
       // Validate the response data
-      if (!data || !data.token) {
+      // Keycloak returns access_token (standard OIDC), not token
+      if (!data || !data.access_token) {
         console.warn(
           chalk.yellow(
             'Invalid token response. Please run `berget auth login` again.',
@@ -299,12 +300,12 @@ async function refreshAccessToken(
       logger.debug('Token refreshed successfully')
 
       // Update the token
-      tokenManager.updateAccessToken(data.token, data.expires_in || 3600)
+      tokenManager.updateAccessToken(data.access_token, data.expires_in || 3600)
 
       // If a new refresh token was provided, update that too
       if (data.refresh_token) {
         tokenManager.setTokens(
-          data.token,
+          data.access_token,
           data.refresh_token,
           data.expires_in || 3600,
         )

@@ -10,7 +10,8 @@ import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { spawn } from 'child_process'
 import { updateEnvFile } from '../utils/env-manager'
-import { createAuthenticatedClient, getAuthToken } from '../client'
+import { createAuthenticatedClient, getAuthToken, refreshAccessToken } from '../client'
+import { TokenManager } from '../utils/token-manager'
 import {
   getConfigLoader,
   getModelConfig,
@@ -1194,14 +1195,53 @@ All agents follow these principles:
           env.BERGET_API_URL = 'https://api.berget.ai/v1'
         }
 
-        // Auth resolution: JWT first (if valid), then API-key
-        // This ensures seat-based users get proper tracking
+        // Smart auth resolution:
+        // 1. If valid JWT exists (with berget_code_seat) -> use JWT (refresh if expired)
+        // 2. If BERGET_API_KEY env var is set -> use API key
+        // 3. If expired JWT with no refresh possible -> fallback to API key if available
+        // 4. No auth found -> warn user
+        const tokenManager = TokenManager.getInstance()
         const jwtToken = getAuthToken()
+        let authResolved = false
+
         if (jwtToken) {
-          env.BERGET_API_KEY = jwtToken
-          console.log(chalk.dim('Using JWT token for authentication'))
+          // We have a JWT token stored -- check if it's still valid
+          if (tokenManager.isTokenExpired()) {
+            // Token expired, try to refresh
+            const refreshToken = tokenManager.getRefreshToken()
+            if (refreshToken) {
+              console.log(chalk.dim('JWT token expired, refreshing...'))
+              const refreshed = await refreshAccessToken(tokenManager)
+              if (refreshed) {
+                const freshToken = tokenManager.getAccessToken()
+                if (freshToken) {
+                  env.BERGET_API_KEY = freshToken
+                  console.log(chalk.dim('Using refreshed JWT token for authentication'))
+                  authResolved = true
+                }
+              }
+            }
+
+            if (!authResolved) {
+              // Refresh failed or no refresh token -- fallback to API key
+              if (env.BERGET_API_KEY) {
+                console.log(chalk.dim('JWT expired, falling back to API key'))
+                authResolved = true
+              } else {
+                console.log(chalk.yellow('JWT expired and no API key found'))
+                console.log(chalk.dim('  Run `berget auth login` or set BERGET_API_KEY'))
+              }
+            }
+          } else {
+            // JWT is still valid, use it
+            env.BERGET_API_KEY = jwtToken
+            console.log(chalk.dim('Using JWT token for authentication'))
+            authResolved = true
+          }
         } else if (env.BERGET_API_KEY) {
+          // No JWT at all, but API key is set
           console.log(chalk.dim('Using API key for authentication'))
+          authResolved = true
         } else {
           console.log(chalk.yellow('Warning: No authentication found'))
           console.log(chalk.dim('  Run `berget auth login` or set BERGET_API_KEY'))
