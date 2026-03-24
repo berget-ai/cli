@@ -2,22 +2,12 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import readline from 'readline'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
-import { ApiKeyService, CreateApiKeyOptions } from '../services/api-key-service'
-import { AuthService } from '../services/auth-service'
 import { handleError } from '../utils/error-handler'
 import * as fs from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { spawn } from 'child_process'
-import { updateEnvFile } from '../utils/env-manager'
-import { createAuthenticatedClient, getAuthToken } from '../client'
-import {
-  getConfigLoader,
-  getModelConfig,
-  getProviderModels,
-  type OpenCodeConfig,
-  type AgentConfig,
-} from '../utils/config-loader'
+import { createAuthenticatedClient } from '../client'
 
 /**
  * Check if current directory has git
@@ -40,18 +30,6 @@ async function mergeConfigurations(
   try {
     const client = createAuthenticatedClient()
 
-    // Get model config with fallback for init scenario
-    let modelConfig: { primary: string; small: string }
-    try {
-      modelConfig = getModelConfig()
-    } catch (error) {
-      // Fallback to defaults when no config exists (init scenario)
-      modelConfig = {
-        primary: 'berget/glm-4.7',
-        small: 'berget/gpt-oss',
-      }
-    }
-
     console.log(chalk.blue('🤖 Using AI to merge configurations...'))
 
     const mergePrompt = `You are a configuration merge specialist. Merge these two OpenCode configurations:
@@ -73,7 +51,7 @@ Return ONLY the merged JSON configuration, no explanations.`
 
     const response = await client.POST('/v1/chat/completions', {
       body: {
-        model: modelConfig.primary,
+        model: 'glm-4.7',
         messages: [
           {
             role: 'user',
@@ -290,7 +268,6 @@ async function loadLatestAgentConfig(): Promise<any> {
   // Return the latest agent configuration directly - no file reading needed
   return {
     fullstack: {
-      model: 'berget/glm-4.7',
       temperature: 0.3,
       top_p: 0.9,
       mode: 'primary',
@@ -301,7 +278,6 @@ async function loadLatestAgentConfig(): Promise<any> {
         "Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
     },
     frontend: {
-      model: 'berget/glm-4.7',
       temperature: 0.4,
       top_p: 0.9,
       mode: 'primary',
@@ -313,7 +289,6 @@ async function loadLatestAgentConfig(): Promise<any> {
         'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion.\n\nIMPORTANT: You have NO bash access and cannot run git commands. When your frontend implementation tasks are complete, inform the user that changes are ready and suggest using /pr command to create a pull request with proper testing and quality checks.\n\nCODE QUALITY RULES:\n- Write clean, production-ready code\n- Follow React and TypeScript best practices\n- Ensure accessibility and responsive design\n- Use semantic tokens from design system\n- Test your components manually when possible\n- Document any complex logic with comments\n\nCRITICAL: When frontend implementation is complete, ALWAYS inform the user to use "/pr" command to handle testing, building, and pull request creation.',
     },
     backend: {
-      model: 'berget/glm-4.7',
       temperature: 0.3,
       top_p: 0.9,
       mode: 'primary',
@@ -324,7 +299,6 @@ async function loadLatestAgentConfig(): Promise<any> {
         "You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
     },
     devops: {
-      model: 'berget/glm-4.7',
       temperature: 0.3,
       top_p: 0.8,
       mode: 'primary',
@@ -335,7 +309,6 @@ async function loadLatestAgentConfig(): Promise<any> {
         "You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nHelm Values Configuration Process:\n1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.\n2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.\n3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.\n4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.",
     },
     app: {
-      model: 'berget/glm-4.7',
       temperature: 0.4,
       top_p: 0.9,
       mode: 'primary',
@@ -347,7 +320,6 @@ async function loadLatestAgentConfig(): Promise<any> {
         "You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all app implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
     },
     security: {
-      model: 'berget/glm-4.7',
       temperature: 0.2,
       top_p: 0.8,
       mode: 'subagent',
@@ -358,7 +330,6 @@ async function loadLatestAgentConfig(): Promise<any> {
         "Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR",
     },
     quality: {
-      model: 'berget/glm-4.7',
       temperature: 0.1,
       top_p: 0.9,
       mode: 'subagent',
@@ -520,188 +491,24 @@ export function registerCodeCommands(program: Command): void {
           return
         }
 
-        // Check if we have an API key in environment first
-        if (process.env.BERGET_API_KEY) {
-          console.log(
-            chalk.blue(
-              '🔑 Using BERGET_API_KEY from environment - no authentication required'
-            )
-          )
-        } else {
-          // Only require authentication if we don't have an API key
-          const authService = AuthService.getInstance()
-          const profile = await authService.whoami()
-
-          if (!profile) {
-            console.log(chalk.red('❌ Not authenticated with Berget AI.'))
-            console.log(chalk.blue('To get started, you have two options:'))
-            console.log('')
-            console.log(
-              chalk.yellow('Option 1: Use an existing API key (recommended)')
-            )
-            console.log(
-              chalk.cyan('  Set BERGET_API_KEY environment variable:')
-            )
-            console.log(
-              chalk.dim('    export BERGET_API_KEY=your_api_key_here')
-            )
-            console.log(chalk.cyan('  Or create a .env file in your project:'))
-            console.log(
-              chalk.dim('    echo "BERGET_API_KEY=your_api_key_here" > .env')
-            )
-            console.log('')
-            console.log(
-              chalk.yellow('Option 2: Login and create a new API key')
-            )
-            console.log(chalk.cyan('  berget auth login'))
-            console.log(
-              chalk.cyan(
-                `  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`
-              )
-            )
-            console.log('')
-            console.log(chalk.blue('Then try again.'))
-            return
-          }
-        }
-
         console.log(
           chalk.cyan(`Initializing OpenCode for project: ${projectName}`)
         )
-
-        // Handle API key selection or creation
-        let apiKey: string
-        let keyName: string
-
-        try {
-          const apiKeyService = ApiKeyService.getInstance()
-
-          if (process.env.BERGET_API_KEY) {
-            if (options.yes) {
-              console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
-              apiKey = process.env.BERGET_API_KEY
-              keyName = `env-key-${projectName}`
-            } else {
-              console.log(chalk.blue('\n📋 API key setup:'))
-              console.log(chalk.dim('─'.repeat(60)))
-              console.log(
-                `${chalk.cyan('1')} ${chalk.bold('Use existing API key')}`
-              )
-              console.log(chalk.dim('   Uses BERGET_API_KEY from environment'))
-              console.log(
-                `${chalk.cyan('2')} ${chalk.bold('Create a new API key')}`
-              )
-              console.log(chalk.dim('─'.repeat(60)))
-
-              const choice = await new Promise<string>((resolve) => {
-                const rl = readline.createInterface({
-                  input: process.stdin,
-                  output: process.stdout,
-                })
-                rl.question(chalk.blue('\nSelect an option (1-2, default: 1): '), (answer) => {
-                  rl.close()
-                  resolve(answer.trim() || '1')
-                })
-              })
-
-              if (choice === '1') {
-                console.log(chalk.blue('🔑 Using BERGET_API_KEY from environment'))
-                apiKey = process.env.BERGET_API_KEY
-                keyName = `env-key-${projectName}`
-              } else if (choice === '2') {
-                console.log(chalk.blue('\n🔑 Creating new API key...'))
-
-                const defaultKeyName = `opencode-${projectName}-${Date.now()}`
-                const customName = await getInput(
-                  chalk.blue(`Enter key name (default: ${defaultKeyName}): `),
-                  defaultKeyName,
-                  options.yes
-                )
-
-                keyName = customName
-                const createOptions: CreateApiKeyOptions = { name: keyName }
-                const keyData = await apiKeyService.create(createOptions)
-                apiKey = keyData.key
-                console.log(chalk.green(`✓ Created new API key: ${keyName}`))
-              } else {
-                console.log(chalk.red('Invalid selection.'))
-                return
-              }
-            }
-          } else {
-            if (!options.yes) {
-              console.log(chalk.yellow('No BERGET_API_KEY environment variable found.'))
-              console.log(chalk.blue('Creating a new API key...'))
-              console.log(chalk.dim('\n💡 Tip: Set BERGET_API_KEY environment variable to reuse an existing key:'))
-              console.log(chalk.dim('   export BERGET_API_KEY=your_api_key_here'))
-            }
-
-            const defaultKeyName = `opencode-${projectName}-${Date.now()}`
-            const customName = await getInput(
-              chalk.blue(`Enter key name (default: ${defaultKeyName}): `),
-              defaultKeyName,
-              options.yes
-            )
-
-            keyName = customName
-            const createOptions: CreateApiKeyOptions = { name: keyName }
-            const keyData = await apiKeyService.create(createOptions)
-            apiKey = keyData.key
-            console.log(chalk.green(`✓ Created new API key: ${keyName}`))
-          }
-        } catch (error) {
-          if (process.env.BERGET_API_KEY) {
-            console.log(
-              chalk.yellow(
-                '⚠️  Could not verify API key with Berget API, but continuing with environment key'
-              )
-            )
-            console.log(
-              chalk.dim('This might be due to network issues or an invalid key')
-            )
-          } else {
-            console.error(chalk.red('❌ Failed to handle API keys:'))
-            console.log(chalk.blue('This could be due to:'))
-            console.log(chalk.dim('  • Network connectivity issues'))
-            console.log(chalk.dim('  • Invalid authentication credentials'))
-            console.log(chalk.dim('  • API service temporarily unavailable'))
-            console.log('')
-            console.log(chalk.blue('Try using an API key directly:'))
-            console.log(chalk.cyan('  export BERGET_API_KEY=your_api_key_here'))
-            console.log(
-              chalk.cyan(
-                `  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT} --yes`
-              )
-            )
-            handleError('API key operation failed', error)
-          }
-          return
-        }
-
-        // Prepare .env file path for safe update
-        const envPath = path.join(process.cwd(), '.env')
 
         // Load latest agent configuration from our own codebase
         const latestAgentConfig = await loadLatestAgentConfig()
 
         // Use hardcoded defaults for init - never try to load from project
-        const modelConfig = {
-          primary: 'berget/glm-4.7',
-          small: 'berget/gpt-oss',
-        }
-
-        // Create opencode.json config with optimized agent-based format
+        // Create opencode.json config — plugin handles auth, models, and provider
         const config = {
           $schema: 'https://opencode.ai/config.json',
+          plugin: ['@bergetai/opencode-auth@latest'],
           username: 'berget-code',
           theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
-          model: modelConfig.primary,
-          small_model: modelConfig.small,
           agent: {
             fullstack: {
-              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -712,7 +519,6 @@ export function registerCodeCommands(program: Command): void {
                 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             frontend: {
-              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -724,7 +530,6 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             backend: {
-              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -736,7 +541,6 @@ export function registerCodeCommands(program: Command): void {
             },
             // Use centralized devops configuration with Helm guidelines
             devops: latestAgentConfig.devops || {
-              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.8,
               mode: 'primary',
@@ -747,7 +551,6 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.',
             },
             app: {
-              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -759,7 +562,6 @@ export function registerCodeCommands(program: Command): void {
                 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.',
             },
             security: {
-              model: modelConfig.primary,
               temperature: 0.2,
               top_p: 0.8,
               mode: 'subagent',
@@ -770,7 +572,6 @@ export function registerCodeCommands(program: Command): void {
                 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.',
             },
             quality: {
-              model: modelConfig.primary,
               temperature: 0.1,
               top_p: 0.9,
               mode: 'subagent',
@@ -824,71 +625,14 @@ export function registerCodeCommands(program: Command): void {
           watcher: {
             ignore: ['node_modules', 'dist', '.git', 'coverage'],
           },
-          provider: {
-            berget: {
-              npm: '@ai-sdk/openai-compatible',
-              name: 'Berget AI',
-              options: {
-                baseURL: '{env:BERGET_API_URL}',
-                apiKey: '{env:BERGET_API_KEY}',
-              },
-              models: {
-                'glm-4.7': {
-                  name: 'GLM-4.7',
-                  limit: { output: 4000, context: 200000 },
-                  modalities: { input: ['text'], output: ['text'] },
-                },
-                'gpt-oss': {
-                  name: 'GPT-OSS',
-                  limit: { output: 4000, context: 128000 },
-                  modalities: { input: ['text', 'image'], output: ['text'] },
-                },
-                'llama-8b': {
-                  name: 'llama-3.1-8b',
-                  limit: { output: 4000, context: 128000 },
-                },
-              },
-            },
-          },
         }
 
         // Ask for permission to create config files
         if (!options.yes) {
           console.log(chalk.blue('\nAbout to create configuration files:'))
           console.log(chalk.dim(`Config: ${configPath}`))
-          console.log(chalk.dim(`Environment: ${envPath}`))
           console.log(
-            chalk.dim(
-              `Documentation: ${path.join(
-                process.cwd(),
-                'AGENTS.md'
-              )} (if not exists)`
-            )
-          )
-          console.log(
-            chalk.dim(
-              `Environment: ${path.join(process.cwd(), '.env')} will be updated`
-            )
-          )
-          console.log(
-            chalk.dim('This will configure OpenCode to use Berget AI models.')
-          )
-          console.log(chalk.cyan('\n💡 Benefits:'))
-          console.log(
-            chalk.cyan(
-              '  • API key stored separately in .env file (not committed to Git)'
-            )
-          )
-          console.log(
-            chalk.cyan('  • Easy cost separation per project/customer')
-          )
-          console.log(
-            chalk.cyan('  • Secure key management with environment variables')
-          )
-          console.log(
-            chalk.cyan(
-              "  • Project-specific agent documentation (won't overwrite existing)"
-            )
+            chalk.dim('This will configure OpenCode with the Berget auth plugin.')
           )
         }
 
@@ -896,217 +640,11 @@ export function registerCodeCommands(program: Command): void {
           await confirm('\nCreate configuration files? (Y/n): ', options.yes)
         ) {
           try {
-            // Safely update .env file using dotenv
-            await updateEnvFile({
-              envPath,
-              key: 'BERGET_API_KEY',
-              value: apiKey,
-              comment: `Berget AI Configuration for ${projectName} - Generated by berget code init - Do not commit to version control`,
-            })
-
             // Create opencode.json
             await writeFile(configPath, JSON.stringify(config, null, 2))
             console.log(chalk.green(`✓ Created opencode.json`))
-            console.log(chalk.dim(`  Model: ${config.model}`))
-            console.log(chalk.dim(`  Small Model: ${config.small_model}`))
+            console.log(chalk.dim(`  Plugin: @bergetai/opencode-auth`))
             console.log(chalk.dim(`  Theme: ${config.theme}`))
-            console.log(
-              chalk.dim(`  API Key: Stored in .env as BERGET_API_KEY`)
-            )
-
-            // Create AGENTS.md documentation only if it doesn't exist
-            const agentsMdPath = path.join(process.cwd(), 'AGENTS.md')
-            if (!fs.existsSync(agentsMdPath)) {
-              const agentsMdContent = `# Berget Code Agents
-
-This document describes the specialized agents available in this project for use with OpenCode.
-
-## Available Agents
-
-### Primary Agents
-
-#### fullstack
-Router/coordinator agent for full-stack development with schema-driven architecture. Handles routing between different personas based on file paths and task requirements.
-
-**Use when:**
-- Working across multiple parts of a monorepo
-- Need to coordinate between frontend, backend, devops, and app
-- Starting new projects and need to determine tech stack
-
-**Key features:**
-- Schema-driven development (database → OpenAPI → types)
-- Automatic routing to appropriate persona
-- Tech stack discovery and recommendations
-
-#### frontend
-Builds Scandinavian, type-safe UIs with React, Tailwind, and Shadcn.
-
-**Use when:**
-- Working with React components (.tsx files)
-- Frontend development in /apps/frontend
-- UI/UX implementation
-
-**Key features:**
-- Design system integration
-- Semantic tokens and accessibility
-- Props-first component architecture
-
-#### backend
-Functional, modular Koa + TypeScript services with schema-first approach and code quality focus.
-
-**Use when:**
-- Working with Koa routers and services
-- Backend development in /services
-- API development and database work
-
-**Key features:**
-- Zod validation and OpenAPI generation
-- Code quality and refactoring principles
-- PR workflow integration
-
-#### devops
-Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
-
-**Use when:**
-- Working with Kubernetes manifests
-- Infrastructure in /infra or /k8s
-- CI/CD and deployment configurations
-
-**Key features:**
-- GitOps workflows
-- Operator-first approach
-- SemVer with release candidates
-
-**Helm Values Configuration Process:**
-1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.
-2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.
-3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.
-4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.
-
-#### app
-Expo + React Native applications with props-first architecture and offline awareness.
-
-**Use when:**
-- Mobile app development with Expo
-- React Native projects in /apps/app
-- Cross-platform mobile development
-
-**Key features:**
-- Shared design tokens with frontend
-- Offline-first architecture
-- Expo integration
-
-### Subagents
-
-#### security
-Security specialist for penetration testing, OWASP compliance, and vulnerability assessments.
-
-**Use when:**
-- Need security review of code changes
-- OWASP Top 10 compliance checks
-- Vulnerability assessments
-
-**Key features:**
-- OWASP standards compliance
-- Security best practices
-- Actionable remediation strategies
-
-#### quality
-Quality assurance specialist for testing, building, and PR management.
-
-**Use when:**
-- Need to run test suites and build processes
-- Creating or updating pull requests
-- Monitoring GitHub for reviewer comments
-- Ensuring code quality standards
-
-**Key features:**
-- Comprehensive testing and building workflows
-- PR creation and management
-- GitHub integration for reviewer feedback
-- CLI command expertise for quality assurance
-
-## Usage
-
-### Switching Agents
-Use the \`<tab>\` key to cycle through primary agents during a session.
-
-### Manual Agent Selection
-Use commands to switch to specific agents:
-- \`/fullstack\` - Switch to Fullstack agent
-- \`/frontend\` - Switch to Frontend agent  
-- \`/backend\` - Switch to Backend agent
-- \`/devops\` - Switch to DevOps agent
-- \`/app\` - Switch to App agent
-- \`/quality\` - Switch to Quality agent for testing and PR management
-
-### Using Subagents
-Mention subagents with \`@\` symbol:
-- \`@security review this authentication implementation\`
-- \`@quality run tests and create PR for these changes\`
-
-## Routing Rules
-
-The fullstack agent automatically routes tasks based on file patterns:
-
-- \`/apps/frontend\` or \`.tsx\` files → frontend
-- \`/apps/app\` or Expo/React Native → app  
-- \`/infra\`, \`/k8s\`, FluxCD, Helm → devops
-- \`/services\`, Koa routers → backend
-
-## Configuration
-
-All agents are configured in \`opencode.json\` with:
-- Specialized prompts and temperature settings
-- Appropriate tool permissions
-- Model optimizations for their specific tasks
-
-## Environment Setup
-
-Configure \`.env\` with your API key:
-\`\`\`
-BERGET_API_KEY=your_api_key_here
-\`\`\`
-
-## Workflow
-
-All agents follow these principles:
-- Never work directly in main branch
-- Follow branch strategy and commit conventions
-- Create PRs for new functionality
-- Run tests before committing
-- Address reviewer feedback promptly
-
----
-
-*Generated by berget code init for ${projectName}*
-`
-
-              await writeFile(agentsMdPath, agentsMdContent)
-              console.log(chalk.green(`✓ Created AGENTS.md`))
-              console.log(
-                chalk.dim(`  Documentation for available agents and usage`)
-              )
-            } else {
-              console.log(
-                chalk.yellow(`⚠ AGENTS.md already exists, skipping creation`)
-              )
-            }
-
-            // Check if .gitignore exists and add .env if not already there
-            const gitignorePath = path.join(process.cwd(), '.gitignore')
-            let gitignoreContent = ''
-
-            if (fs.existsSync(gitignorePath)) {
-              gitignoreContent = fs.readFileSync(gitignorePath, 'utf8')
-            }
-
-            if (!gitignoreContent.includes('.env')) {
-              gitignoreContent +=
-                (gitignoreContent.endsWith('\n') ? '' : '\n') + '.env\n'
-              await writeFile(gitignorePath, gitignoreContent)
-              console.log(chalk.green(`✓ Added .env to .gitignore`))
-            }
           } catch (error) {
             console.error(chalk.red('Failed to create config files:'))
             handleError('Config file creation failed', error)
@@ -1118,11 +656,12 @@ All agents follow these principles:
         }
 
         console.log(chalk.green('\n✅ Project initialized successfully!'))
-        console.log(chalk.blue('Next steps:'))
-        console.log(
-          chalk.blue(`  berget ${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`)
-        )
-        console.log(chalk.blue('  Or run: opencode'))
+        console.log(chalk.blue('\nNext steps:'))
+        console.log(chalk.cyan('  1. Run: opencode'))
+        console.log(chalk.cyan('  2. Type: /connect'))
+        console.log(chalk.cyan('  3. Choose your auth method:'))
+        console.log(chalk.dim('     • "Login with Berget" — Berget Code team members (SSO)'))
+        console.log(chalk.dim('     • "Enter API Key" — API key users (console.berget.ai)'))
       } catch (error) {
         handleError('Failed to initialize project', error)
       }
@@ -1192,19 +731,6 @@ All agents follow these principles:
           console.log(chalk.dim('Using stage API: https://api.stage.berget.ai/v1'))
         } else {
           env.BERGET_API_URL = 'https://api.berget.ai/v1'
-        }
-
-        // Auth resolution: JWT first (if valid), then API-key
-        // This ensures seat-based users get proper tracking
-        const jwtToken = getAuthToken()
-        if (jwtToken) {
-          env.BERGET_API_KEY = jwtToken
-          console.log(chalk.dim('Using JWT token for authentication'))
-        } else if (env.BERGET_API_KEY) {
-          console.log(chalk.dim('Using API key for authentication'))
-        } else {
-          console.log(chalk.yellow('Warning: No authentication found'))
-          console.log(chalk.dim('  Run `berget auth login` or set BERGET_API_KEY'))
         }
 
         // Prepare opencode command
@@ -1356,30 +882,16 @@ All agents follow these principles:
         // Load latest agent configuration to ensure consistency
         const latestAgentConfig = await loadLatestAgentConfig()
 
-        // Get model config with fallback for init scenario
-        let modelConfig: { primary: string; small: string }
-        try {
-          modelConfig = getModelConfig()
-        } catch (error) {
-          // Fallback to defaults when no config exists (init scenario)
-          modelConfig = {
-            primary: 'berget/glm-4.7',
-            small: 'berget/gpt-oss',
-          }
-        }
-
-        // Create latest configuration with all improvements
+        // Create latest configuration — plugin handles auth, models, and provider
         const latestConfig = {
           $schema: 'https://opencode.ai/config.json',
+          plugin: ['@bergetai/opencode-auth@latest'],
           username: 'berget-code',
           theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
-          model: modelConfig.primary,
-          small_model: modelConfig.small,
           agent: {
             fullstack: {
-              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -1390,7 +902,6 @@ All agents follow these principles:
                 'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             frontend: {
-              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -1402,7 +913,6 @@ All agents follow these principles:
                 'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
             },
             backend: {
-              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.9,
               mode: 'primary',
@@ -1414,7 +924,6 @@ All agents follow these principles:
             },
             // Use centralized devops configuration with Helm guidelines
             devops: latestAgentConfig.devops || {
-              model: modelConfig.primary,
               temperature: 0.3,
               top_p: 0.8,
               mode: 'primary',
@@ -1425,7 +934,6 @@ All agents follow these principles:
                 'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth. For testing, building, and PR management, use @quality subagent.',
             },
             app: {
-              model: modelConfig.primary,
               temperature: 0.4,
               top_p: 0.9,
               mode: 'primary',
@@ -1437,7 +945,6 @@ All agents follow these principles:
                 'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity. For testing, building, and PR management, use @quality subagent.',
             },
             security: {
-              model: modelConfig.primary,
               temperature: 0.2,
               top_p: 0.8,
               mode: 'subagent',
@@ -1448,7 +955,6 @@ All agents follow these principles:
                 'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels. Workflow: Always follow branch_strategy and commit_convention from workflow section. Never work directly in main. Agent awareness: Review code from all personas (frontend, backend, app, devops). If implementation changes are needed, suggest <tab> to switch to appropriate persona after security assessment.',
             },
             quality: {
-              model: modelConfig.primary,
               temperature: 0.1,
               top_p: 0.9,
               mode: 'subagent',
@@ -1508,17 +1014,6 @@ All agents follow these principles:
           watcher: {
             ignore: ['node_modules', 'dist', '.git', 'coverage'],
           },
-          provider: {
-            berget: {
-              npm: '@ai-sdk/openai-compatible',
-              name: 'Berget AI',
-              options: {
-                baseURL: '{env:BERGET_API_URL}',
-                apiKey: '{env:BERGET_API_KEY}',
-              },
-              models: getProviderModels(),
-            },
-          },
         }
 
         // Check if update is needed
@@ -1558,14 +1053,10 @@ All agents follow these principles:
             )
           }
 
-          // Check for GLM-4.7 optimizations
-          if (
-            !currentConfig.provider?.berget?.models?.[
-              modelConfig.primary.replace('berget/', '')
-            ]?.limit?.context
-          ) {
+          // Check for plugin migration
+          if (!currentConfig.plugin) {
             console.log(
-              chalk.cyan('  • GLM-4.7 token limits and auto-compaction')
+              chalk.cyan('  • Plugin-first auth (automatic token refresh + model discovery)')
             )
           }
 
@@ -1815,10 +1306,7 @@ All agents are configured in \`opencode.json\` with:
 
 ## Environment Setup
 
-Configure \`.env\` with your API key:
-\`\`\`
-BERGET_API_KEY=your_api_key_here
-\`\`\`
+Authentication is handled by the Berget plugin. Run \`/connect\` in OpenCode to authenticate.
 
 ## Workflow
 
