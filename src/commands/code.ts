@@ -717,23 +717,8 @@ export function registerCodeCommands(program: Command): void {
           return
         }
 
-        // Set environment variables for opencode
-        const env = { ...process.env }
-
-        // Set API base URL based on flags (default to production)
-        const isLocalMode = process.argv.includes('--local')
-        const isStageMode = process.argv.includes('--stage')
-        if (isLocalMode) {
-          env.BERGET_API_URL = 'http://localhost:3000/v1'
-          console.log(chalk.dim('Using local API: http://localhost:3000/v1'))
-        } else if (isStageMode) {
-          env.BERGET_API_URL = 'https://api.stage.berget.ai/v1'
-          console.log(chalk.dim('Using stage API: https://api.stage.berget.ai/v1'))
-        } else {
-          env.BERGET_API_URL = 'https://api.berget.ai/v1'
-        }
-
         // Prepare opencode command
+        const env = { ...process.env }
         const opencodeArgs: string[] = []
 
         if (prompt) {
