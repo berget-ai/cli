@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander'
+import { program, Option } from 'commander'
 import { registerCommands } from './src/commands'
 import { checkBergetConfig } from './src/utils/config-checker'
 import chalk from 'chalk'
@@ -23,8 +23,8 @@ program
 Version: ${version}`
   )
   .version(version, '-v, --version')
-  .option('--local', 'Use local API endpoint (hidden)', false)
-  .option('--stage', 'Use stage API endpoint', false)
+  .addOption(new Option('--local').default(false).hideHelp())
+  .addOption(new Option('--stage').default(false).hideHelp())
   .option('--debug', 'Enable debug output', false)
 
 // Register all commands

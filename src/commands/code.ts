@@ -721,6 +721,21 @@ export function registerCodeCommands(program: Command): void {
         const env = { ...process.env }
         const opencodeArgs: string[] = []
 
+        // Read --stage and --local from root program options
+        // (these flags are registered at program level, not subcommand level)
+        const isStage = process.argv.includes('--stage')
+        const isLocal = process.argv.includes('--local')
+
+        if (isStage) {
+          console.log(chalk.cyan('Using Berget stage environment'))
+          env.BERGET_API_URL = 'https://api.stage.berget.ai'
+          env.BERGET_INFERENCE_URL = 'https://api.stage.berget.ai/v1'
+        } else if (isLocal) {
+          console.log(chalk.cyan('Using local development environment'))
+          env.BERGET_API_URL = 'http://localhost:3000'
+          env.BERGET_INFERENCE_URL = 'http://localhost:3000/v1'
+        }
+
         if (prompt) {
           opencodeArgs.push('run', prompt)
         }
