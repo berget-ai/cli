@@ -1,11 +1,16 @@
 name: Publish to NPM
 
 on:
-  push:
-    branches:
-      - main
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   test:
@@ -32,10 +37,12 @@ jobs:
   publish:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -49,6 +56,13 @@ jobs:
 
       - name: Build project
         run: npm run build
+
+      - name: Bump version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version ${{ inputs.bump }} -m "release: %s"
+          git push --follow-tags
 
       - name: Publish to NPM
         run: npm publish
