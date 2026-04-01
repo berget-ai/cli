@@ -369,7 +369,7 @@ async function installOpencode(): Promise<boolean> {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const install = spawn('npm', ['install', '-g', 'opencode-ai'], {
+      const install = spawn('npm', ['install', '-g', 'opencode-ai@1.2.27'], {
         stdio: 'inherit',
       })
 
