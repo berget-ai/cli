@@ -369,7 +369,7 @@ async function installOpencode(): Promise<boolean> {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const install = spawn('npm', ['install', '-g', 'opencode-ai@1.2.27'], {
+      const install = spawn('npm', ['install', '-g', 'opencode-ai@latest'], {
         stdio: 'inherit',
       })
 
@@ -502,7 +502,7 @@ export function registerCodeCommands(program: Command): void {
         // Create opencode.json config — plugin handles auth, models, and provider
         const config = {
           $schema: 'https://opencode.ai/config.json',
-          plugin: ['@bergetai/opencode-auth@1.0.9'],
+          plugin: ['@bergetai/opencode-auth@1.0.10'],
           username: 'berget-code',
           theme: 'berget-dark',
           share: 'manual',
@@ -885,7 +885,7 @@ export function registerCodeCommands(program: Command): void {
         // Create latest configuration — plugin handles auth, models, and provider
         const latestConfig = {
           $schema: 'https://opencode.ai/config.json',
-          plugin: ['@bergetai/opencode-auth@1.0.9'],
+          plugin: ['@bergetai/opencode-auth@1.0.10'],
           username: 'berget-code',
           theme: 'berget-dark',
           share: 'manual',
