@@ -504,7 +504,6 @@ export function registerCodeCommands(program: Command): void {
           $schema: 'https://opencode.ai/config.json',
           plugin: ['@bergetai/opencode-auth@1.0.16'],
           username: 'berget-code',
-          theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
           agent: {
@@ -604,7 +603,6 @@ export function registerCodeCommands(program: Command): void {
             await writeFile(configPath, JSON.stringify(config, null, 2))
             console.log(chalk.green(`✓ Created opencode.json`))
             console.log(chalk.dim(`  Plugin: @bergetai/opencode-auth`))
-            console.log(chalk.dim(`  Theme: ${config.theme}`))
           } catch (error) {
             console.error(chalk.red('Failed to create config files:'))
             handleError('Config file creation failed', error)
@@ -830,7 +828,6 @@ export function registerCodeCommands(program: Command): void {
 
         console.log(chalk.blue('📋 Current configuration:'))
         console.log(chalk.dim(`  Model: ${currentConfig.model}`))
-        console.log(chalk.dim(`  Theme: ${currentConfig.theme}`))
         console.log(
           chalk.dim(
             `  Agents: ${
@@ -847,7 +844,6 @@ export function registerCodeCommands(program: Command): void {
           $schema: 'https://opencode.ai/config.json',
           plugin: ['@bergetai/opencode-auth@1.0.16'],
           username: 'berget-code',
-          theme: 'berget-dark',
           share: 'manual',
           autoupdate: true,
           agent: {
