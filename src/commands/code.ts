@@ -503,9 +503,6 @@ export function registerCodeCommands(program: Command): void {
         const config = {
           $schema: 'https://opencode.ai/config.json',
           plugin: ['@bergetai/opencode-auth@1.0.16'],
-          username: 'berget-code',
-          share: 'manual',
-          autoupdate: true,
           agent: {
             fullstack: {
               temperature: 0.3,
@@ -843,9 +840,6 @@ export function registerCodeCommands(program: Command): void {
         const latestConfig = {
           $schema: 'https://opencode.ai/config.json',
           plugin: ['@bergetai/opencode-auth@1.0.16'],
-          username: 'berget-code',
-          share: 'manual',
-          autoupdate: true,
           agent: {
             fullstack: {
               temperature: 0.3,
