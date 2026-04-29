@@ -7,7 +7,6 @@ import * as fs from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { spawn } from 'child_process'
-import { createAuthenticatedClient } from '../client'
 
 /**
  * Check if current directory has git
@@ -18,138 +17,6 @@ function hasGit(): boolean {
   } catch {
     return false
   }
-}
-
-/**
- * Merge opencode configurations using chat completions API
- */
-async function mergeConfigurations(
-  currentConfig: any,
-  latestConfig: any
-): Promise<any> {
-  try {
-    const client = createAuthenticatedClient()
-
-    console.log(chalk.blue('🤖 Using AI to merge configurations...'))
-
-    const mergePrompt = `You are a configuration merge specialist. Merge these two OpenCode configurations:
-
-CURRENT CONFIG (user's customizations):
-${JSON.stringify(currentConfig, null, 2)}
-
-LATEST CONFIG (new updates):
-${JSON.stringify(latestConfig, null, 2)}
-
-Merge rules:
-1. Preserve ALL user customizations from current config
-2. Add ALL new features and improvements from latest config  
-3. For conflicts, prefer user's customizations but add new latest features
-4. Maintain valid JSON structure
-5. Keep the merged configuration complete and functional
-
-Return ONLY the merged JSON configuration, no explanations.`
-
-    const response = await client.POST('/v1/chat/completions', {
-      body: {
-        model: 'glm-4.7',
-        messages: [
-          {
-            role: 'user',
-            content: mergePrompt,
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 8000,
-      },
-    })
-
-    if (response.error) {
-      console.warn(chalk.yellow('⚠️  AI merge failed, using fallback merge'))
-      return fallbackMerge(currentConfig, latestConfig)
-    }
-
-    const content = response.data?.choices?.[0]?.message?.content
-    if (!content) {
-      console.warn(chalk.yellow('⚠️  No AI response, using fallback merge'))
-      return fallbackMerge(currentConfig, latestConfig)
-    }
-
-    try {
-      const mergedConfig = JSON.parse(content.trim())
-      console.log(chalk.green('✓ AI merge completed successfully'))
-      return mergedConfig
-    } catch (parseError) {
-      console.warn(
-        chalk.yellow('⚠️  AI response invalid, using fallback merge')
-      )
-      return fallbackMerge(currentConfig, latestConfig)
-    }
-  } catch (error) {
-    console.warn(chalk.yellow('⚠️  AI merge unavailable, using fallback merge'))
-    return fallbackMerge(currentConfig, latestConfig)
-  }
-}
-
-/**
- * Fallback merge logic when AI merge is unavailable
- */
-function fallbackMerge(currentConfig: any, latestConfig: any): any {
-  console.log(chalk.blue('🔀 Using fallback merge logic...'))
-
-  const merged = { ...latestConfig }
-
-  // Preserve user customizations
-  if (currentConfig.theme && currentConfig.theme !== latestConfig.theme) {
-    merged.theme = currentConfig.theme
-  }
-
-  if (currentConfig.share && currentConfig.share !== latestConfig.share) {
-    merged.share = currentConfig.share
-  }
-
-  // Merge custom agents while preserving new ones
-  if (currentConfig.agent) {
-    merged.agent = { ...latestConfig.agent }
-
-    // Add any custom agents from current config
-    Object.keys(currentConfig.agent).forEach((agentName) => {
-      if (!latestConfig.agent[agentName]) {
-        merged.agent[agentName] = currentConfig.agent[agentName]
-        console.log(chalk.cyan(`  • Preserved custom agent: ${agentName}`))
-      }
-    })
-  }
-
-  // Merge custom commands while preserving new ones
-  if (currentConfig.commands) {
-    merged.commands = { ...latestConfig.commands }
-
-    Object.keys(currentConfig.commands).forEach((commandName) => {
-      if (!latestConfig.commands[commandName]) {
-        merged.commands[commandName] = currentConfig.commands[commandName]
-        console.log(chalk.cyan(`  • Preserved custom command: ${commandName}`))
-      }
-    })
-  }
-
-  // Preserve custom provider settings if user has modified them
-  if (currentConfig.provider) {
-    merged.provider = { ...latestConfig.provider }
-
-    // Deep merge provider settings
-    Object.keys(currentConfig.provider).forEach((providerName) => {
-      if (merged.provider[providerName]) {
-        merged.provider[providerName] = {
-          ...merged.provider[providerName],
-          ...currentConfig.provider[providerName],
-        }
-      } else {
-        merged.provider[providerName] = currentConfig.provider[providerName]
-      }
-    })
-  }
-
-  return merged
 }
 
 /**
@@ -177,47 +44,6 @@ async function confirm(question: string, autoYes = false): Promise<boolean> {
   })
 }
 
-/**
- * Helper function to get user choice from options
- */
-async function askChoice(
-  question: string,
-  options: string[],
-  defaultChoice?: string
-): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-
-    rl.question(question, (answer) => {
-      rl.close()
-
-      const trimmed = answer.trim().toLowerCase()
-
-      // Handle numeric input (1, 2, etc.)
-      const numericIndex = parseInt(trimmed) - 1
-      if (numericIndex >= 0 && numericIndex < options.length) {
-        resolve(options[numericIndex])
-        return
-      }
-
-      // Handle text input
-      const matchingOption = options.find((option) =>
-        option.toLowerCase().startsWith(trimmed)
-      )
-
-      if (matchingOption) {
-        resolve(matchingOption)
-      } else if (defaultChoice) {
-        resolve(defaultChoice)
-      } else {
-        resolve(options[0]) // Default to first option
-      }
-    })
-  })
-}
 
 /**
  * Helper function to get user input
@@ -262,84 +88,95 @@ function getProjectName(): string {
 }
 
 /**
- * Load the latest agent configuration from embedded config
+ * Get the path to the bundled agent templates directory
+ */
+function getAgentTemplatesDir(): string {
+  return path.resolve(__dirname, '../../templates/agents')
+}
+
+/**
+ * Parse a markdown agent file with YAML frontmatter into an agent config object
+ */
+function parseAgentMarkdown(content: string): Record<string, any> {
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
+  if (!frontmatterMatch) {
+    throw new Error('Invalid agent markdown: missing frontmatter')
+  }
+
+  const yamlStr = frontmatterMatch[1]
+  const promptBody = frontmatterMatch[2].trim()
+
+  const config: Record<string, any> = { prompt: promptBody }
+
+  for (const line of yamlStr.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+
+    const colonIdx = trimmed.indexOf(':')
+    if (colonIdx === -1) continue
+
+    const key = trimmed.substring(0, colonIdx).trim()
+    const value = trimmed.substring(colonIdx + 1).trim()
+
+    if (key === 'permission') continue
+
+    if (value === 'true') {
+      config[key] = true
+    } else if (value === 'false') {
+      config[key] = false
+    } else if (!isNaN(Number(value)) && value !== '') {
+      config[key] = Number(value)
+    } else {
+      config[key] = value
+    }
+  }
+
+  const permission: Record<string, string> = {}
+  const permMatch = yamlStr.match(/permission:\s*\n((?:\s+\w+:.*\n?)*)/)
+  if (permMatch) {
+    for (const permLine of permMatch[1].split('\n')) {
+      const permTrimmed = permLine.trim()
+      if (!permTrimmed) continue
+      const permColonIdx = permTrimmed.indexOf(':')
+      if (permColonIdx === -1) continue
+      const permKey = permTrimmed.substring(0, permColonIdx).trim()
+      const permValue = permTrimmed.substring(permColonIdx + 1).trim()
+      if (permKey && permValue) {
+        permission[permKey] = permValue
+      }
+    }
+  }
+  if (Object.keys(permission).length > 0) {
+    config.permission = permission
+  }
+
+  return config
+}
+
+/**
+ * Load the latest agent configuration from bundled markdown templates
  */
 async function loadLatestAgentConfig(): Promise<any> {
-  // Return the latest agent configuration directly - no file reading needed
-  return {
-    fullstack: {
-      temperature: 0.3,
-      top_p: 0.9,
-      mode: 'primary',
-      permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description:
-        'Router/coordinator agent for full-stack development with schema-driven architecture',
-      prompt:
-        "Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
-    },
-    frontend: {
-      temperature: 0.4,
-      top_p: 0.9,
-      mode: 'primary',
-      permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
-      note: 'Bash access is denied for frontend persona to prevent shell command execution in UI environments. This restriction enforces security and architectural boundaries.',
-      description:
-        'Builds Scandinavian, type-safe UIs with React, Tailwind, Shadcn.',
-      prompt:
-        'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion.\n\nIMPORTANT: You have NO bash access and cannot run git commands. When your frontend implementation tasks are complete, inform the user that changes are ready and suggest using /pr command to create a pull request with proper testing and quality checks.\n\nCODE QUALITY RULES:\n- Write clean, production-ready code\n- Follow React and TypeScript best practices\n- Ensure accessibility and responsive design\n- Use semantic tokens from design system\n- Test your components manually when possible\n- Document any complex logic with comments\n\nCRITICAL: When frontend implementation is complete, ALWAYS inform the user to use "/pr" command to handle testing, building, and pull request creation.',
-    },
-    backend: {
-      temperature: 0.3,
-      top_p: 0.9,
-      mode: 'primary',
-      permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description:
-        'Functional, modular Koa + TypeScript services; schema-first with code quality focus.',
-      prompt:
-        "You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
-    },
-    devops: {
-      temperature: 0.3,
-      top_p: 0.8,
-      mode: 'primary',
-      permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description:
-        'Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.',
-      prompt:
-        "You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nHelm Values Configuration Process:\n1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.\n2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.\n3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.\n4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.",
-    },
-    app: {
-      temperature: 0.4,
-      top_p: 0.9,
-      mode: 'primary',
-      permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
-      note: 'Bash access is denied for app persona to prevent shell command execution in mobile/Expo environments. This restriction enforces security and architectural boundaries.',
-      description:
-        'Expo + React Native apps; props-first, offline-aware, shared tokens.',
-      prompt:
-        "You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR\n\nCRITICAL: When all app implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.",
-    },
-    security: {
-      temperature: 0.2,
-      top_p: 0.8,
-      mode: 'subagent',
-      permission: { edit: 'deny', bash: 'allow', webfetch: 'allow' },
-      description:
-        'Security specialist for pentesting, OWASP compliance, and vulnerability assessments.',
-      prompt:
-        "Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.\n\nGIT WORKFLOW RULES (CRITICAL):\n- NEVER push directly to main branch - ALWAYS use pull requests\n- NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\n- ALWAYS clean up test files, documentation files, and temporary artifacts before committing\n- ALWAYS ensure git history maintains production quality - no test commits, no debugging code\n- ALWAYS create descriptive commit messages following project conventions\n- ALWAYS run tests and build before creating PR",
-    },
-    quality: {
-      temperature: 0.1,
-      top_p: 0.9,
-      mode: 'subagent',
-      permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-      description:
-        'Quality assurance specialist for testing, building, and PR management.',
-      prompt:
-        "Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Quality agent. Specialist in code quality assurance, testing, building, and pull request management.\\n\\nCore responsibilities:\\n  - Run comprehensive test suites (npm test, npm run test, jest, vitest)\\n  - Execute build processes (npm run build, webpack, vite, tsc)\\n  - Create and manage pull requests with proper descriptions\\n  - Monitor GitHub for Copilot/reviewer comments\\n  - Ensure code quality standards are met\\n  - Validate linting and formatting (npm run lint, prettier)\\n  - Check test coverage and performance benchmarks\\n  - Handle CI/CD pipeline validation\\n\\nGIT WORKFLOW RULES (CRITICAL - ENFORCE STRICTLY):\\n  - NEVER push directly to main branch - ALWAYS use pull requests\\n  - NEVER use 'git add .' - ALWAYS add specific files with 'git add path/to/file'\\n  - ALWAYS clean up test files, documentation files, and temporary artifacts before committing\\n  - ALWAYS ensure git history maintains production quality - no test commits, no debugging code\\n  - ALWAYS create descriptive commit messages following project conventions\\n  - ALWAYS run tests and build before creating PR\\n\\nCommon CLI commands:\\n  - npm test or npm run test (run test suite)\\n  - npm run build (build project)\\n  - npm run lint (run linting)\\n  - npm run format (format code)\\n  - npm run test:coverage (check coverage)\\n  - gh pr create (create pull request)\\n  - gh pr view --comments (check PR comments)\\n  - git add specific/files && git commit -m \\\"message\\\" && git push (NEVER use git add .)\\n\\nPR Workflow:\\n  1. Ensure all tests pass: npm test\\n  2. Build successfully: npm run build\\n  3. Create/update PR with clear description\\n  4. Monitor for reviewer comments\\n  5. Address feedback promptly\\n  6. Update PR with fixes\\n  7. Ensure CI checks pass\\n\\nAlways provide specific command examples and wait for processes to complete before proceeding.",
-    },
+  const templatesDir = getAgentTemplatesDir()
+  const agents: Record<string, any> = {}
+
+  const files = fs.readdirSync(templatesDir).filter((f) => f.endsWith('.md'))
+
+  for (const file of files) {
+    const agentName = path.basename(file, '.md')
+    const filePath = path.join(templatesDir, file)
+    const content = fs.readFileSync(filePath, 'utf8')
+
+    try {
+      agents[agentName] = parseAgentMarkdown(content)
+    } catch (error) {
+      console.warn(
+        chalk.yellow(`Warning: Failed to parse agent template ${file}: ${error}`)
+      )
+    }
   }
+
+  return agents
 }
 
 /**
@@ -495,95 +332,18 @@ export function registerCodeCommands(program: Command): void {
           chalk.cyan(`Initializing OpenCode for project: ${projectName}`)
         )
 
-        // Load latest agent configuration from our own codebase
-        const latestAgentConfig = await loadLatestAgentConfig()
-
-        // Use hardcoded defaults for init - never try to load from project
-        // Create opencode.json config — plugin handles auth, models, and provider
         const config = {
           $schema: 'https://opencode.ai/config.json',
           plugin: ['@bergetai/opencode-auth@1.0.16'],
-          agent: {
-            fullstack: {
-              temperature: 0.3,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Router/coordinator agent for full-stack development with schema-driven architecture',
-              prompt:
-                'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
-            },
-            frontend: {
-              temperature: 0.4,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
-              note: 'Bash access is denied for frontend persona to prevent shell command execution in UI environments. This restriction enforces security and architectural boundaries.',
-              description:
-                'Builds Scandinavian, type-safe UIs with React, Tailwind, Shadcn.',
-              prompt:
-                'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
-            },
-            backend: {
-              temperature: 0.3,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Functional, modular Koa + TypeScript services; schema-first with code quality focus.',
-              prompt:
-                'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it. CRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
-            },
-            // Use centralized devops configuration with Helm guidelines
-            devops: latestAgentConfig.devops || {
-              temperature: 0.3,
-              top_p: 0.8,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.',
-              prompt:
-                'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth.',
-            },
-            app: {
-              temperature: 0.4,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
-              note: 'Bash access is denied for app persona to prevent shell command execution in mobile/Expo environments. This restriction enforces security and architectural boundaries.',
-              description:
-                'Expo + React Native apps; props-first, offline-aware, shared tokens.',
-              prompt:
-                'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.',
-            },
-            security: {
-              temperature: 0.2,
-              top_p: 0.8,
-              mode: 'subagent',
-              permission: { edit: 'deny', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Security specialist for pentesting, OWASP compliance, and vulnerability assessments.',
-              prompt:
-                'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels.',
-            },
-            quality: {
-              temperature: 0.1,
-              top_p: 0.9,
-              mode: 'subagent',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Quality assurance specialist for testing, building, and PR management.',
-              prompt:
-                'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Quality agent. Specialist in code quality assurance, testing, building, and pull request management.\n\nCore responsibilities:\n  - Run comprehensive test suites (npm test, npm run test, jest, vitest)\n  - Execute build processes (npm run build, webpack, vite, tsc)\n  - Create and manage pull requests with proper descriptions\n  - Monitor GitHub for Copilot/reviewer comments\n  - Ensure code quality standards are met\n  - Validate linting and formatting (npm run lint, prettier)\n  - Check test coverage and performance benchmarks\n  - Handle CI/CD pipeline validation\n\nCommon CLI commands:\n  - npm test or npm run test (run test suite)\n  - npm run build (build project)\n  - npm run lint (run linting)\n  - npm run format (format code)\n  - npm run test:coverage (check coverage)\n  - gh pr create (create pull request)\n  - gh pr view --comments (check PR comments)\n  - git add . && git commit -m "message" && git push (commit and push)\n\nPR Workflow:\n  1. Ensure all tests pass: npm test\n  2. Build successfully: npm run build\n  3. Create/update PR with clear description\n  4. Monitor for reviewer comments\n  5. Address feedback promptly\n  6. Update PR with fixes\n  7. Ensure CI checks pass\n\nAlways provide specific command examples and wait for processes to complete before proceeding.',
-            },
-          },
         }
 
-        // Ask for permission to create config files
+        const agentsDir = path.join(process.cwd(), '.opencode', 'agents')
+        const templatesDir = getAgentTemplatesDir()
+
         if (!options.yes) {
           console.log(chalk.blue('\nAbout to create configuration files:'))
           console.log(chalk.dim(`Config: ${configPath}`))
+          console.log(chalk.dim(`Agents: ${agentsDir}/`))
           console.log(
             chalk.dim('This will configure OpenCode with the Berget auth plugin.')
           )
@@ -593,10 +353,24 @@ export function registerCodeCommands(program: Command): void {
           await confirm('\nCreate configuration files? (Y/n): ', options.yes)
         ) {
           try {
-            // Create opencode.json
             await writeFile(configPath, JSON.stringify(config, null, 2))
-            console.log(chalk.green(`✓ Created opencode.json`))
-            console.log(chalk.dim(`  Plugin: @bergetai/opencode-auth`))
+            console.log(chalk.green('✓ Created opencode.json'))
+            console.log(chalk.dim('  Plugin: @bergetai/opencode-auth'))
+
+            fs.mkdirSync(agentsDir, { recursive: true })
+            const templateFiles = fs
+              .readdirSync(templatesDir)
+              .filter((f) => f.endsWith('.md'))
+            for (const file of templateFiles) {
+              const src = path.join(templatesDir, file)
+              const dest = path.join(agentsDir, file)
+              fs.copyFileSync(src, dest)
+            }
+            console.log(
+              chalk.green(
+                `✓ Created ${templateFiles.length} agent definitions in .opencode/agents/`
+              )
+            )
           } catch (error) {
             console.error(chalk.red('Failed to create config files:'))
             handleError('Config file creation failed', error)
@@ -821,144 +595,62 @@ export function registerCodeCommands(program: Command): void {
         }
 
         console.log(chalk.blue('📋 Current configuration:'))
-        console.log(chalk.dim(`  Model: ${currentConfig.model}`))
-        console.log(
-          chalk.dim(
-            `  Agents: ${
-              Object.keys(currentConfig.agent || {}).length
-            } configured`
-          )
-        )
+        if (currentConfig.model) {
+          console.log(chalk.dim(`  Model: ${currentConfig.model}`))
+        }
 
-        // Load latest agent configuration to ensure consistency
-        const latestAgentConfig = await loadLatestAgentConfig()
+        const agentsDir = path.join(process.cwd(), '.opencode', 'agents')
+        const templatesDir = getAgentTemplatesDir()
+        const templateFiles = fs
+          .readdirSync(templatesDir)
+          .filter((f) => f.endsWith('.md'))
 
-        // Create latest configuration — plugin handles auth, models, and provider
         const latestConfig = {
           $schema: 'https://opencode.ai/config.json',
           plugin: ['@bergetai/opencode-auth@1.0.16'],
-          agent: {
-            fullstack: {
-              temperature: 0.3,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Router/coordinator agent for full-stack development with schema-driven architecture',
-              prompt:
-                'Voice: Scandinavian calm—precise, concise, confident; no fluff. You are Berget Code Fullstack agent. Act as a router and coordinator in a monorepo. Bottom-up schema: database → OpenAPI → generated types. Top-down types: API → UI → components. Use openapi-fetch and Zod at every boundary; compile-time errors are desired when contracts change. Routing rules: if task/paths match /apps/frontend or React (.tsx) → use frontend; if /apps/app or Expo/React Native → app; if /infra, /k8s, flux-system, kustomization.yaml, Helm values → devops; if /services, Koa routers, services/adapters/domain → backend. If ambiguous, remain fullstack and outline the end-to-end plan, then delegate subtasks to the right persona. Security: validate inputs; secrets via FluxCD SOPS/Sealed Secrets. Documentation is generated from code—never duplicated. CRITICAL: When all implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
-            },
-            frontend: {
-              temperature: 0.4,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
-              note: 'Bash access is denied for frontend persona to prevent shell command execution in UI environments. This restriction enforces security and architectural boundaries.',
-              description:
-                'Builds Scandinavian, type-safe UIs with React, Tailwind, Shadcn.',
-              prompt:
-                'You are Berget Code Frontend agent. Voice: Scandinavian calm—precise, concise, confident. React 18 + TypeScript. Tailwind + Shadcn UI only via the design system (index.css, tailwind.config.ts). Use semantic tokens for color/spacing/typography/motion; never ad-hoc classes or inline colors. Components are pure and responsive; props-first data; minimal global state (Zustand/Jotai). Accessibility and keyboard navigation mandatory. Mock data only at init under /data via typed hooks (e.g., useProducts() reading /data/products.json). Design: minimal, balanced, quiet motion. CRITICAL: When all frontend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
-            },
-            backend: {
-              temperature: 0.3,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Functional, modular Koa + TypeScript services; schema-first with code quality focus.',
-              prompt:
-                'You are Berget Code Backend agent. Voice: Scandinavian calm—precise, concise, confident. TypeScript + Koa. Prefer many small pure functions; avoid big try/catch blocks. Routes thin; logic in services/adapters/domain. Validate with Zod; auto-generate OpenAPI. Adapters isolate external systems; domain never depends on framework. Test with supertest; idempotent and stateless by default. Each microservice emits an OpenAPI contract; changes propagate upward to types. Code Quality & Refactoring Principles: Apply Single Responsibility Principle, fail fast with explicit errors, eliminate code duplication, remove nested complexity, use descriptive error codes, keep functions under 30 lines. Always leave code cleaner and more readable than you found it. CRITICAL: When all backend implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.',
-            },
-            // Use centralized devops configuration with Helm guidelines
-            devops: latestAgentConfig.devops || {
-              temperature: 0.3,
-              top_p: 0.8,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.',
-              prompt:
-                'You are Berget Code DevOps agent. Voice: Scandinavian calm—precise, concise, confident. Start simple: k8s/{deployment,service,ingress}. Add FluxCD sync to repo and image automation. Use Kustomize bases/overlays (staging, production). Add dependencies via Helm from upstream sources; prefer native operators when available (CloudNativePG, cert-manager, external-dns). SemVer with -rc tags keeps CI environments current. Observability with Prometheus/Grafana. No manual kubectl in production—Git is the source of truth. For testing, building, and PR management, use @quality subagent.',
-            },
-            app: {
-              temperature: 0.4,
-              top_p: 0.9,
-              mode: 'primary',
-              permission: { edit: 'allow', bash: 'deny', webfetch: 'allow' },
-              note: 'Bash access is denied for app persona to prevent shell command execution in mobile/Expo environments. This restriction enforces security and architectural boundaries.',
-              description:
-                'Expo + React Native apps; props-first, offline-aware, shared tokens.',
-              prompt:
-                'You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity. For testing, building, and PR management, use @quality subagent.',
-            },
-            security: {
-              temperature: 0.2,
-              top_p: 0.8,
-              mode: 'subagent',
-              permission: { edit: 'deny', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Security specialist for pentesting, OWASP compliance, and vulnerability assessments.',
-              prompt:
-                'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Security agent. Expert in application security, penetration testing, and OWASP standards. Core responsibilities: Conduct security assessments and penetration tests, Validate OWASP Top 10 compliance, Review code for security vulnerabilities, Implement security headers and Content Security Policy (CSP), Audit API security, Check for sensitive data exposure, Validate input sanitization and output encoding, Assess dependency security and supply chain risks. Tools and techniques: OWASP ZAP, Burp Suite, security linters, dependency scanners, manual code review. Always provide specific, actionable security recommendations with priority levels. Workflow: Always follow branch_strategy and commit_convention from workflow section. Never work directly in main. Agent awareness: Review code from all personas (frontend, backend, app, devops). If implementation changes are needed, suggest <tab> to switch to appropriate persona after security assessment.',
-            },
-            quality: {
-              temperature: 0.1,
-              top_p: 0.9,
-              mode: 'subagent',
-              permission: { edit: 'allow', bash: 'allow', webfetch: 'allow' },
-              description:
-                'Quality assurance specialist for testing, building, and complete PR management.',
-              prompt:
-                'Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Quality agent. Specialist in code quality assurance, testing, building, and complete pull request lifecycle management.\n\nCore responsibilities:\n  - Run comprehensive test suites (npm test, npm run test, jest, vitest)\n  - Execute build processes (npm run build, webpack, vite, tsc)\n  - Create and manage pull requests with proper descriptions\n  - Handle merge conflicts and keep main updated\n  - Monitor GitHub for reviewer comments and address them\n  - Ensure code quality standards are met\n  - Validate linting and formatting (npm run lint, prettier)\n  - Check test coverage and performance benchmarks\n  - Handle CI/CD pipeline validation\n\nComplete PR Workflow:\n  1. Ensure all tests pass: npm test\n  2. Build successfully: npm run build\n  3. Commit all changes with proper message\n  4. Push to feature branch\n  5. Update main branch and handle merge conflicts\n  6. Create or update PR with comprehensive description\n  7. Monitor for reviewer comments\n  8. Address feedback and push updates\n  9. Always provide PR URL for user review\n\nEssential CLI commands:\n  - npm test or npm run test (run test suite)\n  - npm run build (build project)\n  - npm run lint (run linting)\n  - npm run format (format code)\n  - npm run test:coverage (check coverage)\n  - git add . && git commit -m "message" && git push (commit and push)\n  - git checkout main && git pull origin main (update main)\n  - git checkout feature-branch && git merge main (handle conflicts)\n  - gh pr create --title "title" --body "body" (create PR)\n  - gh pr view --comments (check PR comments)\n  - gh pr edit --title "title" --body "body" (update PR)\n\nPR Creation Process:\n  - Always include clear summary of changes\n  - List technical details and improvements\n  - Include testing and validation results\n  - Add any breaking changes or migration notes\n  - Provide PR URL immediately after creation\n\nMerge Conflict Resolution:\n  - Always update main before creating/updating PR\n  - Handle conflicts automatically when possible\n  - If conflicts require human input, clearly explain what\'s needed\n  - Re-run tests after conflict resolution\n  - Ensure CI checks pass before finalizing\n\nReviewer Comment Handling:\n  - Monitor PR for new comments regularly\n  - Address each comment specifically\n  - Push fixes and update PR accordingly\n  - Always provide updated PR URL after changes\n  - Continue monitoring until all feedback is addressed\n\nCRITICAL: When invoked by other agents (@quality), you MUST:\n  - Complete all testing and building tasks\n  - Handle entire PR creation/update process\n  - Provide PR URL at the end\n  - Ensure main branch is properly merged\n  - Handle any merge conflicts automatically\n\nAlways provide specific command examples and wait for processes to complete before proceeding.\nWorkflow: Always follow branch_strategy and commit_convention from workflow section. Never work directly in main.\nAgent awareness: Can be invoked by any primary agent (@quality) for complete testing, building, and PR management. You are the final step before user review - ensure everything is perfect.',
-            },
-          },
         }
 
-        // Check if update is needed
-        const needsUpdate =
-          JSON.stringify(currentConfig) !== JSON.stringify(latestConfig)
+        // Check if agent definitions need updating
+        let agentsNeedUpdate = false
+        const existingAgentFiles = fs.existsSync(agentsDir)
+          ? fs.readdirSync(agentsDir).filter((f) => f.endsWith('.md'))
+          : []
 
-        if (!needsUpdate && !options.force) {
+        for (const file of templateFiles) {
+          const src = path.join(templatesDir, file)
+          const dest = path.join(agentsDir, file)
+          if (!fs.existsSync(dest)) {
+            agentsNeedUpdate = true
+            break
+          }
+          const srcContent = fs.readFileSync(src, 'utf8')
+          const destContent = fs.readFileSync(dest, 'utf8')
+          if (srcContent !== destContent) {
+            agentsNeedUpdate = true
+            break
+          }
+        }
+
+        // Check if opencode.json still has inline agent config (needs migration)
+        const needsMigration = !!currentConfig.agent
+
+        if (!agentsNeedUpdate && !needsMigration && !options.force) {
           console.log(chalk.green('✅ Already using the latest configuration!'))
           return
         }
 
-        if (needsUpdate) {
+        if (agentsNeedUpdate || needsMigration) {
           console.log(chalk.blue('\n🔄 Updates available:'))
 
-          // Compare agents
-          const currentAgents = Object.keys(currentConfig.agent || {})
-          const latestAgents = Object.keys(latestConfig.agent)
-          const newAgents = latestAgents.filter(
-            (agent) => !currentAgents.includes(agent)
-          )
-
-          if (newAgents.length > 0) {
-            console.log(chalk.cyan(`  • New agents: ${newAgents.join(', ')}`))
-          }
-
-          // Check for quality agent specifically
-          if (!currentConfig.agent?.quality && latestConfig.agent.quality) {
+          if (needsMigration) {
             console.log(
-              chalk.cyan('  • Quality subagent for testing and PR management')
+              chalk.cyan('  • Migrate agents from opencode.json to .opencode/agents/')
             )
           }
 
-          // Check for security subagent mode
-          if (currentConfig.agent?.security?.mode !== 'subagent') {
-            console.log(
-              chalk.cyan('  • Security agent converted to subagent (read-only)')
-            )
+          if (agentsNeedUpdate) {
+            console.log(chalk.cyan('  • Latest agent prompts and improvements'))
           }
-
-          // Check for plugin migration
-          if (!currentConfig.plugin) {
-            console.log(
-              chalk.cyan('  • Plugin-first auth (automatic token refresh + model discovery)')
-            )
-          }
-
-          console.log(chalk.cyan('  • Latest agent prompts and improvements'))
         }
 
         if (options.force) {
@@ -968,11 +660,10 @@ export function registerCodeCommands(program: Command): void {
         if (!options.yes) {
           console.log(
             chalk.blue(
-              '\nThis will update your OpenCode configuration with the latest improvements.'
+              '\nThis will update your agent definitions and OpenCode configuration.'
             )
           )
 
-          // Check if user has git for backup
           const hasGitRepo = hasGit()
           if (!hasGitRepo) {
             console.log(
@@ -987,38 +678,12 @@ export function registerCodeCommands(program: Command): void {
           }
         }
 
-        // Ask user what they want to do
-        console.log(chalk.blue('\nChoose update strategy:'))
-        console.log(
-          chalk.cyan(
-            '1) Replace - Use latest configuration (your customizations will be lost)'
-          )
-        )
-        console.log(
-          chalk.cyan(
-            '2) Merge  - Combine latest updates with your customizations (recommended)'
-          )
-        )
-
-        let mergeChoice: 'replace' | 'merge' = 'merge'
-
-        if (!options.yes) {
-          const choice = await askChoice(
-            '\nYour choice (1-2, default: 2): ',
-            ['replace', 'merge'],
-            'merge'
-          )
-          mergeChoice = choice as 'replace' | 'merge'
-        }
-
         if (
-          await confirm(`\nProceed with ${mergeChoice}? (Y/n): `, options.yes)
+          await confirm('\nProceed with update? (Y/n): ', options.yes)
         ) {
           try {
-            let finalConfig: any
             let backupPath: string | null = null
 
-            // Create backup if no git
             if (!hasGit()) {
               backupPath = `${configPath}.backup.${Date.now()}`
               await writeFile(
@@ -1032,28 +697,38 @@ export function registerCodeCommands(program: Command): void {
               )
             }
 
-            if (mergeChoice === 'merge') {
-              // Merge configurations
-              finalConfig = await mergeConfigurations(
-                currentConfig,
-                latestConfig
-              )
+            // Remove inline agent section from opencode.json if present
+            if (currentConfig.agent) {
+              delete currentConfig.agent
+              await writeFile(configPath, JSON.stringify(currentConfig, null, 2))
               console.log(
-                chalk.green('✓ Merged configurations with latest updates')
+                chalk.green('✓ Removed inline agent config from opencode.json')
               )
-            } else {
-              // Replace with latest
-              finalConfig = latestConfig
-              console.log(chalk.green('✓ Replaced with latest configuration'))
             }
 
-            // Write final configuration
-            await writeFile(configPath, JSON.stringify(finalConfig, null, 2))
-            console.log(
-              chalk.green(
-                `✓ Updated opencode.json with ${mergeChoice} strategy`
+            // Sync agent markdown files from templates
+            fs.mkdirSync(agentsDir, { recursive: true })
+            let updatedCount = 0
+            for (const file of templateFiles) {
+              const src = path.join(templatesDir, file)
+              const dest = path.join(agentsDir, file)
+              const agentName = path.basename(file, '.md')
+
+              if (
+                !fs.existsSync(dest) ||
+                fs.readFileSync(src, 'utf8') !== fs.readFileSync(dest, 'utf8')
+              ) {
+                fs.copyFileSync(src, dest)
+                updatedCount++
+                console.log(chalk.cyan(`  • Updated agent: ${agentName}`))
+              }
+            }
+
+            if (updatedCount > 0) {
+              console.log(
+                chalk.green(`✓ Updated ${updatedCount} agent definition(s)`)
               )
-            )
+            }
 
             // Update AGENTS.md if it doesn't exist
             const agentsMdPath = path.join(process.cwd(), 'AGENTS.md')
@@ -1062,158 +737,46 @@ export function registerCodeCommands(program: Command): void {
 
 This document describes the specialized agents available in this project for use with OpenCode.
 
+Agents are defined as markdown files in \`.opencode/agents/\` with YAML frontmatter.
+
 ## Available Agents
 
 ### Primary Agents
 
-#### fullstack
-Router/coordinator agent for full-stack development with schema-driven architecture. Handles routing between different personas based on file paths and task requirements.
-
-**Use when:**
-- Working across multiple parts of a monorepo
-- Need to coordinate between frontend, backend, devops, and app
-- Starting new projects and need to determine tech stack
-
-**Key features:**
-- Schema-driven development (database → OpenAPI → types)
-- Automatic routing to appropriate persona
-- Tech stack discovery and recommendations
-
-#### frontend
-Builds Scandinavian, type-safe UIs with React, Tailwind, and Shadcn.
-
-**Use when:**
-- Working with React components (.tsx files)
-- Frontend development in /apps/frontend
-- UI/UX implementation
-
-**Key features:**
-- Design system integration
-- Semantic tokens and accessibility
-- Props-first component architecture
-
-#### backend
-Functional, modular Koa + TypeScript services with schema-first approach and code quality focus.
-
-**Use when:**
-- Working with Koa routers and services
-- Backend development in /services
-- API development and database work
-
-**Key features:**
-- Zod validation and OpenAPI generation
-- Code quality and refactoring principles
-- PR workflow integration
-
-#### devops
-Declarative GitOps infrastructure with FluxCD, Kustomize, Helm, and operators.
-
-**Use when:**
-- Working with Kubernetes manifests
-- Infrastructure in /infra or /k8s
-- CI/CD and deployment configurations
-
-**Key features:**
-- GitOps workflows
-- Operator-first approach
-- SemVer with release candidates
-
-**Helm Values Configuration Process:**
-1. Documentation First Approach: Always fetch official documentation from Artifact Hub/GitHub for the specific chart version before writing values. Search Artifact Hub for exact chart version documentation, check the chart's GitHub repository for official docs and examples, verify the exact version being used in the deployment.
-2. Validation Requirements: Check for available validation schemas before committing YAML files. Use Helm's built-in validation tools (helm lint, helm template). Validate against JSON schema if available for the chart. Ensure YAML syntax correctness with linters.
-3. Standard Workflow: Identify chart name and exact version. Fetch official documentation from Artifact Hub/GitHub. Check for available schemas and validation tools. Write values according to official documentation. Validate against schema (if available). Test with helm template or helm lint. Commit validated YAML files.
-4. Quality Assurance: Never commit unvalidated Helm values. Use helm dependency update when adding new charts. Test rendering with helm template --dry-run before deployment. Document any custom values with comments referencing official docs.
-
-#### app
-Expo + React Native applications with props-first architecture and offline awareness.
-
-**Use when:**
-- Mobile app development with Expo
-- React Native projects in /apps/app
-- Cross-platform mobile development
-
-**Key features:**
-- Shared design tokens with frontend
-- Offline-first architecture
-- Expo integration
+| Agent | Description | Temperature |
+|-------|-------------|-------------|
+| fullstack | Router/coordinator for full-stack development | 0.3 |
+| frontend | Scandinavian, type-safe UIs with React, Tailwind, Shadcn | 0.4 |
+| backend | Functional, modular Koa + TypeScript services | 0.3 |
+| devops | Declarative GitOps infra with FluxCD, Kustomize, Helm | 0.3 |
+| app | Expo + React Native apps; props-first, offline-aware | 0.4 |
 
 ### Subagents
 
-#### security
-Security specialist for penetration testing, OWASP compliance, and vulnerability assessments.
-
-**Use when:**
-- Need security review of code changes
-- OWASP Top 10 compliance checks
-- Vulnerability assessments
-
-**Key features:**
-- OWASP standards compliance
-- Security best practices
-- Actionable remediation strategies
-
-#### quality
-Quality assurance specialist for testing, building, and PR management.
-
-**Use when:**
-- Need to run test suites and build processes
-- Creating or updating pull requests
-- Monitoring GitHub for reviewer comments
-- Ensuring code quality standards
-
-**Key features:**
-- Comprehensive testing and building workflows
-- PR creation and management
-- GitHub integration for reviewer feedback
-- CLI command expertise for quality assurance
+| Agent | Description | Temperature |
+|-------|-------------|-------------|
+| security | Security specialist for pentesting and OWASP compliance | 0.2 |
+| quality | QA specialist for testing, building, and PR management | 0.1 |
 
 ## Usage
 
-### Switching Agents
-Use the \`<tab>\` key to cycle through primary agents during a session.
-
-### Manual Agent Selection
-Use commands to switch to specific agents:
-- \`/fullstack\` - Switch to Fullstack agent
-- \`/frontend\` - Switch to Frontend agent  
-- \`/backend\` - Switch to Backend agent
-- \`/devops\` - Switch to DevOps agent
-- \`/app\` - Switch to App agent
-- \`/quality\` - Switch to Quality agent for testing and PR management
-
-### Using Subagents
-Mention subagents with \`@\` symbol:
-- \`@security review this authentication implementation\`
-- \`@quality run tests and create PR for these changes\`
+- **Tab** key to cycle between primary agents
+- **@mention** to invoke subagents (e.g. \`@security review this code\`)
+- \`/fullstack\`, \`/frontend\`, \`/backend\`, \`/devops\`, \`/app\` to switch agents
 
 ## Routing Rules
 
 The fullstack agent automatically routes tasks based on file patterns:
 
 - \`/apps/frontend\` or \`.tsx\` files → frontend
-- \`/apps/app\` or Expo/React Native → app  
+- \`/apps/app\` or Expo/React Native → app
 - \`/infra\`, \`/k8s\`, FluxCD, Helm → devops
 - \`/services\`, Koa routers → backend
 
-## Configuration
+## Customization
 
-All agents are configured in \`opencode.json\` with:
-- Specialized prompts and temperature settings
-- Appropriate tool permissions
-- Model optimizations for their specific tasks
-
-## Environment Setup
-
-Authentication is handled by the Berget plugin. Run \`/connect\` in OpenCode to authenticate.
-
-## Workflow
-
-All agents follow these principles:
-- Never work directly in main branch
-- Follow branch strategy and commit conventions
-- Create PRs for new functionality
-- Run tests before committing
-- Address reviewer feedback promptly
+Edit the markdown files in \`.opencode/agents/\` to customize agent behavior.
+See https://opencode.ai/docs/agents/ for available options.
 
 ---
 
@@ -1221,27 +784,14 @@ All agents follow these principles:
 `
 
               await writeFile(agentsMdPath, agentsMdContent)
-              console.log(chalk.green('✓ Updated AGENTS.md documentation'))
+              console.log(chalk.green('✓ Created AGENTS.md documentation'))
             }
 
             console.log(chalk.green('\n✅ Update completed successfully!'))
-            console.log(chalk.blue('New features available:'))
-            console.log(
-              chalk.cyan('  • @quality subagent for testing and PR management')
-            )
-            console.log(
-              chalk.cyan('  • @security subagent for security reviews')
-            )
-            console.log(chalk.cyan('  • Improved agent prompts and routing'))
-            console.log(chalk.cyan('  • GLM-4.7 token optimizations'))
-            console.log(chalk.blue('\nTry these new commands:'))
-            console.log(chalk.cyan('  @quality run tests and create PR'))
-            console.log(chalk.cyan('  @security review this code'))
           } catch (error) {
             console.error(chalk.red('Failed to update configuration:'))
             handleError('Update failed', error)
 
-            // Restore from backup if update failed
             try {
               await writeFile(
                 configPath,
@@ -1262,3 +812,4 @@ All agents follow these principles:
       }
     })
 }
+
