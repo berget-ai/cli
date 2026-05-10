@@ -40,6 +40,7 @@ export const SUBCOMMANDS = {
     RUN: 'run',
     UPDATE: 'update',
     SERVE: 'serve',
+    SETUP: 'setup',
   },
 
   // API Keys commands
@@ -231,6 +232,8 @@ export const COMMAND_DESCRIPTIONS = {
 
   // Code group
   [COMMAND_GROUPS.CODE]: 'AI-powered coding assistant with OpenCode',
+  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.SETUP}`]:
+    'Interactive setup for Berget AI coding tools',
   [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`]:
     'Initialize project for AI coding assistant',
   [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`]: 'Run AI coding assistant',
