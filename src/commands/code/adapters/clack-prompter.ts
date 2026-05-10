@@ -24,7 +24,7 @@ export class ClackPrompter implements Prompter {
 			stop: (msg: string) => s.stop(msg),
 		}
 	}
-	select<T>(opts: {
+	async select<T>(opts: {
 		message: string
 		options: ReadonlyArray<{
 			value: T
@@ -32,12 +32,12 @@ export class ClackPrompter implements Prompter {
 			hint?: string
 		}>
 	}): Promise<T> {
-		return unwrap(p.select(opts as any)) as Promise<T>
+		return unwrap(await p.select(opts as any))
 	}
-	confirm(opts: {
+	async confirm(opts: {
 		message: string
 		initialValue?: boolean
 	}): Promise<boolean> {
-		return unwrap(p.confirm(opts)) as Promise<boolean>
+		return unwrap(await p.confirm(opts))
 	}
 }

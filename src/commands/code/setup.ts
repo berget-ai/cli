@@ -2,6 +2,7 @@ import type { Prompter } from './ports/prompter'
 import type { FileStore } from './ports/file-store'
 import type { CommandRunner } from './ports/command-runner'
 import { CancelledError, CommandFailedError, PrerequisiteError } from './errors'
+import { modify, parse, applyEdits } from 'jsonc-parser'
 
 const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.16'
 const PI_PROVIDER = 'npm:@bergetai/pi-provider'
@@ -82,15 +83,11 @@ async function setupOpenCode(deps: {
 	scope: 'project' | 'global'
 }): Promise<void> {
 	const { prompter, files, commands, homeDir, cwd, scope } = deps
-	const s = prompter.spinner()
 
-	s.start('Checking if OpenCode CLI is installed...')
 	const installed = await commands.checkInstalled('opencode')
 	if (!installed) {
-		s.stop("OpenCode CLI isn't installed. Please install OpenCode before continuing.")
 		throw new PrerequisiteError('opencode')
 	}
-	s.stop('OpenCode CLI found.')
 
 	const state = await getOpencodeState(files, homeDir, cwd)
 	const alreadyConfigured = scope === 'project' ? state.project : state.global
@@ -103,22 +100,33 @@ async function setupOpenCode(deps: {
 		if (!shouldReconfigure) throw new CancelledError()
 	}
 
-	let existingPath: string | null = null
-	if (scope === 'project') {
-		const jsoncPath = pathJoin(cwd, 'opencode.jsonc')
-		const jsonPath = pathJoin(cwd, 'opencode.json')
-		if (await files.exists(jsoncPath)) existingPath = jsoncPath
-		else if (await files.exists(jsonPath)) existingPath = jsonPath
-	} else {
-		const jsoncPath = pathJoin(homeDir, '.config', 'opencode', 'opencode.jsonc')
-		const jsonPath = pathJoin(homeDir, '.config', 'opencode', 'opencode.json')
-		if (await files.exists(jsoncPath)) existingPath = jsoncPath
-		else if (await files.exists(jsonPath)) existingPath = jsonPath
+	const configPath = await resolveOpencodeConfigPath(files, homeDir, cwd, scope)
+	const existingContent = await files.readFile(configPath)
+	const newContent = generateModifiedContent(existingContent, configPath)
+
+	if (existingContent && existingContent === newContent) {
+		prompter.note(`No changes needed.\n\n${configPath} is already up to date.`, '\u2705 Berget AI')
+		return
 	}
 
+	if (existingContent) {
+		prompter.note(generateDiff(existingContent, newContent, configPath), 'Changes to be written')
+	} else {
+		prompter.note(`New config at ${configPath}:\n\n${newContent}`, 'Config preview')
+	}
+
+	const shouldWrite = await prompter.confirm({
+		message: existingContent
+			? `Write these changes to ${configPath}?`
+			: `Create ${configPath}?`,
+		initialValue: true,
+	})
+	if (!shouldWrite) throw new CancelledError()
+
+	const s = prompter.spinner()
 	s.start('Writing OpenCode configuration...')
-	const configPath = await updateOpencodeConfig(files, homeDir, cwd, existingPath, scope)
-	s.stop(`Configuration written to ${configPath}.`)
+	await files.writeFile(configPath, newContent)
+	s.stop(`Wrote configuration to ${configPath}.`)
 }
 
 // ─── Pi ────────────────────────────────────────────────────────────────────────
@@ -134,13 +142,10 @@ async function setupPi(deps: {
 	const { prompter, files, commands, homeDir, cwd, scope } = deps
 	const s = prompter.spinner()
 
-	s.start('Checking if Pi CLI is installed...')
 	const installed = await commands.checkInstalled('pi')
 	if (!installed) {
-		s.stop("Pi CLI isn't installed. Please install Pi before continuing.")
 		throw new PrerequisiteError('pi')
 	}
-	s.stop('Pi CLI found.')
 
 	const state = await getPiState(files, homeDir, cwd)
 	const alreadyConfigured = scope === 'project' ? state.project : state.global
@@ -160,9 +165,9 @@ async function setupPi(deps: {
 	s.start(`Installing Berget AI provider for Pi...`)
 	try {
 		await commands.run('pi', installArgs)
-		s.stop('Provider installed.')
+		s.stop('Installed Pi provider.')
 	} catch (err: any) {
-		s.stop('Provider installation failed. Please try again or install manually.')
+		s.stop('Pi provider installation failed. Please try again or install manually.')
 		throw new CommandFailedError(`pi ${installArgs.join(' ')}`, 1)
 	}
 
@@ -205,6 +210,23 @@ function stripJsoncComments(content: string): string {
 	content = content.replace(/\/\/.*$/gm, '')
 	content = content.replace(/\/\*[\s\S]*?\*\//g, '')
 	return content
+}
+
+function generateDiff(oldText: string, newText: string, filePath: string): string {
+	const oldLines = oldText.split('\n')
+	const newLines = newText.split('\n')
+	let result = `--- ${filePath}\n+++ ${filePath}\n`
+
+	const maxLen = Math.max(oldLines.length, newLines.length)
+	for (let i = 0; i < maxLen; i++) {
+		const oldLine = oldLines[i]
+		const newLine = newLines[i]
+		if (oldLine !== newLine) {
+			if (oldLine !== undefined) result += `- ${oldLine}\n`
+			if (newLine !== undefined) result += `+ ${newLine}\n`
+		}
+	}
+	return result.trimEnd()
 }
 
 async function readJsonMaybe(files: FileStore, filePath: string): Promise<any | null> {
@@ -285,53 +307,80 @@ function getPiLabel(state: { project: boolean; global: boolean }): string {
 	return ''
 }
 
-async function updateOpencodeConfig(
+async function resolveOpencodeConfigPath(
 	files: FileStore,
 	homeDir: string,
 	cwd: string,
-	existingPath: string | null,
 	scope: 'project' | 'global'
 ): Promise<string> {
-	let config: Record<string, any> = {}
-	let configPath: string
-
 	if (scope === 'project') {
 		const jsoncPath = pathJoin(cwd, 'opencode.jsonc')
 		const jsonPath = pathJoin(cwd, 'opencode.json')
-
-		if (existingPath && await files.exists(existingPath)) {
-			configPath = existingPath
-		} else if (await files.exists(jsoncPath)) {
-			configPath = jsoncPath
-		} else if (await files.exists(jsonPath)) {
-			configPath = jsonPath
-		} else {
-			configPath = jsonPath
-		}
+		if (await files.exists(jsoncPath)) return jsoncPath
+		if (await files.exists(jsonPath)) return jsonPath
+		return jsonPath
 	} else {
 		const globalDir = pathJoin(homeDir, '.config', 'opencode')
 		const jsoncPath = pathJoin(globalDir, 'opencode.jsonc')
 		const jsonPath = pathJoin(globalDir, 'opencode.json')
+		if (await files.exists(jsoncPath)) return jsoncPath
+		if (await files.exists(jsonPath)) return jsonPath
+		return jsonPath
+	}
+}
 
-		if (existingPath && await files.exists(existingPath)) {
-			configPath = existingPath
-		} else if (await files.exists(jsoncPath)) {
-			configPath = jsoncPath
-		} else if (await files.exists(jsonPath)) {
-			configPath = jsonPath
-		} else {
-			configPath = jsonPath
+function generateModifiedContent(existingContent: string | null, configPath: string): string {
+	if (configPath.endsWith('.jsonc')) {
+		const content = existingContent || '{}'
+		const parseErrors: any[] = []
+		const parsed = parse(content, parseErrors, { allowTrailingComma: true, disallowComments: false })
+
+		let jsConfig: Record<string, any> = {}
+		const canModifyText =
+			parsed !== undefined &&
+			typeof parsed === 'object' &&
+			parsed !== null &&
+			!Array.isArray(parsed)
+
+		if (canModifyText) {
+			jsConfig = parsed as Record<string, any>
 		}
+
+		const pluginsKey = jsConfig.plugins !== undefined ? 'plugins' : 'plugin'
+		const existing: string[] = jsConfig[pluginsKey] || []
+		const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME))
+		filtered.push(OPENCODE_PLUGIN)
+
+		if (canModifyText) {
+			let modifiedContent = content
+			const pluginEdits = modify(modifiedContent, [pluginsKey], filtered, {
+				formattingOptions: { insertSpaces: true, tabSize: 2 },
+			})
+			modifiedContent = applyEdits(modifiedContent, pluginEdits)
+
+			if (!jsConfig.$schema) {
+				const schemaEdits = modify(modifiedContent, ['$schema'], 'https://opencode.ai/config.json', {
+					formattingOptions: { insertSpaces: true, tabSize: 2 },
+				})
+				modifiedContent = applyEdits(modifiedContent, schemaEdits)
+			}
+
+			return modifiedContent
+		}
+
+		// Malformed, empty, or non-object JSONC — write a clean config
+		const config: Record<string, any> = {
+			[pluginsKey]: filtered,
+			$schema: 'https://opencode.ai/config.json',
+		}
+		return JSON.stringify(config, null, 2) + '\n'
 	}
 
-	const content = await files.readFile(configPath)
-	if (content) {
+	// Plain JSON
+	let config: Record<string, any> = {}
+	if (existingContent) {
 		try {
-			if (configPath.endsWith('.jsonc')) {
-				config = JSON.parse(stripJsoncComments(content))
-			} else {
-				config = JSON.parse(content)
-			}
+			config = JSON.parse(existingContent)
 		} catch {
 			// ignore malformed, overwrite
 		}
@@ -344,8 +393,7 @@ async function updateOpencodeConfig(
 	config[pluginsKey] = filtered
 	config.$schema = config.$schema || 'https://opencode.ai/config.json'
 
-	await writeJsonFile(files, configPath, config)
-	return configPath
+	return JSON.stringify(config, null, 2) + '\n'
 }
 
 // ─── Production CLI entry point ──────────────────────────────────────────────
