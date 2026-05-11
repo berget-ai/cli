@@ -38,7 +38,7 @@ export interface components {
       /** @description API key prefix (for display purposes) */
       prefix: string;
     };
-    ApiKeyListResponse: components["schemas"]["ApiKey"][];
+    ApiKeyListResponse: components['schemas']['ApiKey'][];
     ApiKeyModelUsage: {
       /** @description Model identifier */
       id: string;
@@ -93,7 +93,7 @@ export interface components {
       /** @description API key ID */
       id: number;
       /** @description Usage statistics per model */
-      models: components["schemas"]["ApiKeyModelUsage"][];
+      models: components['schemas']['ApiKeyModelUsage'][];
       /** @description API key name */
       name: string;
       /** @description Time period for the usage data */
@@ -106,7 +106,7 @@ export interface components {
       /** @description Request statistics */
       requests: {
         /** @description Daily request counts */
-        daily: components["schemas"]["ApiKeyUsageEntry"][];
+        daily: components['schemas']['ApiKeyUsageEntry'][];
         /** @description Total number of requests */
         total: number;
       };
@@ -132,7 +132,7 @@ export interface components {
        * @description Installation status
        * @enum {string}
        */
-      status: "failed" | "installing" | "pending" | "running";
+      status: 'failed' | 'installing' | 'pending' | 'running';
       /** @description Access URL if available */
       url?: string;
     };
@@ -158,12 +158,12 @@ export interface components {
          * @description Installation status
          * @enum {string}
          */
-        status: "failed" | "installing" | "pending" | "running";
+        status: 'failed' | 'installing' | 'pending' | 'running';
         /** @description Access URL if available */
         url?: string;
       }[];
       /** @enum {string} */
-      object: "list";
+      object: 'list';
     };
     AppInstallRequest: {
       /** @description ID of the app to install */
@@ -192,7 +192,7 @@ export interface components {
              * @description String input type
              * @enum {string}
              */
-            type: "string";
+            type: 'string';
           },
           {
             /** @description Default value if any */
@@ -205,7 +205,7 @@ export interface components {
              * @description Number input type
              * @enum {string}
              */
-            type: "number";
+            type: 'number';
           },
           {
             /** @description Default value if any */
@@ -218,7 +218,7 @@ export interface components {
              * @description Boolean toggle type
              * @enum {string}
              */
-            type: "boolean";
+            type: 'boolean';
           },
           {
             /** @description Default selected option */
@@ -233,7 +233,7 @@ export interface components {
              * @description Dropdown select type
              * @enum {string}
              */
-            type: "select";
+            type: 'select';
           },
           {
             /** @description Default value if any */
@@ -246,7 +246,7 @@ export interface components {
              * @description Password input type
              * @enum {string}
              */
-            type: "password";
+            type: 'password';
           },
         ]
       >[];
@@ -303,7 +303,7 @@ export interface components {
                * @description String input type
                * @enum {string}
                */
-              type: "string";
+              type: 'string';
             },
             {
               /** @description Default value if any */
@@ -316,7 +316,7 @@ export interface components {
                * @description Number input type
                * @enum {string}
                */
-              type: "number";
+              type: 'number';
             },
             {
               /** @description Default value if any */
@@ -329,7 +329,7 @@ export interface components {
                * @description Boolean toggle type
                * @enum {string}
                */
-              type: "boolean";
+              type: 'boolean';
             },
             {
               /** @description Default selected option */
@@ -344,7 +344,7 @@ export interface components {
                * @description Dropdown select type
                * @enum {string}
                */
-              type: "select";
+              type: 'select';
             },
             {
               /** @description Default value if any */
@@ -357,7 +357,7 @@ export interface components {
                * @description Password input type
                * @enum {string}
                */
-              type: "password";
+              type: 'password';
             },
           ]
         >[];
@@ -397,7 +397,7 @@ export interface components {
         };
       }[];
       /** @enum {string} */
-      object: "list";
+      object: 'list';
     };
     AuthToken: {
       accessToken: string;
@@ -412,7 +412,7 @@ export interface components {
     ChatCompletionRequest: {
       /** @default 4096 */
       max_tokens?: number;
-      messages: components["schemas"]["ChatMessage"][];
+      messages: components['schemas']['ChatMessage'][];
       model: string;
       /** @default false */
       stream?: boolean;
@@ -423,13 +423,13 @@ export interface components {
     ChatCompletionResponse: {
       choices: {
         /** @enum {string} */
-        finish_reason: "content_filter" | "length" | "stop";
+        finish_reason: 'content_filter' | 'length' | 'stop';
         index: number;
         message: {
           /** @description The model's response */
           content: string;
           /** @enum {string} */
-          role: "assistant";
+          role: 'assistant';
         };
       }[];
       /** @description Unix timestamp of when the completion was created */
@@ -439,7 +439,7 @@ export interface components {
       /** @description The model used for completion */
       model: string;
       /** @enum {string} */
-      object: "chat.completion";
+      object: 'chat.completion';
       usage: {
         completion_tokens: number;
         prompt_tokens: number;
@@ -452,7 +452,7 @@ export interface components {
        * @default user
        * @enum {string}
        */
-      role?: "assistant" | "system" | "user";
+      role?: 'assistant' | 'system' | 'user';
     };
     Cluster: {
       /**
@@ -474,7 +474,7 @@ export interface components {
        * @description Current status of the cluster
        * @enum {string}
        */
-      status: "degraded" | "healthy" | "unhealthy" | "unknown";
+      status: 'degraded' | 'healthy' | 'unhealthy' | 'unknown';
       /** @description Kubernetes version */
       version: string;
     };
@@ -494,12 +494,12 @@ export interface components {
       total: number;
     };
     /** @description Detailed cost breakdown with daily data */
-    ClusterCostWithDaily: components["schemas"]["ClusterCost"] & {
+    ClusterCostWithDaily: components['schemas']['ClusterCost'] & {
       /** @description Daily cost breakdown */
-      daily: components["schemas"]["DailyCost"][];
+      daily: components['schemas']['DailyCost'][];
     };
     ClusterDetailedUsage: {
-      cost: components["schemas"]["ClusterCostWithDaily"];
+      cost: components['schemas']['ClusterCostWithDaily'];
       /** @description Unique cluster identifier */
       id: string;
       /** @description Cluster name */
@@ -515,21 +515,21 @@ export interface components {
       };
       /** @description Detailed resource usage metrics with trends */
       resources: {
-        cpu: components["schemas"]["ResourceMetricWithTrend"];
-        memory: components["schemas"]["ResourceMetricWithTrend"];
-        storage: components["schemas"]["ResourceMetricWithTrend"];
+        cpu: components['schemas']['ResourceMetricWithTrend'];
+        memory: components['schemas']['ResourceMetricWithTrend'];
+        storage: components['schemas']['ResourceMetricWithTrend'];
       };
       /** @description Current cluster status */
       status: string;
     };
     ClusterList: {
-      data: components["schemas"]["Cluster"][];
+      data: components['schemas']['Cluster'][];
       /** @enum {string} */
-      object: "list";
+      object: 'list';
     };
     ClustersUsageResponse: {
       /** @description List of clusters with usage data */
-      clusters: components["schemas"]["ClusterUsage"][];
+      clusters: components['schemas']['ClusterUsage'][];
       /** @description Time period for the usage data */
       period: {
         /** @description End date of the period (YYYY-MM-DD) */
@@ -557,7 +557,7 @@ export interface components {
       };
     };
     ClusterUsage: {
-      cost: components["schemas"]["ClusterCost"];
+      cost: components['schemas']['ClusterCost'];
       /** @description Unique cluster identifier */
       id: string;
       /** @description Cluster name */
@@ -566,9 +566,9 @@ export interface components {
       nodes: number;
       /** @description Resource usage metrics */
       resources: {
-        cpu: components["schemas"]["ResourceMetric"];
-        memory: components["schemas"]["ResourceMetric"];
-        storage: components["schemas"]["ResourceMetric"];
+        cpu: components['schemas']['ResourceMetric'];
+        memory: components['schemas']['ResourceMetric'];
+        storage: components['schemas']['ResourceMetric'];
       };
       /** @description Current cluster status */
       status: string;
@@ -598,7 +598,7 @@ export interface components {
       setDefault?: boolean;
       token: string;
       /** @enum {string} */
-      type: "card" | "sepa";
+      type: 'card' | 'sepa';
     };
     CreateUser: {
       company_id: number;
@@ -607,12 +607,12 @@ export interface components {
       name: string;
       phone: null | string;
       /** @enum {string} */
-      role: "admin" | "member";
+      role: 'admin' | 'member';
       settings?: {
         language?: string;
         notifications: boolean;
         /** @enum {string} */
-        theme?: "dark" | "light" | "system";
+        theme?: 'dark' | 'light' | 'system';
         timezone: string;
       };
     };
@@ -631,7 +631,7 @@ export interface components {
       total: number;
     };
     DailyTokenUsage: {
-      cost: components["schemas"]["TokenCost"];
+      cost: components['schemas']['TokenCost'];
       /** @description Usage date in YYYY-MM-DD format */
       date: string;
       /** @description Number of input tokens used */
@@ -660,7 +660,7 @@ export interface components {
        * @description Authentication is still pending
        * @enum {string}
        */
-      status: "pending";
+      status: 'pending';
     };
     DeviceAuthRequest: {
       /** @description The device code obtained from the device authorization request */
@@ -700,7 +700,7 @@ export interface components {
        * @description Role to assign to the new team member
        * @enum {string}
        */
-      role: "admin" | "member";
+      role: 'admin' | 'member';
     };
     Invoice: {
       amount: number;
@@ -719,7 +719,7 @@ export interface components {
       issuingDate: string;
       number: string;
       /** @enum {string} */
-      paymentStatus: "failed" | "pending" | "succeeded";
+      paymentStatus: 'failed' | 'pending' | 'succeeded';
     };
     Model: {
       /** @description Whether the model is active */
@@ -731,14 +731,14 @@ export interface components {
       /** @description Name of the model */
       name: string;
     };
-    ModelList: components["schemas"]["Model"][];
+    ModelList: components['schemas']['Model'][];
     ModelTokenUsageResponse: {
       /** @description Model identifier */
       model: string;
-      period: components["schemas"]["TokenUsagePeriod"];
-      total: components["schemas"]["TokenUsageTotal"];
+      period: components['schemas']['TokenUsagePeriod'];
+      total: components['schemas']['TokenUsageTotal'];
       /** @description Daily token usage data */
-      usage: components["schemas"]["DailyTokenUsage"][];
+      usage: components['schemas']['DailyTokenUsage'][];
     };
     PaymentMethod: {
       brand?: string;
@@ -748,7 +748,7 @@ export interface components {
       isDefault: boolean;
       last4: string;
       /** @enum {string} */
-      type: "card" | "sepa";
+      type: 'card' | 'sepa';
     };
     RefreshTokenRequest: {
       /** @description Whether this is a device token */
@@ -776,7 +776,7 @@ export interface components {
       /** @description Currently used resources */
       used: number;
     };
-    ResourceMetricWithTrend: components["schemas"]["ResourceMetric"] & {
+    ResourceMetricWithTrend: components['schemas']['ResourceMetric'] & {
       /** @description Historical usage trend data */
       usage_trend: {
         /** @description Date in YYYY-MM-DD format */
@@ -800,14 +800,14 @@ export interface components {
       start: string;
     };
     TokenUsageResponse: {
-      period: components["schemas"]["TokenUsagePeriod"];
-      total: components["schemas"]["TokenUsageTotal"];
+      period: components['schemas']['TokenUsagePeriod'];
+      total: components['schemas']['TokenUsageTotal'];
       /** @description Daily token usage data */
-      usage: components["schemas"]["DailyTokenUsage"][];
+      usage: components['schemas']['DailyTokenUsage'][];
     };
     /** @description Aggregated usage totals */
     TokenUsageTotal: {
-      cost: components["schemas"]["TokenCost"];
+      cost: components['schemas']['TokenCost'];
       /** @description Total input tokens for the period */
       input_tokens: number;
       /** @description Total output tokens for the period */
@@ -828,7 +828,7 @@ export interface components {
         language?: string;
         notifications: boolean;
         /** @enum {string} */
-        theme?: "dark" | "light" | "system";
+        theme?: 'dark' | 'light' | 'system';
         timezone: string;
       };
     };
@@ -917,7 +917,7 @@ export interface components {
        * @description User role determining permissions
        * @enum {string}
        */
-      role: "admin" | "member";
+      role: 'admin' | 'member';
       /** @description User preferences and settings */
       settings?: {
         /** @description Preferred interface language */
@@ -928,7 +928,7 @@ export interface components {
          * @description UI theme preference
          * @enum {string}
          */
-        theme?: "dark" | "light" | "system";
+        theme?: 'dark' | 'light' | 'system';
         /** @description User's preferred timezone */
         timezone: string;
       };
@@ -945,7 +945,7 @@ export type external = Record<string, never>;
 export type operations = Record<string, never>;
 
 export interface paths {
-  "/v1/api-keys": {
+  '/v1/api-keys': {
     /**
      * List all API keys
      * @description Lists all API keys for the authenticated user's organization.
@@ -969,7 +969,7 @@ export interface paths {
         /** @description List of API keys */
         200: {
           content: {
-            "application/json": components["schemas"]["ApiKeyListResponse"];
+            'application/json': components['schemas']['ApiKeyListResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1000,14 +1000,14 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateApiKey"];
+          'application/json': components['schemas']['CreateApiKey'];
         };
       };
       responses: {
         /** @description API key created successfully */
         201: {
           content: {
-            "application/json": components["schemas"]["CreateApiKeyResponse"];
+            'application/json': components['schemas']['CreateApiKeyResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1021,7 +1021,7 @@ export interface paths {
       };
     };
   };
-  "/v1/api-keys/{id}": {
+  '/v1/api-keys/{id}': {
     /**
      * Delete an API key
      * @description Permanently deletes an API key
@@ -1053,7 +1053,7 @@ export interface paths {
       };
     };
   };
-  "/v1/api-keys/{id}/rotate": {
+  '/v1/api-keys/{id}/rotate': {
     /**
      * Rotate an API key
      * @description Rotates an API key by invalidating the old key and generating a new one. The new key is returned in the response and is only shown once.
@@ -1084,7 +1084,7 @@ export interface paths {
         /** @description API key rotated successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["CreateApiKeyResponse"];
+            'application/json': components['schemas']['CreateApiKeyResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1102,7 +1102,7 @@ export interface paths {
       };
     };
   };
-  "/v1/api-keys/{id}/usage": {
+  '/v1/api-keys/{id}/usage': {
     /**
      * Get API key usage statistics
      * @description Returns usage statistics for a specific API key including request count, daily breakdown, model-specific usage, and token consumption.
@@ -1138,7 +1138,7 @@ export interface paths {
         /** @description API key usage statistics */
         200: {
           content: {
-            "application/json": components["schemas"]["ApiKeyUsageResponse"];
+            'application/json': components['schemas']['ApiKeyUsageResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1156,7 +1156,7 @@ export interface paths {
       };
     };
   };
-  "/v1/apps/installations": {
+  '/v1/apps/installations': {
     /**
      * List app installations
      * @description Retrieves a list of all installed applications in your clusters
@@ -1166,7 +1166,7 @@ export interface paths {
         /** @description List of app installations */
         200: {
           content: {
-            "application/json": components["schemas"]["AppInstallationList"];
+            'application/json': components['schemas']['AppInstallationList'];
           };
         };
         /** @description Unauthorized */
@@ -1186,14 +1186,14 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["AppInstallRequest"];
+          'application/json': components['schemas']['AppInstallRequest'];
         };
       };
       responses: {
         /** @description App installation initiated */
         201: {
           content: {
-            "application/json": components["schemas"]["AppInstallation"];
+            'application/json': components['schemas']['AppInstallation'];
           };
         };
         /** @description Invalid request */
@@ -1215,7 +1215,7 @@ export interface paths {
       };
     };
   };
-  "/v1/apps/installations/{installationId}": {
+  '/v1/apps/installations/{installationId}': {
     /**
      * Uninstall an app
      * @description Removes an installed application from your cluster
@@ -1261,7 +1261,7 @@ export interface paths {
         /** @description Installation details */
         200: {
           content: {
-            "application/json": components["schemas"]["AppInstallation"];
+            'application/json': components['schemas']['AppInstallation'];
           };
         };
         /** @description Unauthorized */
@@ -1279,7 +1279,7 @@ export interface paths {
       };
     };
   };
-  "/v1/apps/templates": {
+  '/v1/apps/templates': {
     /**
      * List app templates
      * @description Retrieves a list of all available application templates that can be installed in your cluster
@@ -1289,7 +1289,7 @@ export interface paths {
         /** @description List of app templates */
         200: {
           content: {
-            "application/json": components["schemas"]["AppTemplateList"];
+            'application/json': components['schemas']['AppTemplateList'];
           };
         };
         /** @description Unauthorized */
@@ -1303,7 +1303,7 @@ export interface paths {
       };
     };
   };
-  "/v1/apps/templates/{appId}": {
+  '/v1/apps/templates/{appId}': {
     /**
      * Get app template details
      * @description Retrieves detailed information about a specific app template
@@ -1319,7 +1319,7 @@ export interface paths {
         /** @description App template details */
         200: {
           content: {
-            "application/json": components["schemas"]["AppTemplate"];
+            'application/json': components['schemas']['AppTemplate'];
           };
         };
         /** @description Unauthorized */
@@ -1337,7 +1337,7 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/callback": {
+  '/v1/auth/callback': {
     /**
      * OAuth callback
      * @description Handles Keycloak login callback and exchanges token
@@ -1357,7 +1357,7 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/device": {
+  '/v1/auth/device': {
     /**
      * Initiate device authorization flow
      * @description Initiates the device authorization flow, returning a device code and user verification URL.
@@ -1376,13 +1376,13 @@ export interface paths {
         /** @description Device authorization initiated */
         200: {
           content: {
-            "application/json": components["schemas"]["DeviceAuthInitResponse"];
+            'application/json': components['schemas']['DeviceAuthInitResponse'];
           };
         };
       };
     };
   };
-  "/v1/auth/device/token": {
+  '/v1/auth/device/token': {
     /**
      * Poll for device token
      * @description Polls for the status of a device authorization flow. The client should poll this endpoint
@@ -1406,16 +1406,16 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["DeviceAuthRequest"];
+          'application/json': components['schemas']['DeviceAuthRequest'];
         };
       };
       responses: {
         /** @description Token returned or pending status */
         200: {
           content: {
-            "application/json":
-              | components["schemas"]["DeviceAuthPendingResponse"]
-              | components["schemas"]["DeviceAuthTokenResponse"];
+            'application/json':
+              | components['schemas']['DeviceAuthPendingResponse']
+              | components['schemas']['DeviceAuthTokenResponse'];
           };
         };
         /** @description Invalid device code or expired token */
@@ -1433,7 +1433,7 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/login": {
+  '/v1/auth/login': {
     /**
      * OAuth login
      * @description Initiates OAuth login flow via Keycloak.
@@ -1456,7 +1456,7 @@ export interface paths {
           /** @description URL to redirect to after successful login */
           redirect_uri?: string;
           /** @description How to return the token after successful login (default is redirect) */
-          response_type?: "json" | "redirect";
+          response_type?: 'json' | 'redirect';
         };
       };
       responses: {
@@ -1467,7 +1467,7 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/logout": {
+  '/v1/auth/logout': {
     /**
      * Logout
      * @description Clears cookies and redirects to Keycloak logout
@@ -1486,7 +1486,7 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/refresh": {
+  '/v1/auth/refresh': {
     /**
      * Refresh access token
      * @description Refreshes an access token using a refresh token. This endpoint can be used to obtain a new
@@ -1503,14 +1503,14 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["RefreshTokenRequest"];
+          'application/json': components['schemas']['RefreshTokenRequest'];
         };
       };
       responses: {
         /** @description New access and refresh tokens */
         200: {
           content: {
-            "application/json": components["schemas"]["RefreshTokenResponse"];
+            'application/json': components['schemas']['RefreshTokenResponse'];
           };
         };
         /** @description Invalid or expired refresh token */
@@ -1520,14 +1520,14 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/register-url": {
+  '/v1/auth/register-url': {
     /** Get Keycloak registration URL */
     get: {
       responses: {
         /** @description Registration URL returned */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               url?: string;
             };
           };
@@ -1535,7 +1535,7 @@ export interface paths {
       };
     };
   };
-  "/v1/billing/invoices": {
+  '/v1/billing/invoices': {
     /**
      * List invoices
      * @description Retrieves all invoices for the authenticated user
@@ -1545,15 +1545,15 @@ export interface paths {
         /** @description List of invoices */
         200: {
           content: {
-            "application/json": {
-              invoices?: components["schemas"]["Invoice"][];
+            'application/json': {
+              invoices?: components['schemas']['Invoice'][];
             };
           };
         };
       };
     };
   };
-  "/v1/billing/invoices/{id}": {
+  '/v1/billing/invoices/{id}': {
     /**
      * Get invoice details
      * @description Retrieves details for a specific invoice
@@ -1568,13 +1568,13 @@ export interface paths {
         /** @description Invoice details */
         200: {
           content: {
-            "application/json": components["schemas"]["Invoice"];
+            'application/json': components['schemas']['Invoice'];
           };
         };
       };
     };
   };
-  "/v1/billing/payment-methods": {
+  '/v1/billing/payment-methods': {
     /**
      * List payment methods
      * @description Retrieves all payment methods for the authenticated user
@@ -1584,8 +1584,8 @@ export interface paths {
         /** @description List of payment methods */
         200: {
           content: {
-            "application/json": {
-              paymentMethods?: components["schemas"]["PaymentMethod"][];
+            'application/json': {
+              paymentMethods?: components['schemas']['PaymentMethod'][];
             };
           };
         };
@@ -1598,20 +1598,20 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreatePaymentMethod"];
+          'application/json': components['schemas']['CreatePaymentMethod'];
         };
       };
       responses: {
         /** @description Payment method added */
         201: {
           content: {
-            "application/json": components["schemas"]["PaymentMethod"];
+            'application/json': components['schemas']['PaymentMethod'];
           };
         };
       };
     };
   };
-  "/v1/billing/payment-methods/{id}": {
+  '/v1/billing/payment-methods/{id}': {
     /**
      * Remove payment method
      * @description Removes a payment method for the authenticated user
@@ -1630,7 +1630,7 @@ export interface paths {
       };
     };
   };
-  "/v1/billing/subscription": {
+  '/v1/billing/subscription': {
     /**
      * Update subscription
      * @description Updates the subscription plan for the authenticated user
@@ -1638,7 +1638,7 @@ export interface paths {
     put: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateSubscription"];
+          'application/json': components['schemas']['UpdateSubscription'];
         };
       };
       responses: {
@@ -1649,7 +1649,7 @@ export interface paths {
       };
     };
   };
-  "/v1/billing/usage": {
+  '/v1/billing/usage': {
     /**
      * Get current usage
      * @description Retrieves current billing period usage metrics and costs. Shows detailed breakdown of API calls, compute resources, and other billable items. This helps you understand your current billing status.
@@ -1659,13 +1659,13 @@ export interface paths {
         /** @description Current usage metrics */
         200: {
           content: {
-            "application/json": components["schemas"]["Usage"];
+            'application/json': components['schemas']['Usage'];
           };
         };
       };
     };
   };
-  "/v1/chat/completions": {
+  '/v1/chat/completions': {
     /**
      * Create a chat completion
      * @description Creates a model response for the given chat conversation.
@@ -1710,14 +1710,14 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["ChatCompletionRequest"];
+          'application/json': components['schemas']['ChatCompletionRequest'];
         };
       };
       responses: {
         /** @description Successful completion */
         200: {
           content: {
-            "application/json": components["schemas"]["ChatCompletionResponse"];
+            'application/json': components['schemas']['ChatCompletionResponse'];
           };
         };
         /** @description Invalid request */
@@ -1731,7 +1731,7 @@ export interface paths {
       };
     };
   };
-  "/v1/clusters": {
+  '/v1/clusters': {
     /**
      * List all clusters
      * @description Retrieves a list of all Kubernetes clusters in the customer's namespace
@@ -1741,7 +1741,7 @@ export interface paths {
         /** @description List of clusters */
         200: {
           content: {
-            "application/json": components["schemas"]["ClusterList"];
+            'application/json': components['schemas']['ClusterList'];
           };
         };
         /** @description Unauthorized */
@@ -1755,7 +1755,7 @@ export interface paths {
       };
     };
   };
-  "/v1/clusters/usage": {
+  '/v1/clusters/usage': {
     /**
      * Get cluster usage
      * @description Retrieves resource usage and cost data across all Kubernetes clusters for the current billing period
@@ -1765,7 +1765,7 @@ export interface paths {
         /** @description Cluster usage data */
         200: {
           content: {
-            "application/json": components["schemas"]["ClustersUsageResponse"];
+            'application/json': components['schemas']['ClustersUsageResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1779,7 +1779,7 @@ export interface paths {
       };
     };
   };
-  "/v1/clusters/{clusterId}/usage": {
+  '/v1/clusters/{clusterId}/usage': {
     /**
      * Get detailed usage for a specific cluster
      * @description Retrieves detailed resource usage and cost data for a specific Kubernetes cluster
@@ -1795,7 +1795,7 @@ export interface paths {
         /** @description Detailed cluster usage data */
         200: {
           content: {
-            "application/json": components["schemas"]["ClusterDetailedUsage"];
+            'application/json': components['schemas']['ClusterDetailedUsage'];
           };
         };
         /** @description Unauthorized */
@@ -1813,7 +1813,7 @@ export interface paths {
       };
     };
   };
-  "/v1/models": {
+  '/v1/models': {
     /**
      * List available models
      * @description Retrieves a list of all available AI models with their specifications, capabilities, and pricing information. Use this endpoint to discover which models are available for your chat completion API calls.
@@ -1823,7 +1823,7 @@ export interface paths {
         /** @description List of available models */
         200: {
           content: {
-            "application/json": components["schemas"]["ModelList"];
+            'application/json': components['schemas']['ModelList'];
           };
         };
         /** @description Server error */
@@ -1833,7 +1833,7 @@ export interface paths {
       };
     };
   };
-  "/v1/models/{modelId}": {
+  '/v1/models/{modelId}': {
     /**
      * Retrieve model information
      * @description Get detailed information about a specific model
@@ -1848,7 +1848,7 @@ export interface paths {
         /** @description Model details */
         200: {
           content: {
-            "application/json": components["schemas"]["Model"];
+            'application/json': components['schemas']['Model'];
           };
         };
         /** @description Model not found */
@@ -1862,7 +1862,7 @@ export interface paths {
       };
     };
   };
-  "/v1/usage/tokens": {
+  '/v1/usage/tokens': {
     /**
      * Get token usage
      * @description Retrieves token usage data across all models for the current billing period. This helps you track your API usage and associated costs.
@@ -1872,7 +1872,7 @@ export interface paths {
         /** @description Token usage data */
         200: {
           content: {
-            "application/json": components["schemas"]["TokenUsageResponse"];
+            'application/json': components['schemas']['TokenUsageResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1886,7 +1886,7 @@ export interface paths {
       };
     };
   };
-  "/v1/usage/tokens/{modelId}": {
+  '/v1/usage/tokens/{modelId}': {
     /**
      * Get token usage for a specific model
      * @description Retrieves token usage data for a specific model in the current billing period
@@ -1902,7 +1902,7 @@ export interface paths {
         /** @description Model token usage data */
         200: {
           content: {
-            "application/json": components["schemas"]["ModelTokenUsageResponse"];
+            'application/json': components['schemas']['ModelTokenUsageResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1920,7 +1920,7 @@ export interface paths {
       };
     };
   };
-  "/v1/users": {
+  '/v1/users': {
     /**
      * List team members
      * @description Retrieves a list of all users in your organization
@@ -1930,25 +1930,25 @@ export interface paths {
         /** @description List of team members */
         200: {
           content: {
-            "application/json": components["schemas"]["UserProfile"][];
+            'application/json': components['schemas']['UserProfile'][];
           };
         };
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
       };
     };
   };
-  "/v1/users/invite": {
+  '/v1/users/invite': {
     /**
      * Invite team member
      * @description Invites a new team member to join your organization. They will receive an email with instructions to set up their account.
@@ -1956,7 +1956,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["InviteUser"];
+          'application/json': components['schemas']['InviteUser'];
         };
       };
       responses: {
@@ -1975,7 +1975,7 @@ export interface paths {
       };
     };
   };
-  "/v1/users/me": {
+  '/v1/users/me': {
     /**
      * Get current user profile
      * @description Retrieves the profile of the currently authenticated user
@@ -1985,19 +1985,19 @@ export interface paths {
         /** @description User profile */
         200: {
           content: {
-            "application/json": components["schemas"]["UserProfile"];
+            'application/json': components['schemas']['UserProfile'];
           };
         };
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
       };
     };
   };
-  "/v1/users/{id}": {
+  '/v1/users/{id}': {
     /**
      * Delete user
      * @description Deletes your own user account
@@ -2016,13 +2016,13 @@ export interface paths {
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Cannot delete other users */
         403: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
       };
@@ -2041,19 +2041,19 @@ export interface paths {
         /** @description User details */
         200: {
           content: {
-            "application/json": components["schemas"]["UserProfile"];
+            'application/json': components['schemas']['UserProfile'];
           };
         };
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description User not found */
         404: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
       };
@@ -2070,32 +2070,32 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateUser"];
+          'application/json': components['schemas']['UpdateUser'];
         };
       };
       responses: {
         /** @description User updated */
         200: {
           content: {
-            "application/json": components["schemas"]["UserProfile"];
+            'application/json': components['schemas']['UserProfile'];
           };
         };
         /** @description Invalid request */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Unauthorized */
         401: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
         /** @description Forbidden */
         403: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            'application/json': components['schemas']['ErrorResponse'];
           };
         };
       };

@@ -1,14 +1,14 @@
-import { Agent } from "./types.js";
+import { Agent } from './types.js';
 
 export const agent: Agent = {
   config: {
-    description: "Expo + React Native apps; props-first, offline-aware, shared tokens.",
-    mode: "primary",
-    name: "app",
+    description: 'Expo + React Native apps; props-first, offline-aware, shared tokens.',
+    mode: 'primary',
+    name: 'app',
     permission: {
-      bash: "deny",
-      edit: "allow",
-      webfetch: "allow",
+      bash: 'deny',
+      edit: 'allow',
+      webfetch: 'allow',
     },
     temperature: 0.4,
     top_p: 0.9,

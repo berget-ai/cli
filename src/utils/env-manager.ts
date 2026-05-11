@@ -1,8 +1,8 @@
-import chalk from "chalk";
-import dotenv from "dotenv";
-import fs from "node:fs";
-import { writeFile } from "node:fs/promises";
-import path from "node:path";
+import chalk from 'chalk';
+import dotenv from 'dotenv';
+import fs from 'node:fs';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 export interface EnvUpdateOptions {
   comment?: string;
@@ -16,15 +16,15 @@ export interface EnvUpdateOptions {
  * Checks if a .env file exists and contains a specific key
  */
 export function hasEnvKey(
-  environmentPath: string = path.join(process.cwd(), ".env"),
-  key: string
+  environmentPath: string = path.join(process.cwd(), '.env'),
+  key: string,
 ): boolean {
   if (!fs.existsSync(environmentPath)) {
     return false;
   }
 
   try {
-    const content = fs.readFileSync(environmentPath, "utf8");
+    const content = fs.readFileSync(environmentPath, 'utf8');
     const parsed = dotenv.parse(content);
     return key in parsed;
   } catch {
@@ -39,19 +39,19 @@ export function hasEnvKey(
 export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean> {
   const {
     comment,
-    envPath: environmentPath = path.join(process.cwd(), ".env"),
+    envPath: environmentPath = path.join(process.cwd(), '.env'),
     force = false,
     key,
     value,
   } = options;
 
   try {
-    let existingContent = "";
+    let existingContent = '';
     let parsed: Record<string, string> = {};
 
     // Read existing .env file if it exists
     if (fs.existsSync(environmentPath)) {
-      existingContent = fs.readFileSync(environmentPath, "utf8");
+      existingContent = fs.readFileSync(environmentPath, 'utf8');
       parsed = dotenv.parse(existingContent);
     }
 
@@ -65,7 +65,7 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
     parsed[key] = value;
 
     // Generate new .env content
-    let newContent = "";
+    let newContent = '';
 
     // Add comment at the top if this is a new file
     if (!existingContent && comment) {
@@ -78,7 +78,7 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
     }
 
     // Write the updated content
-    await writeFile(environmentPath, newContent.trim() + "\n");
+    await writeFile(environmentPath, newContent.trim() + '\n');
 
     if (existingContent) {
       console.log(chalk.green(`✓ Updated .env with ${key}`));

@@ -5,7 +5,7 @@ export interface Agent {
 
 export interface AgentConfig {
   description: string;
-  mode?: "primary" | "subagent";
+  mode?: 'primary' | 'subagent';
   name: string;
   permission?: {
     bash?: string;

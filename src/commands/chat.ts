@@ -1,32 +1,32 @@
-import chalk from "chalk";
-import { Command } from "commander";
-import readline from "node:readline";
+import chalk from 'chalk';
+import { Command } from 'commander';
+import readline from 'node:readline';
 
-import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
-import { ApiKeyService } from "../services/api-key-service";
-import { AuthService } from "../services/auth-service";
-import { ChatCompletionOptions, ChatMessage, ChatService } from "../services/chat-service";
-import { DefaultApiKeyManager } from "../utils/default-api-key";
-import { handleError } from "../utils/error-handler";
-import { containsMarkdown, renderMarkdown } from "../utils/markdown-renderer";
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
+import { ApiKeyService } from '../services/api-key-service';
+import { AuthService } from '../services/auth-service';
+import { ChatCompletionOptions, ChatMessage, ChatService } from '../services/chat-service';
+import { DefaultApiKeyManager } from '../utils/default-api-key';
+import { handleError } from '../utils/error-handler';
+import { containsMarkdown, renderMarkdown } from '../utils/markdown-renderer';
 
 /**
  * Register chat commands
  */
 export function registerChatCommands(program: Command): void {
-  const chat = program.command(COMMAND_GROUPS.CHAT).description("Interact with AI chat models");
+  const chat = program.command(COMMAND_GROUPS.CHAT).description('Interact with AI chat models');
 
   chat
     .command(SUBCOMMANDS.CHAT.RUN)
-    .description("Run a chat session with a specified model")
-    .argument("[message]", "Message to send directly (skips interactive mode)")
-    .option("-m, --model <model>", "Model to use (default: glm-4.7)")
+    .description('Run a chat session with a specified model')
+    .argument('[message]', 'Message to send directly (skips interactive mode)')
+    .option('-m, --model <model>', 'Model to use (default: glm-4.7)')
 
-    .option("-t, --temperature <temp>", "Temperature (0-1)", Number.parseFloat)
-    .option("--max-tokens <tokens>", "Maximum tokens to generate", Number.parseInt)
-    .option("-k, --api-key <key>", "API key to use for this chat session")
-    .option("--api-key-id <id>", "ID of the API key to use from your saved keys")
-    .option("--no-stream", "Disable streaming (streaming is enabled by default)")
+    .option('-t, --temperature <temp>', 'Temperature (0-1)', Number.parseFloat)
+    .option('--max-tokens <tokens>', 'Maximum tokens to generate', Number.parseInt)
+    .option('-k, --api-key <key>', 'API key to use for this chat session')
+    .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
+    .option('--no-stream', 'Disable streaming (streaming is enabled by default)')
     .action(async (message, options) => {
       try {
         const chatService = ChatService.getInstance();
@@ -42,11 +42,11 @@ export function registerChatCommands(program: Command): void {
           apiKey = environmentApiKey;
 
           // Debug the API key (first few characters only)
-          if (process.argv.includes("--debug")) {
+          if (process.argv.includes('--debug')) {
             console.log(
               chalk.yellow(
-                `DEBUG: API key from env starts with: ${environmentApiKey.slice(0, 4)}...`
-              )
+                `DEBUG: API key from env starts with: ${environmentApiKey.slice(0, 4)}...`,
+              ),
             );
           }
         }
@@ -70,38 +70,38 @@ export function registerChatCommands(program: Command): void {
               } else {
                 console.log(
                   chalk.yellow(
-                    `Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`
-                  )
+                    `Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`,
+                  ),
                 );
                 console.log(
                   chalk.yellow(
-                    `Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`
-                  )
+                    `Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`,
+                  ),
                 );
               }
             } else {
               // No default API key, prompt the user to create one
-              console.log(chalk.yellow("No default API key set."));
+              console.log(chalk.yellow('No default API key set.'));
 
               // Try to prompt for a default API key
               apiKey = await defaultApiKeyManager.promptForDefaultApiKey();
 
               if (!apiKey) {
-                console.log(chalk.red("Error: An API key is required to use the chat command."));
-                console.log(chalk.yellow("You can:"));
+                console.log(chalk.red('Error: An API key is required to use the chat command.'));
+                console.log(chalk.yellow('You can:'));
                 console.log(
-                  chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"')
+                  chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'),
                 );
                 console.log(
-                  chalk.yellow("2. Set a default API key with: berget api-keys set-default <id>")
+                  chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'),
                 );
-                console.log(chalk.yellow("3. Provide an API key with the --api-key option"));
+                console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
                 return;
               }
             }
           } catch (error) {
-            if (process.argv.includes("--debug")) {
-              console.log(chalk.yellow("DEBUG: Error checking default API key:"));
+            if (process.argv.includes('--debug')) {
+              console.log(chalk.yellow('DEBUG: Error checking default API key:'));
               console.log(chalk.yellow(String(error)));
             }
           }
@@ -112,7 +112,7 @@ export function registerChatCommands(program: Command): void {
           try {
             const apiKeyService = ApiKeyService.getInstance();
             const keys = await apiKeyService.list();
-            const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
+            const selectedKey = keys.find((key) => key.id.toString() === options.apiKeyId);
 
             if (selectedKey) {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
@@ -121,40 +121,40 @@ export function registerChatCommands(program: Command): void {
               if (
                 await confirm(
                   chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`
-                  )
+                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`,
+                  ),
                 )
               ) {
                 const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
                 apiKey = rotatedKey.key;
                 console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
               } else {
-                console.log(chalk.yellow("Using default authentication instead."));
+                console.log(chalk.yellow('Using default authentication instead.'));
               }
             } else {
               console.log(
                 chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
-                )
+                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`,
+                ),
               );
             }
           } catch (error) {
             // Check if this is an authentication error
             const errorMessage = error instanceof Error ? error.message : String(error);
             const isAuthError =
-              errorMessage.includes("Unauthorized") ||
-              errorMessage.includes("Authentication failed") ||
-              errorMessage.includes("AUTH_FAILED");
+              errorMessage.includes('Unauthorized') ||
+              errorMessage.includes('Authentication failed') ||
+              errorMessage.includes('AUTH_FAILED');
 
             if (isAuthError) {
               console.log(
-                chalk.yellow("Authentication required. Please run `berget auth login` first.")
+                chalk.yellow('Authentication required. Please run `berget auth login` first.'),
               );
             } else {
-              console.error(chalk.red("Error fetching API key:"));
+              console.error(chalk.red('Error fetching API key:'));
               console.error(error);
             }
-            console.log(chalk.yellow("Using default authentication instead."));
+            console.log(chalk.yellow('Using default authentication instead.'));
           }
         }
 
@@ -163,13 +163,13 @@ export function registerChatCommands(program: Command): void {
           try {
             AuthService.getInstance();
           } catch {
-            console.log(chalk.red("Error: Authentication required for chat"));
-            console.log(chalk.yellow("Please either:"));
-            console.log(chalk.yellow("1. Log in with `berget auth login`"));
-            console.log(chalk.yellow("2. Provide an API key with `--api-key`"));
-            console.log(chalk.yellow("3. Provide an API key ID with `--api-key-id`"));
+            console.log(chalk.red('Error: Authentication required for chat'));
+            console.log(chalk.yellow('Please either:'));
+            console.log(chalk.yellow('1. Log in with `berget auth login`'));
+            console.log(chalk.yellow('2. Provide an API key with `--api-key`'));
+            console.log(chalk.yellow('3. Provide an API key ID with `--api-key-id`'));
             console.log(
-              chalk.yellow("4. Set a default API key with `berget api-keys set-default <id>`")
+              chalk.yellow('4. Set a default API key with `berget api-keys set-default <id>`'),
             );
             return;
           }
@@ -182,13 +182,13 @@ export function registerChatCommands(program: Command): void {
         if (options.system) {
           messages.push({
             content: options.system,
-            role: "system",
+            role: 'system',
           });
         }
 
         // Check if input is being piped in
         let inputMessage = message;
-        let stdinContent = "";
+        let stdinContent = '';
 
         if (!process.stdin.isTTY) {
           // Read from stdin (piped input)
@@ -196,7 +196,7 @@ export function registerChatCommands(program: Command): void {
           for await (const chunk of process.stdin) {
             chunks.push(chunk);
           }
-          stdinContent = Buffer.concat(chunks).toString("utf8").trim();
+          stdinContent = Buffer.concat(chunks).toString('utf8').trim();
         }
 
         // Combine stdin content with message if both exist
@@ -211,7 +211,7 @@ export function registerChatCommands(program: Command): void {
           // Add user message
           messages.push({
             content: inputMessage,
-            role: "user",
+            role: 'user',
           });
 
           try {
@@ -219,7 +219,7 @@ export function registerChatCommands(program: Command): void {
             const completionOptions: ChatCompletionOptions = {
               max_tokens: options.maxTokens || 4096,
               messages: messages,
-              model: options.model || "openai/gpt-oss",
+              model: options.model || 'openai/gpt-oss',
               stream: options.stream !== false,
               temperature: options.temperature === undefined ? 0.7 : options.temperature,
             };
@@ -231,7 +231,7 @@ export function registerChatCommands(program: Command): void {
 
             // Add streaming support (now default)
             if (completionOptions.stream) {
-              let assistantResponse = "";
+              let assistantResponse = '';
 
               // Stream the response in real-time
               completionOptions.onChunk = (chunk: any) => {
@@ -246,7 +246,7 @@ export function registerChatCommands(program: Command): void {
                     process.stdout.write(content);
                   } catch (error: any) {
                     // Handle EPIPE errors gracefully (when pipe is closed)
-                    if (error.code === "EPIPE") {
+                    if (error.code === 'EPIPE') {
                       // Stop streaming if the pipe is closed
                       return;
                     }
@@ -259,10 +259,10 @@ export function registerChatCommands(program: Command): void {
               try {
                 await chatService.createCompletion(completionOptions);
               } catch (streamError) {
-                console.error(chalk.red("\nStreaming error:"), streamError);
+                console.error(chalk.red('\nStreaming error:'), streamError);
 
                 // Fallback to non-streaming if streaming fails
-                console.log(chalk.yellow("Falling back to non-streaming mode..."));
+                console.log(chalk.yellow('Falling back to non-streaming mode...'));
                 completionOptions.stream = false;
                 delete completionOptions.onChunk;
 
@@ -291,9 +291,9 @@ export function registerChatCommands(program: Command): void {
               !response.choices[0] ||
               !response.choices[0].message
             ) {
-              console.error(chalk.red("Error: Unexpected response format from API"));
-              console.error(chalk.red("Response:", JSON.stringify(response, null, 2)));
-              throw new Error("Unexpected response format from API");
+              console.error(chalk.red('Error: Unexpected response format from API'));
+              console.error(chalk.red('Response:', JSON.stringify(response, null, 2)));
+              throw new Error('Unexpected response format from API');
             }
 
             // Get assistant's response
@@ -308,7 +308,7 @@ export function registerChatCommands(program: Command): void {
 
             return;
           } catch (error) {
-            console.error(chalk.red("Error: Failed to get response"));
+            console.error(chalk.red('Error: Failed to get response'));
             if (error instanceof Error) {
               console.error(chalk.red(error.message));
             }
@@ -323,14 +323,14 @@ export function registerChatCommands(program: Command): void {
         });
 
         console.log(chalk.cyan('Chat with Berget AI (type "exit" to quit)'));
-        console.log(chalk.cyan("----------------------------------------"));
+        console.log(chalk.cyan('----------------------------------------'));
 
         // Start the conversation loop
         const askQuestion = () => {
-          rl.question(chalk.green("You: "), async input => {
+          rl.question(chalk.green('You: '), async (input) => {
             // Check if user wants to exit
-            if (input.toLowerCase() === "exit") {
-              console.log(chalk.cyan("Goodbye!"));
+            if (input.toLowerCase() === 'exit') {
+              console.log(chalk.cyan('Goodbye!'));
               rl.close();
               return;
             }
@@ -338,7 +338,7 @@ export function registerChatCommands(program: Command): void {
             // Add user message
             messages.push({
               content: input,
-              role: "user",
+              role: 'user',
             });
 
             try {
@@ -346,7 +346,7 @@ export function registerChatCommands(program: Command): void {
               const completionOptions: ChatCompletionOptions = {
                 max_tokens: options.maxTokens || 4096,
                 messages: messages,
-                model: options.model || "openai/gpt-oss",
+                model: options.model || 'openai/gpt-oss',
                 stream: options.stream !== false,
                 temperature: options.temperature === undefined ? 0.7 : options.temperature,
               };
@@ -358,8 +358,8 @@ export function registerChatCommands(program: Command): void {
 
               // Add streaming support (now default)
               if (completionOptions.stream) {
-                let assistantResponse = "";
-                console.log(chalk.blue("Assistant: "));
+                let assistantResponse = '';
+                console.log(chalk.blue('Assistant: '));
 
                 // Stream the response in real-time
                 completionOptions.onChunk = (chunk: any) => {
@@ -374,7 +374,7 @@ export function registerChatCommands(program: Command): void {
                       process.stdout.write(content);
                     } catch (error: any) {
                       // Handle EPIPE errors gracefully (when pipe is closed)
-                      if (error.code === "EPIPE") {
+                      if (error.code === 'EPIPE') {
                         // Stop streaming if the pipe is closed
                         return;
                       }
@@ -387,10 +387,10 @@ export function registerChatCommands(program: Command): void {
                 try {
                   await chatService.createCompletion(completionOptions);
                 } catch (streamError) {
-                  console.error(chalk.red("\nStreaming error:"), streamError);
+                  console.error(chalk.red('\nStreaming error:'), streamError);
 
                   // Fallback to non-streaming if streaming fails
-                  console.log(chalk.yellow("Falling back to non-streaming mode..."));
+                  console.log(chalk.yellow('Falling back to non-streaming mode...'));
                   completionOptions.stream = false;
                   delete completionOptions.onChunk;
 
@@ -406,12 +406,12 @@ export function registerChatCommands(program: Command): void {
                     console.log(assistantResponse);
                   }
                 }
-                console.log("\n");
+                console.log('\n');
 
                 // Add assistant response to messages
                 messages.push({
                   content: assistantResponse,
-                  role: "assistant",
+                  role: 'assistant',
                 });
 
                 // Continue the conversation
@@ -423,7 +423,7 @@ export function registerChatCommands(program: Command): void {
 
               // Debug output
               if (program.opts().debug) {
-                console.log(chalk.yellow("DEBUG: Full response:"));
+                console.log(chalk.yellow('DEBUG: Full response:'));
                 console.log(chalk.yellow(JSON.stringify(response, null, 2)));
               }
 
@@ -434,9 +434,9 @@ export function registerChatCommands(program: Command): void {
                 !response.choices[0] ||
                 !response.choices[0].message
               ) {
-                console.error(chalk.red("Error: Unexpected response format from API"));
-                console.error(chalk.red("Response:", JSON.stringify(response, null, 2)));
-                throw new Error("Unexpected response format from API");
+                console.error(chalk.red('Error: Unexpected response format from API'));
+                console.error(chalk.red('Response:', JSON.stringify(response, null, 2)));
+                throw new Error('Unexpected response format from API');
               }
 
               // Get assistant's response
@@ -445,11 +445,11 @@ export function registerChatCommands(program: Command): void {
               // Add to messages array
               messages.push({
                 content: assistantMessage,
-                role: "assistant",
+                role: 'assistant',
               });
 
               // Display the response
-              console.log(chalk.blue("Assistant: "));
+              console.log(chalk.blue('Assistant: '));
 
               // Check if the response contains markdown and render it if it does
               if (containsMarkdown(assistantMessage)) {
@@ -463,7 +463,7 @@ export function registerChatCommands(program: Command): void {
               // Continue the conversation
               askQuestion();
             } catch (error) {
-              console.error(chalk.red("Error: Failed to get response"));
+              console.error(chalk.red('Error: Failed to get response'));
               if (error instanceof Error) {
                 console.error(chalk.red(error.message));
               }
@@ -476,16 +476,16 @@ export function registerChatCommands(program: Command): void {
         // Start the conversation
         askQuestion();
       } catch (error) {
-        handleError("Failed to create chat completion", error);
+        handleError('Failed to create chat completion', error);
       }
     });
 
   chat
     .command(SUBCOMMANDS.CHAT.LIST)
-    .description("List available chat models")
-    .option("-k, --api-key <key>", "API key to use for this request")
-    .option("--api-key-id <id>", "ID of the API key to use from your saved keys")
-    .action(async options => {
+    .description('List available chat models')
+    .option('-k, --api-key <key>', 'API key to use for this request')
+    .option('--api-key-id <id>', 'ID of the API key to use from your saved keys')
+    .action(async (options) => {
       try {
         // If API key ID is provided, fetch the actual key
         let apiKey = options.apiKey;
@@ -506,7 +506,7 @@ export function registerChatCommands(program: Command): void {
           try {
             const apiKeyService = ApiKeyService.getInstance();
             const keys = await apiKeyService.list();
-            const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
+            const selectedKey = keys.find((key) => key.id.toString() === options.apiKeyId);
 
             if (selectedKey) {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
@@ -515,27 +515,27 @@ export function registerChatCommands(program: Command): void {
               if (
                 await confirm(
                   chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`
-                  )
+                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`,
+                  ),
                 )
               ) {
                 const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
                 apiKey = rotatedKey.key;
                 console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
               } else {
-                console.log(chalk.yellow("Using default authentication instead."));
+                console.log(chalk.yellow('Using default authentication instead.'));
               }
             } else {
               console.log(
                 chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
-                )
+                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`,
+                ),
               );
             }
           } catch (error) {
-            console.error(chalk.red("Error fetching API key:"));
+            console.error(chalk.red('Error fetching API key:'));
             console.error(error);
-            console.log(chalk.yellow("Using default authentication instead."));
+            console.log(chalk.yellow('Using default authentication instead.'));
           }
         }
 
@@ -544,31 +544,31 @@ export function registerChatCommands(program: Command): void {
 
         // Debug output
         if (program.opts().debug) {
-          console.log(chalk.yellow("DEBUG: Models response:"));
+          console.log(chalk.yellow('DEBUG: Models response:'));
           console.log(chalk.yellow(JSON.stringify(models, null, 2)));
         }
 
-        console.log(chalk.bold("Available Chat Models:"));
-        console.log(chalk.dim("─".repeat(70)));
-        console.log(chalk.dim("MODEL ID".padEnd(40)) + chalk.dim("CAPABILITIES"));
-        console.log(chalk.dim("─".repeat(70)));
+        console.log(chalk.bold('Available Chat Models:'));
+        console.log(chalk.dim('─'.repeat(70)));
+        console.log(chalk.dim('MODEL ID'.padEnd(40)) + chalk.dim('CAPABILITIES'));
+        console.log(chalk.dim('─'.repeat(70)));
 
         // Filter to only show active models
         const activeModels = models.data.filter((model: any) => model.active === true);
 
         activeModels.forEach((model: any) => {
           const capabilities = [];
-          if (model.capabilities.vision) capabilities.push("vision");
-          if (model.capabilities.function_calling) capabilities.push("function_calling");
-          if (model.capabilities.json_mode) capabilities.push("json_mode");
+          if (model.capabilities.vision) capabilities.push('vision');
+          if (model.capabilities.function_calling) capabilities.push('function_calling');
+          if (model.capabilities.json_mode) capabilities.push('json_mode');
 
           // Format model ID in Huggingface compatible format (owner/model)
           const modelId = `${model.owned_by.toLowerCase()}/${model.id}`.padEnd(40);
 
-          console.log(modelId + capabilities.join(", "));
+          console.log(modelId + capabilities.join(', '));
         });
       } catch (error) {
-        handleError("Failed to list chat models", error);
+        handleError('Failed to list chat models', error);
       }
     });
 }
@@ -582,10 +582,10 @@ async function confirm(question: string): Promise<boolean> {
     output: process.stdout,
   });
 
-  return new Promise<boolean>(resolve => {
-    rl.question(question, answer => {
+  return new Promise<boolean>((resolve) => {
+    rl.question(question, (answer) => {
       rl.close();
-      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
     });
   });
 }

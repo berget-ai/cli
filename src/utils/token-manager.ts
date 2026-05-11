@@ -1,8 +1,8 @@
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
-import { logger } from "./logger";
+import { logger } from './logger';
 
 interface TokenData {
   access_token: string;
@@ -20,11 +20,11 @@ export class TokenManager {
 
   private constructor() {
     // Set up token file path in user's home directory
-    const bergetDir = path.join(os.homedir(), ".berget");
+    const bergetDir = path.join(os.homedir(), '.berget');
     if (!fs.existsSync(bergetDir)) {
       fs.mkdirSync(bergetDir, { recursive: true });
     }
-    this.tokenFilePath = path.join(bergetDir, "auth.json");
+    this.tokenFilePath = path.join(bergetDir, 'auth.json');
     this.loadToken();
   }
 
@@ -83,7 +83,7 @@ export class TokenManager {
 
       if (isExpired) {
         logger.debug(
-          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(expiresAt).toISOString()}`
+          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(expiresAt).toISOString()}`,
         );
       }
 
@@ -91,7 +91,7 @@ export class TokenManager {
     } catch (error) {
       // If there's any error checking expiration, assume token is expired
       logger.error(
-        `Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`
+        `Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`,
       );
       return true;
     }
@@ -139,11 +139,11 @@ export class TokenManager {
   private loadToken(): void {
     try {
       if (fs.existsSync(this.tokenFilePath)) {
-        const data = fs.readFileSync(this.tokenFilePath, "utf8");
+        const data = fs.readFileSync(this.tokenFilePath, 'utf8');
         this.tokenData = JSON.parse(data);
       }
     } catch {
-      logger.error("Failed to load authentication token");
+      logger.error('Failed to load authentication token');
       this.tokenData = null;
     }
   }
@@ -164,7 +164,7 @@ export class TokenManager {
         }
       }
     } catch {
-      logger.error("Failed to save authentication token");
+      logger.error('Failed to save authentication token');
     }
   }
 }
@@ -176,11 +176,11 @@ export class TokenManager {
  */
 function extractJwtExpiresAt(accessToken: string): number {
   try {
-    const parts = accessToken.split(".");
+    const parts = accessToken.split('.');
     if (parts.length !== 3) return 0;
-    const payload = Buffer.from(parts[1], "base64url").toString("utf8");
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
     const decoded = JSON.parse(payload);
-    if (typeof decoded.exp === "number") {
+    if (typeof decoded.exp === 'number') {
       return decoded.exp * 1000; // JWT exp is in seconds, convert to milliseconds
     }
   } catch {

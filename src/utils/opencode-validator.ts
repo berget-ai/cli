@@ -1,19 +1,19 @@
-import Ajv from "ajv";
-import addFormats from "ajv-formats";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { dirname } from "node:path";
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { dirname } from 'node:path';
 
 // Load the official OpenCode JSON Schema
 const __dirname = dirname(__filename);
-const schemaPath = join(__dirname, "..", "schemas", "opencode-schema.json");
+const schemaPath = join(__dirname, '..', 'schemas', 'opencode-schema.json');
 
 let ajv: Ajv;
 let openCodeSchema: any;
 let validateFunction: any;
 
 try {
-  const schemaContent = readFileSync(schemaPath, "utf-8");
+  const schemaContent = readFileSync(schemaPath, 'utf-8');
   openCodeSchema = JSON.parse(schemaContent);
 
   // Initialize AJV with formats and options
@@ -31,8 +31,8 @@ try {
   // Compile the schema
   validateFunction = ajv.compile(openCodeSchema);
 } catch (error) {
-  console.error("Failed to load OpenCode schema:", error);
-  throw new Error("Could not initialize OpenCode validator");
+  console.error('Failed to load OpenCode schema:', error);
+  throw new Error('Could not initialize OpenCode validator');
 }
 
 export type OpenCodeConfig = any;
@@ -44,14 +44,14 @@ export function fixOpenCodeConfig(config: any): OpenCodeConfig {
   const fixed = { ...config };
 
   // Fix tools.compact - should be boolean, not object
-  if (fixed.tools && typeof fixed.tools.compact === "object") {
-    console.warn("⚠️  Converting tools.compact from object to boolean");
+  if (fixed.tools && typeof fixed.tools.compact === 'object') {
+    console.warn('⚠️  Converting tools.compact from object to boolean');
     // If it has properties, assume it should be enabled
     fixed.tools.compact = true;
   }
 
   // Remove invalid properties
-  const invalidProperties = ["maxTokens", "contextWindow"];
+  const invalidProperties = ['maxTokens', 'contextWindow'];
   for (const property of invalidProperties) {
     if (fixed[property] !== undefined) {
       console.warn(`⚠️  Removing invalid property: ${property}`);
@@ -66,7 +66,7 @@ export function fixOpenCodeConfig(config: any): OpenCodeConfig {
         Object.values(provider.models).forEach((model: any) => {
           if (
             model &&
-            typeof model === "object" && // Move maxTokens/contextWindow to proper structure if needed
+            typeof model === 'object' && // Move maxTokens/contextWindow to proper structure if needed
             (model.maxTokens || model.contextWindow)
           ) {
             if (!model.limit) model.limit = {};
@@ -88,7 +88,7 @@ export function fixOpenCodeConfig(config: any): OpenCodeConfig {
 
             delete model.maxTokens;
             delete model.contextWindow;
-            console.warn("⚠️  Moved maxTokens/contextWindow to limit.context/output");
+            console.warn('⚠️  Moved maxTokens/contextWindow to limit.context/output');
           }
         });
       }
@@ -107,7 +107,7 @@ export function validateOpenCodeConfig(config: any): {
 } {
   try {
     if (!validateFunction) {
-      return { errors: ["Schema validator not initialized"], valid: false };
+      return { errors: ['Schema validator not initialized'], valid: false };
     }
 
     const isValid = validateFunction(config);
@@ -116,15 +116,15 @@ export function validateOpenCodeConfig(config: any): {
       return { valid: true };
     } else {
       const errors = validateFunction.errors?.map((error: any) => {
-        const path = error.instancePath || error.schemaPath || "root";
-        const message = error.message || "Unknown error";
+        const path = error.instancePath || error.schemaPath || 'root';
+        const message = error.message || 'Unknown error';
         return `${path}: ${message}`;
-      }) || ["Unknown validation error"];
+      }) || ['Unknown validation error'];
 
       return { errors, valid: false };
     }
   } catch (error) {
-    console.error("Validation error:", error);
-    return { errors: ["Validation process failed"], valid: false };
+    console.error('Validation error:', error);
+    return { errors: ['Validation process failed'], valid: false };
   }
 }

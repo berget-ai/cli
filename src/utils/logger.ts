@@ -1,4 +1,4 @@
-import chalk from "chalk";
+import chalk from 'chalk';
 
 /**
  * Log levels in order of increasing verbosity
@@ -22,9 +22,9 @@ export class Logger {
     // Set log level from environment variable or command line argument
     if (process.env.LOG_LEVEL) {
       this.setLogLevelFromString(process.env.LOG_LEVEL);
-    } else if (process.argv.includes("--debug")) {
+    } else if (process.argv.includes('--debug')) {
       this.logLevel = LogLevel.DEBUG;
-    } else if (process.argv.includes("--quiet")) {
+    } else if (process.argv.includes('--quiet')) {
       this.logLevel = LogLevel.ERROR;
     }
   }
@@ -133,23 +133,23 @@ export class Logger {
    */
   private setLogLevelFromString(level: string): void {
     switch (level.toLowerCase()) {
-      case "debug": {
+      case 'debug': {
         this.logLevel = LogLevel.DEBUG;
         break;
       }
-      case "error": {
+      case 'error': {
         this.logLevel = LogLevel.ERROR;
         break;
       }
-      case "info": {
+      case 'info': {
         this.logLevel = LogLevel.INFO;
         break;
       }
-      case "none": {
+      case 'none': {
         this.logLevel = LogLevel.NONE;
         break;
       }
-      case "warn": {
+      case 'warn': {
         this.logLevel = LogLevel.WARN;
         break;
       }

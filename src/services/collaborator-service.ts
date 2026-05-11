@@ -1,4 +1,4 @@
-import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
 
 export interface Collaborator {
   role: string;
@@ -34,7 +34,7 @@ export class CollaboratorService {
    * This endpoint is not available in the API
    */
   public async invite(_clusterId: string, _githubUsername: string): Promise<Collaborator[]> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 
   /**
@@ -43,6 +43,6 @@ export class CollaboratorService {
    * This endpoint is not available in the API
    */
   public async list(_clusterId: string): Promise<Collaborator[]> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 }

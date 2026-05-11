@@ -1,17 +1,17 @@
-import chalk from "chalk";
+import chalk from 'chalk';
 
-import { clearAuthToken, createAuthenticatedClient, saveAuthToken } from "../client";
-import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
-import { handleError } from "../utils/error-handler";
-import { BrowserAuth } from "./browser-auth";
+import { clearAuthToken, createAuthenticatedClient, saveAuthToken } from '../client';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
+import { handleError } from '../utils/error-handler';
+import { BrowserAuth } from './browser-auth';
 
 // Keycloak configuration based on environment
-const isStageMode = process.argv.includes("--stage");
-const isLocalMode = process.argv.includes("--local");
+const isStageMode = process.argv.includes('--stage');
+const isLocalMode = process.argv.includes('--local');
 const KEYCLOAK_URL =
-  isStageMode || isLocalMode ? "https://keycloak.stage.berget.ai" : "https://keycloak.berget.ai";
-const KEYCLOAK_REALM = "berget";
-const KEYCLOAK_CLIENT_ID = "berget-code";
+  isStageMode || isLocalMode ? 'https://keycloak.stage.berget.ai' : 'https://keycloak.berget.ai';
+const KEYCLOAK_REALM = 'berget';
+const KEYCLOAK_CLIENT_ID = 'berget-code';
 const CALLBACK_PORT = 8787;
 
 /**
@@ -45,20 +45,20 @@ export class AuthService {
     try {
       clearAuthToken();
 
-      console.log(chalk.blue("Initiating login process..."));
+      console.log(chalk.blue('Initiating login process...'));
 
-      const auth = makeBrowserAuth(process.argv.includes("--debug"));
+      const auth = makeBrowserAuth(process.argv.includes('--debug'));
       const result = await auth.start();
 
       if (!result.success) {
-        console.log(chalk.red(`\nAuthentication failed: ${result.error || "Unknown error"}`));
+        console.log(chalk.red(`\nAuthentication failed: ${result.error || 'Unknown error'}`));
         return false;
       }
 
       saveAuthToken(result.accessToken!, result.refreshToken!, result.expiresIn!);
 
-      if (process.argv.includes("--debug")) {
-        console.log(chalk.yellow("DEBUG: Token data received:"));
+      if (process.argv.includes('--debug')) {
+        console.log(chalk.yellow('DEBUG: Token data received:'));
         console.log(
           chalk.yellow(
             JSON.stringify(
@@ -66,13 +66,13 @@ export class AuthService {
                 expires_in: result.expiresIn,
               },
               null,
-              2
-            )
-          )
+              2,
+            ),
+          ),
         );
       }
 
-      console.log(chalk.green("\n✓ Successfully logged in to Berget"));
+      console.log(chalk.green('\n✓ Successfully logged in to Berget'));
 
       try {
         const profile = await this.whoami();
@@ -83,13 +83,13 @@ export class AuthService {
         // Ignore errors fetching profile
       }
 
-      console.log(chalk.cyan("\nNext steps:"));
-      console.log(chalk.cyan("  • Create an API key: berget api-keys create"));
-      console.log(chalk.cyan("  • Setup OpenCode: berget code init"));
+      console.log(chalk.cyan('\nNext steps:'));
+      console.log(chalk.cyan('  • Create an API key: berget api-keys create'));
+      console.log(chalk.cyan('  • Setup OpenCode: berget code init'));
 
       return true;
     } catch (error) {
-      handleError("Login failed", error);
+      handleError('Login failed', error);
       return false;
     }
   }
@@ -109,7 +109,7 @@ export class AuthService {
     try {
       clearAuthToken();
 
-      const auth = makeBrowserAuth(process.argv.includes("--debug"));
+      const auth = makeBrowserAuth(process.argv.includes('--debug'));
       const result = await auth.start();
 
       if (result.success) {
@@ -129,7 +129,7 @@ export class AuthService {
     try {
       // Create fresh client to ensure we have the latest token
       const client = createAuthenticatedClient();
-      const { data: profile, error } = await client.GET("/v1/users/me");
+      const { data: profile, error } = await client.GET('/v1/users/me');
       if (error) {
         return null;
       }

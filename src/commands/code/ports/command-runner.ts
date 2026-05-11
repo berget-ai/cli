@@ -5,6 +5,6 @@ export interface CommandRunner {
     arguments_: readonly string[],
     options?: {
       cwd?: string;
-    }
+    },
   ): Promise<string>;
 }

@@ -1,36 +1,36 @@
-import { Command } from "commander";
-import * as fs from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Command } from 'commander';
+import * as fs from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { registerCodeCommands } from "../../src/commands/code";
-import { ApiKeyService } from "../../src/services/api-key-service";
-import { updateEnvFile as updateEnvironmentFile } from "../../src/utils/env-manager";
+import { registerCodeCommands } from '../../src/commands/code';
+import { ApiKeyService } from '../../src/services/api-key-service';
+import { updateEnvFile as updateEnvironmentFile } from '../../src/utils/env-manager';
 
 // Mock dependencies
-vi.mock("../../src/services/api-key-service");
-vi.mock("fs", () => ({
+vi.mock('../../src/services/api-key-service');
+vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
   },
 }));
-vi.mock("fs/promises", () => ({
+vi.mock('fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
 }));
-vi.mock("../../src/utils/env-manager");
-vi.mock("child_process", () => ({
+vi.mock('../../src/utils/env-manager');
+vi.mock('child_process', () => ({
   spawn: vi.fn(),
 }));
-vi.mock("readline", () => ({
+vi.mock('readline', () => ({
   createInterface: vi.fn(() => ({
     close: vi.fn(),
     question: vi.fn(),
   })),
 }));
 
-describe("Code Commands", () => {
+describe('Code Commands', () => {
   let program: Command;
   let mockApiKeyService: any;
   let mockFs: any;
@@ -60,7 +60,7 @@ describe("Code Commands", () => {
 
     // Mock spawn
     mockSpawn = vi.fn();
-    vi.doMock("child_process", () => ({ spawn: mockSpawn }));
+    vi.doMock('child_process', () => ({ spawn: mockSpawn }));
 
     registerCodeCommands(program);
   });
@@ -69,36 +69,36 @@ describe("Code Commands", () => {
     vi.clearAllMocks();
   });
 
-  describe("code init command", () => {
-    it("should register init command with correct description", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const initCommand = codeCommand?.commands.find(cmd => cmd.name() === "init");
+  describe('code init command', () => {
+    it('should register init command with correct description', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const initCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'init');
 
       expect(initCommand).toBeDefined();
-      expect(initCommand?.description()).toBe("Initialize project for AI coding assistant");
+      expect(initCommand?.description()).toBe('Initialize project for AI coding assistant');
     });
 
-    it("should have name, force, and yes options", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const initCommand = codeCommand?.commands.find(cmd => cmd.name() === "init");
+    it('should have name, force, and yes options', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const initCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'init');
 
       expect(initCommand).toBeDefined();
 
-      const nameOption = initCommand?.options.find(opt => opt.long === "--name");
-      const forceOption = initCommand?.options.find(opt => opt.long === "--force");
-      const yesOption = initCommand?.options.find(opt => opt.long === "--yes");
+      const nameOption = initCommand?.options.find((opt) => opt.long === '--name');
+      const forceOption = initCommand?.options.find((opt) => opt.long === '--force');
+      const yesOption = initCommand?.options.find((opt) => opt.long === '--yes');
 
       expect(nameOption).toBeDefined();
-      expect(nameOption?.description).toContain("Project name");
+      expect(nameOption?.description).toContain('Project name');
       expect(forceOption).toBeDefined();
-      expect(forceOption?.description).toContain("Overwrite existing configuration");
+      expect(forceOption?.description).toContain('Overwrite existing configuration');
       expect(yesOption).toBeDefined();
-      expect(yesOption?.description).toContain("Automatically answer yes");
+      expect(yesOption?.description).toContain('Automatically answer yes');
     });
 
-    it("should check if opencode is installed", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const initCommand = codeCommand?.commands.find(cmd => cmd.name() === "init");
+    it('should check if opencode is installed', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const initCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'init');
 
       expect(initCommand).toBeDefined();
 
@@ -106,13 +106,13 @@ describe("Code Commands", () => {
       // This is tested implicitly through the spawn mock
     });
 
-    it("should list existing API keys and allow selection", async () => {
+    it('should list existing API keys and allow selection', async () => {
       // Mock successful opencode installation check
       mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
-        if (command === "opencode" && arguments_[0] === "--version") {
+        if (command === 'opencode' && arguments_[0] === '--version') {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
-              if (event === "close") callback(0);
+              if (event === 'close') callback(0);
             }),
           };
         }
@@ -122,18 +122,18 @@ describe("Code Commands", () => {
       // Mock existing API keys
       const mockExistingKeys = [
         {
-          created: "2023-01-01T00:00:00.000Z",
+          created: '2023-01-01T00:00:00.000Z',
           id: 1,
           lastUsed: null,
-          name: "existing-key-1",
-          prefix: "sk_ber",
+          name: 'existing-key-1',
+          prefix: 'sk_ber',
         },
         {
-          created: "2023-01-02T00:00:00.000Z",
+          created: '2023-01-02T00:00:00.000Z',
           id: 2,
-          lastUsed: "2023-01-03T00:00:00.000Z",
-          name: "existing-key-2",
-          prefix: "sk_ber",
+          lastUsed: '2023-01-03T00:00:00.000Z',
+          name: 'existing-key-2',
+          prefix: 'sk_ber',
         },
       ];
       mockApiKeyService.list.mockResolvedValue(mockExistingKeys);
@@ -146,13 +146,13 @@ describe("Code Commands", () => {
       expect(mockApiKeyService.list).toBeDefined();
     });
 
-    it("should create new API key with project-based naming", async () => {
+    it('should create new API key with project-based naming', async () => {
       // Mock successful opencode installation check
       mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
-        if (command === "opencode" && arguments_[0] === "--version") {
+        if (command === 'opencode' && arguments_[0] === '--version') {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
-              if (event === "close") callback(0);
+              if (event === 'close') callback(0);
             }),
           };
         }
@@ -165,8 +165,8 @@ describe("Code Commands", () => {
       // Mock successful API key creation
       const mockApiKeyData = {
         id: 123,
-        key: "test-api-key-12345",
-        name: "opencode-testproject-1234567890",
+        key: 'test-api-key-12345',
+        name: 'opencode-testproject-1234567890',
       };
       mockApiKeyService.create.mockResolvedValue(mockApiKeyData);
 
@@ -178,25 +178,25 @@ describe("Code Commands", () => {
       expect(mockApiKeyService.create).toBeDefined();
     });
 
-    it("should create opencode.json with correct structure", async () => {
+    it('should create opencode.json with correct structure', async () => {
       // This tests the expected config structure
       const expectedConfig = {
-        apiKey: "test-api-key",
+        apiKey: 'test-api-key',
         created: expect.any(String),
-        model: "berget/glm-4-6",
-        projectName: "testproject",
-        provider: "berget",
-        version: "1.0.0",
+        model: 'berget/glm-4-6',
+        projectName: 'testproject',
+        provider: 'berget',
+        version: '1.0.0',
       };
 
-      expect(expectedConfig.model).toBe("berget/glm-4-6");
-      expect(expectedConfig.provider).toBe("berget");
-      expect(expectedConfig.version).toBe("1.0.0");
+      expect(expectedConfig.model).toBe('berget/glm-4-6');
+      expect(expectedConfig.provider).toBe('berget');
+      expect(expectedConfig.version).toBe('1.0.0');
     });
 
-    it("should handle existing config file", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const initCommand = codeCommand?.commands.find(cmd => cmd.name() === "init");
+    it('should handle existing config file', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const initCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'init');
 
       expect(initCommand).toBeDefined();
 
@@ -205,41 +205,41 @@ describe("Code Commands", () => {
     });
   });
 
-  describe("code run command", () => {
-    it("should register run command with correct description", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const runCommand = codeCommand?.commands.find(cmd => cmd.name() === "run");
+  describe('code run command', () => {
+    it('should register run command with correct description', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const runCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'run');
 
       expect(runCommand).toBeDefined();
-      expect(runCommand?.description()).toBe("Run AI coding assistant");
+      expect(runCommand?.description()).toBe('Run AI coding assistant');
     });
 
-    it("should accept prompt argument and model, no-config, and yes options", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const runCommand = codeCommand?.commands.find(cmd => cmd.name() === "run");
+    it('should accept prompt argument and model, no-config, and yes options', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const runCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'run');
 
       expect(runCommand).toBeDefined();
 
-      const modelOption = runCommand?.options.find(opt => opt.long === "--model");
-      const noConfigOption = runCommand?.options.find(opt => opt.long === "--no-config");
-      const yesOption = runCommand?.options.find(opt => opt.long === "--yes");
+      const modelOption = runCommand?.options.find((opt) => opt.long === '--model');
+      const noConfigOption = runCommand?.options.find((opt) => opt.long === '--no-config');
+      const yesOption = runCommand?.options.find((opt) => opt.long === '--yes');
 
       expect(modelOption).toBeDefined();
-      expect(modelOption?.description).toContain("Model to use");
+      expect(modelOption?.description).toContain('Model to use');
       expect(noConfigOption).toBeDefined();
-      expect(noConfigOption?.description).toContain("Run without loading project config");
+      expect(noConfigOption?.description).toContain('Run without loading project config');
       expect(yesOption).toBeDefined();
-      expect(yesOption?.description).toContain("Automatically answer yes");
+      expect(yesOption?.description).toContain('Automatically answer yes');
     });
 
-    it("should load configuration from opencode.json", async () => {
+    it('should load configuration from opencode.json', async () => {
       const mockConfig = {
-        apiKey: "test-api-key",
-        created: "2023-01-01T00:00:00.000Z",
-        model: "berget/glm-4-6",
-        projectName: "testproject",
-        provider: "berget",
-        version: "1.0.0",
+        apiKey: 'test-api-key',
+        created: '2023-01-01T00:00:00.000Z',
+        model: 'berget/glm-4-6',
+        projectName: 'testproject',
+        provider: 'berget',
+        version: '1.0.0',
       };
 
       // Mock file exists and contains config
@@ -248,10 +248,10 @@ describe("Code Commands", () => {
 
       // Mock successful opencode check
       mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
-        if (command === "opencode" && arguments_[0] === "--version") {
+        if (command === 'opencode' && arguments_[0] === '--version') {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
-              if (event === "close") callback(0);
+              if (event === 'close') callback(0);
             }),
           };
         }
@@ -259,14 +259,14 @@ describe("Code Commands", () => {
       });
 
       // Verify config structure expectations
-      expect(mockConfig.model).toBe("berget/glm-4-6");
-      expect(mockConfig.apiKey).toBe("test-api-key");
-      expect(mockConfig.projectName).toBe("testproject");
+      expect(mockConfig.model).toBe('berget/glm-4-6');
+      expect(mockConfig.apiKey).toBe('test-api-key');
+      expect(mockConfig.projectName).toBe('testproject');
     });
 
-    it("should spawn opencode with correct arguments", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const runCommand = codeCommand?.commands.find(cmd => cmd.name() === "run");
+    it('should spawn opencode with correct arguments', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const runCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'run');
 
       expect(runCommand).toBeDefined();
 
@@ -274,9 +274,9 @@ describe("Code Commands", () => {
       expect(mockSpawn).toBeDefined();
     });
 
-    it("should handle missing configuration file", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const runCommand = codeCommand?.commands.find(cmd => cmd.name() === "run");
+    it('should handle missing configuration file', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const runCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'run');
 
       expect(runCommand).toBeDefined();
 
@@ -285,19 +285,19 @@ describe("Code Commands", () => {
     });
   });
 
-  describe("opencode installation", () => {
-    it("should check if opencode is installed", () => {
+  describe('opencode installation', () => {
+    it('should check if opencode is installed', () => {
       // The spawn function should be called with opencode --version
       expect(mockSpawn).toBeDefined();
     });
 
-    it("should offer to install opencode if not found", () => {
+    it('should offer to install opencode if not found', () => {
       // Mock opencode not installed
       mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
-        if (command === "opencode" && arguments_[0] === "--version") {
+        if (command === 'opencode' && arguments_[0] === '--version') {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
-              if (event === "close") callback(1); // Non-zero exit code
+              if (event === 'close') callback(1); // Non-zero exit code
             }),
           };
         }
@@ -308,54 +308,54 @@ describe("Code Commands", () => {
       expect(mockSpawn).toBeDefined();
     });
 
-    it("should install opencode via npm if user agrees", () => {
+    it('should install opencode via npm if user agrees', () => {
       // Should spawn npm install -g opencode-ai
       expect(mockSpawn).toBeDefined();
     });
   });
 
-  describe("automation support", () => {
-    it("should support -y flag for automated initialization", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const initCommand = codeCommand?.commands.find(cmd => cmd.name() === "init");
+  describe('automation support', () => {
+    it('should support -y flag for automated initialization', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const initCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'init');
 
       expect(initCommand).toBeDefined();
 
-      const yesOption = initCommand?.options.find(opt => opt.long === "--yes");
+      const yesOption = initCommand?.options.find((opt) => opt.long === '--yes');
       expect(yesOption).toBeDefined();
-      expect(yesOption?.description).toContain("automation");
+      expect(yesOption?.description).toContain('automation');
     });
 
-    it("should support -y flag for automated run", () => {
-      const codeCommand = program.commands.find(cmd => cmd.name() === "code");
-      const runCommand = codeCommand?.commands.find(cmd => cmd.name() === "run");
+    it('should support -y flag for automated run', () => {
+      const codeCommand = program.commands.find((cmd) => cmd.name() === 'code');
+      const runCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'run');
 
       expect(runCommand).toBeDefined();
 
-      const yesOption = runCommand?.options.find(opt => opt.long === "--yes");
+      const yesOption = runCommand?.options.find((opt) => opt.long === '--yes');
       expect(yesOption).toBeDefined();
-      expect(yesOption?.description).toContain("automation");
+      expect(yesOption?.description).toContain('automation');
     });
 
-    it("should use BERGET_API_KEY environment variable in automation mode", () => {
+    it('should use BERGET_API_KEY environment variable in automation mode', () => {
       // Test that environment variable is used when -y flag is set
-      process.env.BERGET_API_KEY = "test-env-key";
+      process.env.BERGET_API_KEY = 'test-env-key';
 
-      expect(process.env.BERGET_API_KEY).toBe("test-env-key");
+      expect(process.env.BERGET_API_KEY).toBe('test-env-key');
 
       // Clean up
       delete process.env.BERGET_API_KEY;
     });
   });
 
-  describe(".env file handling", () => {
+  describe('.env file handling', () => {
     let mockUpdateEnvironmentFile: any;
 
     beforeEach(() => {
       mockUpdateEnvironmentFile = vi.mocked(updateEnvironmentFile);
     });
 
-    it("should call updateEnvFile when creating new project", async () => {
+    it('should call updateEnvFile when creating new project', async () => {
       mockUpdateEnvironmentFile.mockResolvedValue(true);
       mockFs.existsSync.mockReturnValue(false); // .env doesn't exist
       mockFsPromises.writeFile.mockResolvedValue();
@@ -365,16 +365,16 @@ describe("Code Commands", () => {
       expect(mockUpdateEnvironmentFile).toBeDefined();
     });
 
-    it("should not overwrite existing BERGET_API_KEY in .env", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    it('should not overwrite existing BERGET_API_KEY in .env', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       // Mock existing .env with BERGET_API_KEY
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue("BERGET_API_KEY=existing_key\nOTHER_KEY=value\n");
+      mockFs.readFileSync.mockReturnValue('BERGET_API_KEY=existing_key\nOTHER_KEY=value\n');
 
       // Mock updateEnvFile to simulate the check
       mockUpdateEnvironmentFile.mockImplementation(async (options: any) => {
-        if (options.key === "BERGET_API_KEY" && !options.force) {
+        if (options.key === 'BERGET_API_KEY' && !options.force) {
           console.log(`⚠ ${options.key} already exists in .env - leaving unchanged`);
           return false;
         }
@@ -382,89 +382,89 @@ describe("Code Commands", () => {
       });
 
       await updateEnvironmentFile({
-        key: "BERGET_API_KEY",
-        value: "new_key",
+        key: 'BERGET_API_KEY',
+        value: 'new_key',
       });
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("BERGET_API_KEY already exists in .env - leaving unchanged")
+        expect.stringContaining('BERGET_API_KEY already exists in .env - leaving unchanged'),
       );
 
       consoleSpy.mockRestore();
     });
 
-    it("should add new key to existing .env file", async () => {
+    it('should add new key to existing .env file', async () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue("EXISTING_KEY=value\n");
+      mockFs.readFileSync.mockReturnValue('EXISTING_KEY=value\n');
       mockUpdateEnvironmentFile.mockResolvedValue(true);
 
       await updateEnvironmentFile({
-        comment: "Berget AI Configuration",
-        key: "BERGET_API_KEY",
-        value: "new_api_key",
+        comment: 'Berget AI Configuration',
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key',
       });
 
       expect(mockUpdateEnvironmentFile).toHaveBeenCalledWith({
-        comment: "Berget AI Configuration",
-        key: "BERGET_API_KEY",
-        value: "new_api_key",
+        comment: 'Berget AI Configuration',
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key',
       });
     });
 
-    it("should create new .env file when none exists", async () => {
+    it('should create new .env file when none exists', async () => {
       mockFs.existsSync.mockReturnValue(false);
       mockUpdateEnvironmentFile.mockResolvedValue(true);
 
       await updateEnvironmentFile({
-        key: "BERGET_API_KEY",
-        value: "new_api_key",
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key',
       });
 
       expect(mockUpdateEnvironmentFile).toHaveBeenCalledWith({
-        key: "BERGET_API_KEY",
-        value: "new_api_key",
+        key: 'BERGET_API_KEY',
+        value: 'new_api_key',
       });
     });
   });
 
-  describe("error handling", () => {
-    it("should handle API key creation failures", () => {
+  describe('error handling', () => {
+    it('should handle API key creation failures', () => {
       // Mock API key service to throw error
-      mockApiKeyService.create.mockRejectedValue(new Error("API Error"));
+      mockApiKeyService.create.mockRejectedValue(new Error('API Error'));
 
       expect(mockApiKeyService.create).toBeDefined();
     });
 
-    it("should handle file system errors", () => {
+    it('should handle file system errors', () => {
       // Mock file operations to throw errors
-      mockFsPromises.writeFile.mockRejectedValue(new Error("File write error"));
+      mockFsPromises.writeFile.mockRejectedValue(new Error('File write error'));
 
       expect(mockFsPromises.writeFile).toBeDefined();
     });
 
-    it("should handle spawn errors", () => {
+    it('should handle spawn errors', () => {
       // Mock spawn to throw error
       mockSpawn.mockImplementation(() => {
-        throw new Error("Command not found");
+        throw new Error('Command not found');
       });
 
       expect(mockSpawn).toBeDefined();
     });
 
-    it("should handle .env update failures", async () => {
+    it('should handle .env update failures', async () => {
       const mockUpdateEnvironmentFile = vi.mocked(updateEnvironmentFile);
-      mockUpdateEnvironmentFile.mockRejectedValue(new Error("Env update failed"));
+      mockUpdateEnvironmentFile.mockRejectedValue(new Error('Env update failed'));
 
       await expect(
         updateEnvironmentFile({
-          key: "TEST_KEY",
-          value: "test_value",
-        })
-      ).rejects.toThrow("Env update failed");
+          key: 'TEST_KEY',
+          value: 'test_value',
+        }),
+      ).rejects.toThrow('Env update failed');
     });
   });
 
-  describe("experimental features", () => {
+  describe('experimental features', () => {
     let originalEnvironment: string | undefined;
 
     beforeEach(() => {
@@ -479,29 +479,29 @@ describe("Code Commands", () => {
       }
     });
 
-    it("should NOT show setup command when BERGET_EXPERIMENTAL is not set", () => {
+    it('should NOT show setup command when BERGET_EXPERIMENTAL is not set', () => {
       delete process.env.BERGET_EXPERIMENTAL;
 
       const freshProgram = new Command();
       registerCodeCommands(freshProgram);
 
-      const codeCommand = freshProgram.commands.find(cmd => cmd.name() === "code");
-      const setupCommand = codeCommand?.commands.find(cmd => cmd.name() === "setup");
+      const codeCommand = freshProgram.commands.find((cmd) => cmd.name() === 'code');
+      const setupCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'setup');
 
       expect(setupCommand).toBeUndefined();
     });
 
-    it("should show setup command when BERGET_EXPERIMENTAL is set", () => {
-      process.env.BERGET_EXPERIMENTAL = "1";
+    it('should show setup command when BERGET_EXPERIMENTAL is set', () => {
+      process.env.BERGET_EXPERIMENTAL = '1';
 
       const freshProgram = new Command();
       registerCodeCommands(freshProgram);
 
-      const codeCommand = freshProgram.commands.find(cmd => cmd.name() === "code");
-      const setupCommand = codeCommand?.commands.find(cmd => cmd.name() === "setup");
+      const codeCommand = freshProgram.commands.find((cmd) => cmd.name() === 'code');
+      const setupCommand = codeCommand?.commands.find((cmd) => cmd.name() === 'setup');
 
       expect(setupCommand).toBeDefined();
-      expect(setupCommand?.description()).toBe("Interactive setup for Berget AI coding tools");
+      expect(setupCommand?.description()).toBe('Interactive setup for Berget AI coding tools');
     });
   });
 });

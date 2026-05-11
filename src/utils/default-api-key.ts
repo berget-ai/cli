@@ -1,10 +1,10 @@
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
-import readline from "node:readline";
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import readline from 'node:readline';
 
-import { ApiKeyService } from "../services/api-key-service";
-import { logger } from "./logger";
+import { ApiKeyService } from '../services/api-key-service';
+import { logger } from './logger';
 
 interface DefaultApiKeyData {
   id: string;
@@ -23,11 +23,11 @@ export class DefaultApiKeyManager {
 
   private constructor() {
     // Set up config file path in user's home directory
-    const bergetDir = path.join(os.homedir(), ".berget");
+    const bergetDir = path.join(os.homedir(), '.berget');
     if (!fs.existsSync(bergetDir)) {
       fs.mkdirSync(bergetDir, { recursive: true });
     }
-    this.configFilePath = path.join(bergetDir, "default-api-key.json");
+    this.configFilePath = path.join(bergetDir, 'default-api-key.json');
     this.loadConfig();
   }
 
@@ -66,29 +66,29 @@ export class DefaultApiKeyManager {
    */
   public async promptForDefaultApiKey(): Promise<null | string> {
     try {
-      logger.debug("promptForDefaultApiKey called");
+      logger.debug('promptForDefaultApiKey called');
 
       // If we already have a default API key, return it
       if (this.defaultApiKey) {
-        logger.debug("Using existing default API key");
+        logger.debug('Using existing default API key');
         return this.defaultApiKey.key;
       }
 
-      logger.debug("No default API key found, getting ApiKeyService");
+      logger.debug('No default API key found, getting ApiKeyService');
 
       const apiKeyService = ApiKeyService.getInstance();
 
       // Get all API keys
       let apiKeys;
       try {
-        logger.debug("Calling apiKeyService.list()");
+        logger.debug('Calling apiKeyService.list()');
 
         apiKeys = await apiKeyService.list();
 
         logger.debug(`Got ${apiKeys ? apiKeys.length : 0} API keys`);
 
         if (!apiKeys || apiKeys.length === 0) {
-          logger.warn("No API keys found. Create one with:");
+          logger.warn('No API keys found. Create one with:');
           logger.info('  berget api-keys create --name "My Key"');
           return null;
         }
@@ -96,14 +96,14 @@ export class DefaultApiKeyManager {
         // Check if this is an authentication error
         const errorMessage = error instanceof Error ? error.message : String(error);
         const isAuthError =
-          errorMessage.includes("Unauthorized") ||
-          errorMessage.includes("Authentication failed") ||
-          errorMessage.includes("AUTH_FAILED");
+          errorMessage.includes('Unauthorized') ||
+          errorMessage.includes('Authentication failed') ||
+          errorMessage.includes('AUTH_FAILED');
 
         if (isAuthError) {
-          logger.warn("Authentication required. Please run `berget auth login` first.");
+          logger.warn('Authentication required. Please run `berget auth login` first.');
         } else {
-          logger.error("Error fetching API keys:");
+          logger.error('Error fetching API keys:');
           if (error instanceof Error) {
             logger.error(error.message);
             logger.debug(`API key list error: ${error.message}`);
@@ -113,7 +113,7 @@ export class DefaultApiKeyManager {
         return null;
       }
 
-      logger.info("Select an API key to use as default:");
+      logger.info('Select an API key to use as default:');
 
       // Display available API keys
       for (const [index, key] of apiKeys.entries()) {
@@ -127,8 +127,8 @@ export class DefaultApiKeyManager {
       });
 
       // Prompt for selection
-      const selection = await new Promise<number>(resolve => {
-        rl.question("Enter number (or press Enter to cancel): ", answer => {
+      const selection = await new Promise<number>((resolve) => {
+        rl.question('Enter number (or press Enter to cancel): ', (answer) => {
           rl.close();
           const number_ = Number.parseInt(answer.trim(), 10);
           if (isNaN(number_) || number_ < 1 || number_ > apiKeys.length) {
@@ -140,7 +140,7 @@ export class DefaultApiKeyManager {
       });
 
       if (selection === -1) {
-        logger.warn("No API key selected");
+        logger.warn('No API key selected');
         return null;
       }
 
@@ -148,7 +148,7 @@ export class DefaultApiKeyManager {
 
       // Create a new API key with the selected name
       const newKey = await apiKeyService.create({
-        description: "Created automatically by the Berget CLI for default use",
+        description: 'Created automatically by the Berget CLI for default use',
         name: `CLI Default (copy of ${selectedKey.name})`,
       });
 
@@ -157,13 +157,13 @@ export class DefaultApiKeyManager {
         newKey.id.toString(),
         newKey.name,
         newKey.key.slice(0, 8), // Use first 8 chars as prefix
-        newKey.key
+        newKey.key,
       );
 
       logger.success(`✓ Default API key set to: ${newKey.name}`);
       return newKey.key;
     } catch (error) {
-      logger.error("Failed to set default API key:", error);
+      logger.error('Failed to set default API key:', error);
       return null;
     }
   }
@@ -182,11 +182,11 @@ export class DefaultApiKeyManager {
   private loadConfig(): void {
     try {
       if (fs.existsSync(this.configFilePath)) {
-        const data = fs.readFileSync(this.configFilePath, "utf8");
+        const data = fs.readFileSync(this.configFilePath, 'utf8');
         this.defaultApiKey = JSON.parse(data);
       }
     } catch {
-      logger.debug("Failed to load default API key configuration");
+      logger.debug('Failed to load default API key configuration');
       this.defaultApiKey = null;
     }
   }
@@ -207,7 +207,7 @@ export class DefaultApiKeyManager {
         }
       }
     } catch {
-      logger.debug("Failed to save default API key configuration");
+      logger.debug('Failed to save default API key configuration');
     }
   }
 }

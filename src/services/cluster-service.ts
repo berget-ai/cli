@@ -1,5 +1,5 @@
-import { createAuthenticatedClient } from "../client";
-import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
+import { createAuthenticatedClient } from '../client';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
 
 export interface Cluster {
   created: string;
@@ -41,9 +41,9 @@ export class ClusterService {
       // This is a placeholder since the API doesn't have a specific endpoint
       // In a real implementation, this would call a specific endpoint
       const clusters = await this.list();
-      return clusters.find(cluster => cluster.id === clusterId) || null;
+      return clusters.find((cluster) => cluster.id === clusterId) || null;
     } catch (error) {
-      console.error("Failed to describe cluster:", error);
+      console.error('Failed to describe cluster:', error);
       throw error;
     }
   }
@@ -54,13 +54,13 @@ export class ClusterService {
    */
   public async getUsage(clusterId: string): Promise<any> {
     try {
-      const { data, error } = await this.client.GET("/v1/clusters/{clusterId}/usage", {
+      const { data, error } = await this.client.GET('/v1/clusters/{clusterId}/usage', {
         params: { path: { clusterId } },
       });
       if (error) throw new Error(JSON.stringify(error));
       return data;
     } catch (error) {
-      console.error("Failed to get cluster usage:", error);
+      console.error('Failed to get cluster usage:', error);
       throw error;
     }
   }
@@ -71,11 +71,11 @@ export class ClusterService {
    */
   public async list(): Promise<Cluster[]> {
     try {
-      const { data, error } = await this.client.GET("/v1/clusters");
+      const { data, error } = await this.client.GET('/v1/clusters');
       if (error) throw new Error(JSON.stringify(error));
       return data?.data || [];
     } catch (error) {
-      console.error("Failed to list clusters:", error);
+      console.error('Failed to list clusters:', error);
       throw error;
     }
   }

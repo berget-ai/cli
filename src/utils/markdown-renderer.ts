@@ -1,6 +1,6 @@
-import chalk from "chalk";
-import { marked } from "marked";
-import TerminalRenderer from "marked-terminal";
+import chalk from 'chalk';
+import { marked } from 'marked';
+import TerminalRenderer from 'marked-terminal';
 
 // Configure marked to use the terminal renderer
 marked.setOptions({
@@ -46,7 +46,7 @@ export function containsMarkdown(text: string): boolean {
     /^===+$/m, // Alternative headers
   ];
 
-  return markdownPatterns.some(pattern => pattern.test(text));
+  return markdownPatterns.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -55,7 +55,7 @@ export function containsMarkdown(text: string): boolean {
  * @returns Formatted text for terminal display
  */
 export function renderMarkdown(markdown: string): string {
-  if (!markdown) return "";
+  if (!markdown) return '';
 
   try {
     // Convert markdown to terminal-friendly text

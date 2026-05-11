@@ -1,24 +1,24 @@
-import { applyEdits, modify, parse } from "jsonc-parser";
-import * as os from "node:os";
+import { applyEdits, modify, parse } from 'jsonc-parser';
+import * as os from 'node:os';
 
-import type { ApiKeyServicePort, AuthServicePort } from "./ports/auth-services";
-import type { CommandRunner } from "./ports/command-runner";
-import type { FileStore } from "./ports/file-store";
-import type { Prompter } from "./ports/prompter";
+import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services';
+import type { CommandRunner } from './ports/command-runner';
+import type { FileStore } from './ports/file-store';
+import type { Prompter } from './ports/prompter';
 
-import { getAllAgents, toMarkdown, toPiPrompt } from "../../agents/index.js";
-import { ApiKeyService } from "../../services/api-key-service.js";
-import { AuthService } from "../../services/auth-service.js";
-import { ClackPrompter } from "./adapters/clack-prompter.js";
-import { FsFileStore } from "./adapters/fs-file-store.js";
-import { SpawnCommandRunner } from "./adapters/spawn-command-runner.js";
-import { configureAuth } from "./auth-sync.js";
-import { CancelledError, CommandFailedError, PrerequisiteError } from "./errors";
+import { getAllAgents, toMarkdown, toPiPrompt } from '../../agents/index.js';
+import { ApiKeyService } from '../../services/api-key-service.js';
+import { AuthService } from '../../services/auth-service.js';
+import { ClackPrompter } from './adapters/clack-prompter.js';
+import { FsFileStore } from './adapters/fs-file-store.js';
+import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
+import { configureAuth } from './auth-sync.js';
+import { CancelledError, CommandFailedError, PrerequisiteError } from './errors';
 
-const OPENCODE_PLUGIN = "@bergetai/opencode-auth";
-const PI_PROVIDER = "npm:@bergetai/pi-provider";
-const OPENCODE_PLUGIN_NAME = "@bergetai/opencode-auth";
-const PI_PROVIDER_NAME = "@bergetai/pi-provider";
+const OPENCODE_PLUGIN = '@bergetai/opencode-auth';
+const PI_PROVIDER = 'npm:@bergetai/pi-provider';
+const OPENCODE_PLUGIN_NAME = '@bergetai/opencode-auth';
+const PI_PROVIDER_NAME = '@bergetai/pi-provider';
 
 export interface WizardDeps {
   apiKeyService: ApiKeyServicePort;
@@ -33,75 +33,75 @@ export interface WizardDeps {
 export async function runSetup(deps: WizardDeps): Promise<void> {
   const { apiKeyService, authService, commands, cwd, files, homeDir, prompter } = deps;
 
-  prompter.intro("\uD83D\uDD27 Berget Code Setup");
+  prompter.intro('\uD83D\uDD27 Berget Code Setup');
 
   const ocState = await getOpencodeState(files, homeDir, cwd);
   const piState = await getPiState(files, homeDir, cwd);
 
-  const tool = await prompter.select<"opencode" | "pi">({
-    message: "How do you want to use Berget AI?",
+  const tool = await prompter.select<'opencode' | 'pi'>({
+    message: 'How do you want to use Berget AI?',
     options: [
       {
-        hint: "Open source AI coding agent",
+        hint: 'Open source AI coding agent',
         label: `OpenCode${getOpencodeLabel(ocState)}`,
-        value: "opencode",
+        value: 'opencode',
       },
       {
-        hint: "Minimal terminal coding harness",
+        hint: 'Minimal terminal coding harness',
         label: `Pi${getPiLabel(piState)}`,
-        value: "pi",
+        value: 'pi',
       },
     ],
   });
 
-  const scope = await prompter.select<"global" | "project">({
-    message: "Where should the configuration apply?",
+  const scope = await prompter.select<'global' | 'project'>({
+    message: 'Where should the configuration apply?',
     options: [
       {
         hint:
-          tool === "opencode"
+          tool === 'opencode'
             ? ocState.project
-              ? "Already configured"
-              : "opencode.json in current directory"
+              ? 'Already configured'
+              : 'opencode.json in current directory'
             : piState.project
-              ? "Already configured"
-              : ".pi/settings.json in current directory",
-        label: "This project only",
-        value: "project",
+              ? 'Already configured'
+              : '.pi/settings.json in current directory',
+        label: 'This project only',
+        value: 'project',
       },
       {
         hint:
-          tool === "opencode"
+          tool === 'opencode'
             ? ocState.global
-              ? "Already configured"
-              : "~/.config/opencode/opencode.json"
+              ? 'Already configured'
+              : '~/.config/opencode/opencode.json'
             : piState.global
-              ? "Already configured"
-              : "~/.pi/agent/settings.json",
-        label: "Globally for all projects",
-        value: "global",
+              ? 'Already configured'
+              : '~/.pi/agent/settings.json',
+        label: 'Globally for all projects',
+        value: 'global',
       },
     ],
   });
 
   const authResult = await configureAuth(
     { apiKeyService, authService, files, homeDir, prompter },
-    tool
+    tool,
   );
 
-  if (tool === "opencode") {
+  if (tool === 'opencode') {
     await setupOpenCode({ commands, cwd, files, homeDir, prompter, scope });
     await setupOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
 
     if (authResult.authenticated) {
       prompter.note(
         `You're all set!\n\n1. Run: opencode\n2. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`,
-        "Successfully configured Berget AI for OpenCode"
+        'Successfully configured Berget AI for OpenCode',
       );
     } else {
       prompter.note(
         `Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`,
-        "Successfully configured Berget AI for OpenCode"
+        'Successfully configured Berget AI for OpenCode',
       );
     }
   } else {
@@ -111,17 +111,17 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
     if (authResult.authenticated) {
       prompter.note(
         `You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`,
-        "Successfully configured Berget AI for Pi"
+        'Successfully configured Berget AI for Pi',
       );
     } else {
       prompter.note(
         `Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`,
-        "Successfully configured Berget AI for Pi"
+        'Successfully configured Berget AI for Pi',
       );
     }
   }
 
-  prompter.outro("Setup complete!");
+  prompter.outro('Setup complete!');
 }
 
 // ─── OpenCode ────────────────────────────────────────────────────────────────
@@ -157,8 +157,8 @@ export async function runSetupCommand(): Promise<void> {
 // ─── Pi ────────────────────────────────────────────────────────────────────────
 
 function generateDiff(oldText: string, newText: string, filePath: string): string {
-  const oldLines = oldText.split("\n");
-  const newLines = newText.split("\n");
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
   let result = `--- ${filePath}\n+++ ${filePath}\n`;
 
   const maxLength = Math.max(oldLines.length, newLines.length);
@@ -174,8 +174,8 @@ function generateDiff(oldText: string, newText: string, filePath: string): strin
 }
 
 function generateModifiedContent(existingContent: null | string, configPath: string): string {
-  if (configPath.endsWith(".jsonc")) {
-    const content = existingContent || "{}";
+  if (configPath.endsWith('.jsonc')) {
+    const content = existingContent || '{}';
     const parseErrors: any[] = [];
     const parsed = parse(content, parseErrors, {
       allowTrailingComma: true,
@@ -185,7 +185,7 @@ function generateModifiedContent(existingContent: null | string, configPath: str
     let jsConfig: Record<string, any> = {};
     const canModifyText =
       parsed !== undefined &&
-      typeof parsed === "object" &&
+      typeof parsed === 'object' &&
       parsed !== null &&
       !Array.isArray(parsed);
 
@@ -193,7 +193,7 @@ function generateModifiedContent(existingContent: null | string, configPath: str
       jsConfig = parsed as Record<string, any>;
     }
 
-    const pluginsKey = jsConfig.plugins === undefined ? "plugin" : "plugins";
+    const pluginsKey = jsConfig.plugins === undefined ? 'plugin' : 'plugins';
     const existing: string[] = jsConfig[pluginsKey] || [];
     const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME));
     filtered.push(OPENCODE_PLUGIN);
@@ -208,11 +208,11 @@ function generateModifiedContent(existingContent: null | string, configPath: str
       if (!jsConfig.$schema) {
         const schemaEdits = modify(
           modifiedContent,
-          ["$schema"],
-          "https://opencode.ai/config.json",
+          ['$schema'],
+          'https://opencode.ai/config.json',
           {
             formattingOptions: { insertSpaces: true, tabSize: 2 },
-          }
+          },
         );
         modifiedContent = applyEdits(modifiedContent, schemaEdits);
       }
@@ -222,10 +222,10 @@ function generateModifiedContent(existingContent: null | string, configPath: str
 
     // Malformed, empty, or non-object JSONC — write a clean config
     const config: Record<string, any> = {
-      $schema: "https://opencode.ai/config.json",
+      $schema: 'https://opencode.ai/config.json',
       [pluginsKey]: filtered,
     };
-    return JSON.stringify(config, null, 2) + "\n";
+    return JSON.stringify(config, null, 2) + '\n';
   }
 
   // Plain JSON
@@ -238,19 +238,19 @@ function generateModifiedContent(existingContent: null | string, configPath: str
     }
   }
 
-  const pluginsKey = config.plugins === undefined ? "plugin" : "plugins";
+  const pluginsKey = config.plugins === undefined ? 'plugin' : 'plugins';
   const existing: string[] = config[pluginsKey] || [];
   const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME));
   filtered.push(OPENCODE_PLUGIN);
   config[pluginsKey] = filtered;
-  config.$schema = config.$schema || "https://opencode.ai/config.json";
+  config.$schema = config.$schema || 'https://opencode.ai/config.json';
 
-  return JSON.stringify(config, null, 2) + "\n";
+  return JSON.stringify(config, null, 2) + '\n';
 }
 
 function getOpencodeLabel(state: { global: boolean; project: boolean }): string {
-  if (state.project || state.global) return " (already configured)";
-  return "";
+  if (state.project || state.global) return ' (already configured)';
+  return '';
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -258,17 +258,17 @@ function getOpencodeLabel(state: { global: boolean; project: boolean }): string 
 async function getOpencodeState(
   files: FileStore,
   homeDir: string,
-  cwd: string
+  cwd: string,
 ): Promise<{ global: boolean; project: boolean }> {
-  const projectJsonc = await readJsonMaybe(files, pathJoin(cwd, "opencode.jsonc"));
-  const projectJson = await readJsonMaybe(files, pathJoin(cwd, "opencode.json"));
+  const projectJsonc = await readJsonMaybe(files, pathJoin(cwd, 'opencode.jsonc'));
+  const projectJson = await readJsonMaybe(files, pathJoin(cwd, 'opencode.json'));
   const globalJsonc = await readJsonMaybe(
     files,
-    pathJoin(homeDir, ".config", "opencode", "opencode.jsonc")
+    pathJoin(homeDir, '.config', 'opencode', 'opencode.jsonc'),
   );
   const globalJson = await readJsonMaybe(
     files,
-    pathJoin(homeDir, ".config", "opencode", "opencode.json")
+    pathJoin(homeDir, '.config', 'opencode', 'opencode.json'),
   );
 
   return {
@@ -278,19 +278,19 @@ async function getOpencodeState(
 }
 
 function getPiLabel(state: { global: boolean; project: boolean }): string {
-  if (state.project || state.global) return " (already configured)";
-  return "";
+  if (state.project || state.global) return ' (already configured)';
+  return '';
 }
 
 async function getPiState(
   files: FileStore,
   homeDir: string,
-  cwd: string
+  cwd: string,
 ): Promise<{ global: boolean; project: boolean }> {
-  const projectSettings = await readJsonMaybe(files, pathJoin(cwd, ".pi", "settings.json"));
+  const projectSettings = await readJsonMaybe(files, pathJoin(cwd, '.pi', 'settings.json'));
   const globalSettings = await readJsonMaybe(
     files,
-    pathJoin(homeDir, ".pi", "agent", "settings.json")
+    pathJoin(homeDir, '.pi', 'agent', 'settings.json'),
   );
 
   return {
@@ -303,8 +303,8 @@ async function hasPiProviderInSettings(settings: any): Promise<boolean> {
   if (!settings) return false;
   const packages = settings.packages || [];
   return packages.some((p: any) => {
-    if (typeof p === "string") return p.includes(PI_PROVIDER_NAME);
-    if (typeof p === "object" && p.source) return p.source.includes(PI_PROVIDER_NAME);
+    if (typeof p === 'string') return p.includes(PI_PROVIDER_NAME);
+    if (typeof p === 'object' && p.source) return p.source.includes(PI_PROVIDER_NAME);
     return false;
   });
 }
@@ -318,7 +318,7 @@ async function hasPluginInConfig(config: any): Promise<boolean> {
 function pathJoin(...parts: string[]): string {
   // Simple path join that avoids importing 'path' module
   // This is good enough for cross-platform testing since tests control the path format
-  return parts.join("/");
+  return parts.join('/');
 }
 
 async function readJsonMaybe(files: FileStore, filePath: string): Promise<any | null> {
@@ -339,18 +339,18 @@ async function resolveOpencodeConfigPath(
   files: FileStore,
   homeDir: string,
   cwd: string,
-  scope: "global" | "project"
+  scope: 'global' | 'project',
 ): Promise<string> {
-  if (scope === "project") {
-    const jsoncPath = pathJoin(cwd, "opencode.jsonc");
-    const jsonPath = pathJoin(cwd, "opencode.json");
+  if (scope === 'project') {
+    const jsoncPath = pathJoin(cwd, 'opencode.jsonc');
+    const jsonPath = pathJoin(cwd, 'opencode.json');
     if (await files.exists(jsoncPath)) return jsoncPath;
     if (await files.exists(jsonPath)) return jsonPath;
     return jsonPath;
   } else {
-    const globalDir = pathJoin(homeDir, ".config", "opencode");
-    const jsoncPath = pathJoin(globalDir, "opencode.jsonc");
-    const jsonPath = pathJoin(globalDir, "opencode.json");
+    const globalDir = pathJoin(homeDir, '.config', 'opencode');
+    const jsoncPath = pathJoin(globalDir, 'opencode.jsonc');
+    const jsonPath = pathJoin(globalDir, 'opencode.json');
     if (await files.exists(jsoncPath)) return jsoncPath;
     if (await files.exists(jsonPath)) return jsonPath;
     return jsonPath;
@@ -363,13 +363,13 @@ async function setupOpenCode(deps: {
   files: FileStore;
   homeDir: string;
   prompter: Prompter;
-  scope: "global" | "project";
+  scope: 'global' | 'project';
 }): Promise<void> {
   const { commands, cwd, files, homeDir, prompter, scope } = deps;
 
-  const installed = await commands.checkInstalled("opencode");
+  const installed = await commands.checkInstalled('opencode');
   if (!installed) {
-    throw new PrerequisiteError("opencode");
+    throw new PrerequisiteError('opencode');
   }
 
   const configPath = await resolveOpencodeConfigPath(files, homeDir, cwd, scope);
@@ -381,9 +381,9 @@ async function setupOpenCode(deps: {
   }
 
   if (existingContent) {
-    prompter.note(generateDiff(existingContent, newContent, configPath), "Changes to be written");
+    prompter.note(generateDiff(existingContent, newContent, configPath), 'Changes to be written');
   } else {
-    prompter.note(`New config at ${configPath}:\n\n${newContent}`, "Config preview");
+    prompter.note(`New config at ${configPath}:\n\n${newContent}`, 'Config preview');
   }
 
   const shouldWrite = await prompter.confirm({
@@ -393,7 +393,7 @@ async function setupOpenCode(deps: {
   if (!shouldWrite) throw new CancelledError();
 
   const s = prompter.spinner();
-  s.start("Writing OpenCode configuration...");
+  s.start('Writing OpenCode configuration...');
   await files.writeFile(configPath, newContent);
   s.stop(`Wrote configuration to ${configPath}.`);
 }
@@ -403,19 +403,19 @@ async function setupOpenCodeAgents(deps: {
   files: FileStore;
   homeDir: string;
   prompter: Prompter;
-  scope: "global" | "project";
+  scope: 'global' | 'project';
 }): Promise<void> {
   const { cwd, files, homeDir, prompter, scope } = deps;
 
-  const agents = getAllAgents().filter(a => a.config.mode === "primary");
+  const agents = getAllAgents().filter((a) => a.config.mode === 'primary');
 
   if (agents.length === 0) {
     return;
   }
 
   const selectedAgents = await prompter.multiselect({
-    message: "Select agents to set up (optional - press enter to skip):",
-    options: agents.map(agent => ({
+    message: 'Select agents to set up (optional - press enter to skip):',
+    options: agents.map((agent) => ({
       hint: agent.config.description,
       label: agent.config.name,
       value: agent.config.name,
@@ -427,15 +427,15 @@ async function setupOpenCodeAgents(deps: {
   }
 
   const agentsDir =
-    scope === "project"
-      ? pathJoin(cwd, ".opencode", "agents")
-      : pathJoin(homeDir, ".config", "opencode", "agents");
+    scope === 'project'
+      ? pathJoin(cwd, '.opencode', 'agents')
+      : pathJoin(homeDir, '.config', 'opencode', 'agents');
 
   await files.mkdir(agentsDir);
 
   const hasChanges = await Promise.all(
-    selectedAgents.map(async agentName => {
-      const agent = agents.find(a => a.config.name === agentName);
+    selectedAgents.map(async (agentName) => {
+      const agent = agents.find((a) => a.config.name === agentName);
       if (!agent) return false;
 
       const agentPath = pathJoin(agentsDir, `${agentName}.md`);
@@ -449,22 +449,22 @@ async function setupOpenCodeAgents(deps: {
       if (existing) {
         prompter.note(
           generateDiff(existing, newContent, agentPath),
-          `Changes to ${agentName} agent`
+          `Changes to ${agentName} agent`,
         );
       }
 
       return true;
-    })
+    }),
   );
 
   if (!hasChanges.some(Boolean)) {
-    prompter.note("Agent files are already up to date.", "No changes needed");
+    prompter.note('Agent files are already up to date.', 'No changes needed');
     return;
   }
 
   const shouldWrite = await prompter.confirm({
     initialValue: true,
-    message: "Write agent configuration files?",
+    message: 'Write agent configuration files?',
   });
 
   if (!shouldWrite) {
@@ -472,10 +472,10 @@ async function setupOpenCodeAgents(deps: {
   }
 
   const s = prompter.spinner();
-  s.start("Writing agent configurations...");
+  s.start('Writing agent configurations...');
 
   for (const agentName of selectedAgents) {
-    const agent = agents.find(a => a.config.name === agentName);
+    const agent = agents.find((a) => a.config.name === agentName);
     if (!agent) continue;
 
     const agentPath = pathJoin(agentsDir, `${agentName}.md`);
@@ -492,39 +492,39 @@ async function setupPi(deps: {
   files: FileStore;
   homeDir: string;
   prompter: Prompter;
-  scope: "global" | "project";
+  scope: 'global' | 'project';
 }): Promise<void> {
   const { commands, cwd, files, homeDir, prompter, scope } = deps;
   const s = prompter.spinner();
 
-  const installed = await commands.checkInstalled("pi");
+  const installed = await commands.checkInstalled('pi');
   if (!installed) {
-    throw new PrerequisiteError("pi");
+    throw new PrerequisiteError('pi');
   }
 
   const installArguments =
-    scope === "project" ? ["install", "-l", PI_PROVIDER] : ["install", PI_PROVIDER];
+    scope === 'project' ? ['install', '-l', PI_PROVIDER] : ['install', PI_PROVIDER];
 
   s.start(`Installing Berget AI provider for Pi...`);
   try {
-    await commands.run("pi", installArguments);
-    s.stop("Installed Pi provider.");
+    await commands.run('pi', installArguments);
+    s.stop('Installed Pi provider.');
   } catch {
-    s.stop("Pi provider installation failed. Please try again or install manually.");
-    throw new CommandFailedError(`pi ${installArguments.join(" ")}`, 1);
+    s.stop('Pi provider installation failed. Please try again or install manually.');
+    throw new CommandFailedError(`pi ${installArguments.join(' ')}`, 1);
   }
 
   const settingsPath =
-    scope === "project"
-      ? pathJoin(cwd, ".pi", "settings.json")
-      : pathJoin(homeDir, ".pi", "agent", "settings.json");
+    scope === 'project'
+      ? pathJoin(cwd, '.pi', 'settings.json')
+      : pathJoin(homeDir, '.pi', 'agent', 'settings.json');
 
   const settings = (await readJsonMaybe(files, settingsPath)) || {};
 
-  if (settings.defaultProvider === "berget") {
+  if (settings.defaultProvider === 'berget') {
     prompter.note(
-      "Berget AI is already set as your default provider.",
-      "Default provider already set"
+      'Berget AI is already set as your default provider.',
+      'Default provider already set',
     );
   } else {
     if (settings.defaultProvider) {
@@ -533,14 +533,14 @@ async function setupPi(deps: {
         message: `Your default provider is ${settings.defaultProvider}. Switch to Berget AI instead?`,
       });
       if (makeDefault) {
-        settings.defaultProvider = "berget";
+        settings.defaultProvider = 'berget';
         await writeJsonFile(files, settingsPath, settings);
-        prompter.note("Berget AI is now your default provider.", "Updated default provider");
+        prompter.note('Berget AI is now your default provider.', 'Updated default provider');
       }
     } else {
-      settings.defaultProvider = "berget";
+      settings.defaultProvider = 'berget';
       await writeJsonFile(files, settingsPath, settings);
-      prompter.note("Berget AI is now your default provider.", "Updated default provider");
+      prompter.note('Berget AI is now your default provider.', 'Updated default provider');
     }
   }
 }
@@ -550,21 +550,21 @@ async function setupPiAgent(deps: {
   files: FileStore;
   homeDir: string;
   prompter: Prompter;
-  scope: "global" | "project";
+  scope: 'global' | 'project';
 }): Promise<void> {
   const { cwd, files, homeDir, prompter, scope } = deps;
 
-  const agents = getAllAgents().filter(a => a.config.mode === "primary");
+  const agents = getAllAgents().filter((a) => a.config.mode === 'primary');
 
   if (agents.length === 0) {
     return;
   }
 
   const selectedAgentName = await prompter.select({
-    message: "Select an agent (optional - press enter to skip):",
+    message: 'Select an agent (optional - press enter to skip):',
     options: [
-      { label: "Skip agent setup", value: "__skip__" },
-      ...agents.map(agent => ({
+      { label: 'Skip agent setup', value: '__skip__' },
+      ...agents.map((agent) => ({
         hint: agent.config.description,
         label: agent.config.name,
         value: agent.config.name,
@@ -572,35 +572,35 @@ async function setupPiAgent(deps: {
     ],
   });
 
-  if (selectedAgentName === "__skip__") {
+  if (selectedAgentName === '__skip__') {
     return;
   }
 
-  const agent = agents.find(a => a.config.name === selectedAgentName);
+  const agent = agents.find((a) => a.config.name === selectedAgentName);
   if (!agent) return;
 
   const systemPath =
-    scope === "project"
-      ? pathJoin(cwd, ".pi", "SYSTEM.md")
-      : pathJoin(homeDir, ".pi", "agent", "SYSTEM.md");
+    scope === 'project'
+      ? pathJoin(cwd, '.pi', 'SYSTEM.md')
+      : pathJoin(homeDir, '.pi', 'agent', 'SYSTEM.md');
 
   const existing = await files.readFile(systemPath);
   const newContent = toPiPrompt(agent);
 
   if (existing === newContent) {
-    prompter.note("Agent configuration is already up to date.", "No changes needed");
+    prompter.note('Agent configuration is already up to date.', 'No changes needed');
     return;
   }
 
   if (existing) {
-    prompter.note(generateDiff(existing, newContent, systemPath), "Changes to agent configuration");
+    prompter.note(generateDiff(existing, newContent, systemPath), 'Changes to agent configuration');
   } else {
-    prompter.note(newContent, "New agent configuration");
+    prompter.note(newContent, 'New agent configuration');
   }
 
   const shouldWrite = await prompter.confirm({
     initialValue: true,
-    message: existing ? "Overwrite existing agent configuration?" : "Create agent configuration?",
+    message: existing ? 'Overwrite existing agent configuration?' : 'Create agent configuration?',
   });
 
   if (!shouldWrite) {
@@ -608,9 +608,9 @@ async function setupPiAgent(deps: {
   }
 
   const s = prompter.spinner();
-  s.start("Writing agent configuration...");
+  s.start('Writing agent configuration...');
 
-  const systemDir = scope === "project" ? pathJoin(cwd, ".pi") : pathJoin(homeDir, ".pi", "agent");
+  const systemDir = scope === 'project' ? pathJoin(cwd, '.pi') : pathJoin(homeDir, '.pi', 'agent');
   await files.mkdir(systemDir);
   await files.writeFile(systemPath, newContent);
 
@@ -618,15 +618,15 @@ async function setupPiAgent(deps: {
 }
 
 function stripJsoncComments(content: string): string {
-  content = content.replaceAll(/\/\/.*$/gm, "");
-  content = content.replaceAll(/\/\*[\s\S]*?\*\//g, "");
+  content = content.replaceAll(/\/\/.*$/gm, '');
+  content = content.replaceAll(/\/\*[\s\S]*?\*\//g, '');
   return content;
 }
 
 async function writeJsonFile(
   files: FileStore,
   filePath: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): Promise<void> {
-  await files.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+  await files.writeFile(filePath, JSON.stringify(data, null, 2) + '\n');
 }

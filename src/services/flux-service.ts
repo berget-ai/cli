@@ -1,4 +1,4 @@
-import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
 
 export interface FluxBootstrapOptions {
   owner?: string;
@@ -40,7 +40,7 @@ export class FluxService {
    * This endpoint is not available in the API
    */
   public async bootstrap(_options: FluxBootstrapOptions): Promise<boolean> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 
   /**
@@ -49,6 +49,6 @@ export class FluxService {
    * This endpoint is not available in the API
    */
   public async install(_options: FluxInstallOptions): Promise<boolean> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 }

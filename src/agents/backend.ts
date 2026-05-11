@@ -1,10 +1,10 @@
-import { Agent } from "./types.js";
+import { Agent } from './types.js';
 
 export const agent: Agent = {
   config: {
-    description: "Functional, modular Koa + TypeScript services",
-    mode: "primary",
-    name: "backend",
+    description: 'Functional, modular Koa + TypeScript services',
+    mode: 'primary',
+    name: 'backend',
   },
   systemPrompt: `# Backend Agent
 

@@ -1,15 +1,15 @@
-import { Agent } from "./types.js";
+import { Agent } from './types.js';
 
 export const agent: Agent = {
   config: {
     description:
-      "Security specialist for pentesting, OWASP compliance, and vulnerability assessments.",
-    mode: "subagent",
-    name: "security",
+      'Security specialist for pentesting, OWASP compliance, and vulnerability assessments.',
+    mode: 'subagent',
+    name: 'security',
     permission: {
-      bash: "allow",
-      edit: "deny",
-      webfetch: "allow",
+      bash: 'allow',
+      edit: 'deny',
+      webfetch: 'allow',
     },
     temperature: 0.2,
     top_p: 0.8,

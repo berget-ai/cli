@@ -1,6 +1,6 @@
-import * as crypto from "node:crypto";
-import * as http from "node:http";
-import * as net from "node:net";
+import * as crypto from 'node:crypto';
+import * as http from 'node:http';
+import * as net from 'node:net';
 
 export interface BrowserAuthOptions {
   callbackPort: number;
@@ -27,26 +27,26 @@ export class BrowserAuth {
     // Generate PKCE code verifier and challenge
     const codeVerifier = this.generateCodeVerifier();
     const codeChallenge = this.generateCodeChallenge(codeVerifier);
-    const state = crypto.randomBytes(16).toString("hex");
+    const state = crypto.randomBytes(16).toString('hex');
 
     const redirectUri = `http://localhost:${callbackPort}/callback`;
 
     // Build authorization URL
     const authUrl = new URL(`${keycloakUrl}/realms/${realm}/protocol/openid-connect/auth`);
-    authUrl.searchParams.set("client_id", clientId);
-    authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", "openid email profile");
-    authUrl.searchParams.set("state", state);
-    authUrl.searchParams.set("code_challenge", codeChallenge);
-    authUrl.searchParams.set("code_challenge_method", "S256");
+    authUrl.searchParams.set('client_id', clientId);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('scope', 'openid email profile');
+    authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('code_challenge', codeChallenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
 
     // Create a promise that resolves when we receive the callback
     const authResult = await new Promise<{
       code?: string;
       error?: string;
       success: boolean;
-    }>(resolve => {
+    }>((resolve) => {
       let resolved = false;
       const sockets = new Set<net.Socket>();
 
@@ -64,12 +64,12 @@ export class BrowserAuth {
       };
 
       const server = http.createServer((request, res) => {
-        const requestUrl = new URL(request.url || "", `http://localhost:${callbackPort}`);
+        const requestUrl = new URL(request.url || '', `http://localhost:${callbackPort}`);
 
-        if (requestUrl.pathname === "/callback") {
-          const receivedState = requestUrl.searchParams.get("state") || "";
-          const code = requestUrl.searchParams.get("code") || "";
-          const error = requestUrl.searchParams.get("error") || "";
+        if (requestUrl.pathname === '/callback') {
+          const receivedState = requestUrl.searchParams.get('state') || '';
+          const code = requestUrl.searchParams.get('code') || '';
+          const error = requestUrl.searchParams.get('error') || '';
 
           const errorPage = (title: string, message: string) => `
             <!DOCTYPE html>
@@ -130,27 +130,27 @@ export class BrowserAuth {
           // Set Connection: close so the browser doesn't keep the socket alive
           // after we respond, and force-end the connection
           if (error) {
-            res.writeHead(200, { Connection: "close", "Content-Type": "text/html; charset=utf-8" });
+            res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
             res.end(
               errorPage(
-                "Authentication Failed",
-                requestUrl.searchParams.get("error_description") || error
-              )
+                'Authentication Failed',
+                requestUrl.searchParams.get('error_description') || error,
+              ),
             );
             safeResolve({ error, success: false });
             return;
           }
 
           if (receivedState !== state) {
-            res.writeHead(200, { Connection: "close", "Content-Type": "text/html; charset=utf-8" });
+            res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
             res.end(
-              errorPage("Authentication Failed", "Invalid state parameter. Please try again.")
+              errorPage('Authentication Failed', 'Invalid state parameter. Please try again.'),
             );
-            safeResolve({ error: "Invalid state parameter", success: false });
+            safeResolve({ error: 'Invalid state parameter', success: false });
             return;
           }
 
-          res.writeHead(200, { Connection: "close", "Content-Type": "text/html; charset=utf-8" });
+          res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
           res.end(`
             <!DOCTYPE html>
             <html lang="en">
@@ -210,9 +210,9 @@ export class BrowserAuth {
       });
 
       // Track sockets so we can destroy them on shutdown
-      server.on("connection", (socket: net.Socket) => {
+      server.on('connection', (socket: net.Socket) => {
         sockets.add(socket);
-        socket.on("close", () => sockets.delete(socket));
+        socket.on('close', () => sockets.delete(socket));
       });
 
       server.listen(callbackPort, () => {
@@ -224,15 +224,15 @@ export class BrowserAuth {
       // Set timeout for the server
       const timeoutHandle = setTimeout(
         () => {
-          safeResolve({ error: "Authentication timed out", success: false });
+          safeResolve({ error: 'Authentication timed out', success: false });
         },
-        5 * 60 * 1000
+        5 * 60 * 1000,
       ); // 5 minute timeout
 
       // Open browser
       (async () => {
         try {
-          const open = await import("open").then(m => m.default);
+          const open = await import('open').then((m) => m.default);
           await open(authUrl.toString());
         } catch {
           // Browser failed to open - user must open URL manually
@@ -242,7 +242,7 @@ export class BrowserAuth {
 
     if (!authResult.success || !authResult.code) {
       return {
-        error: authResult.error || "Unknown error",
+        error: authResult.error || 'Unknown error',
         success: false,
       };
     }
@@ -254,13 +254,13 @@ export class BrowserAuth {
         client_id: clientId,
         code: authResult.code,
         code_verifier: codeVerifier,
-        grant_type: "authorization_code",
+        grant_type: 'authorization_code',
         redirect_uri: redirectUri,
       }).toString(),
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      method: "POST",
+      method: 'POST',
     });
 
     if (!tokenResponse.ok) {
@@ -287,10 +287,10 @@ export class BrowserAuth {
   }
 
   private generateCodeChallenge(verifier: string): string {
-    return crypto.createHash("sha256").update(verifier).digest("base64url");
+    return crypto.createHash('sha256').update(verifier).digest('base64url');
   }
 
   private generateCodeVerifier(): string {
-    return crypto.randomBytes(32).toString("base64url");
+    return crypto.randomBytes(32).toString('base64url');
   }
 }

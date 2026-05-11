@@ -1,14 +1,14 @@
-import { Agent } from "./types.js";
+import { Agent } from './types.js';
 
 export const agent: Agent = {
   config: {
-    description: "Quality assurance specialist for testing, building, and complete PR management.",
-    mode: "subagent",
-    name: "quality",
+    description: 'Quality assurance specialist for testing, building, and complete PR management.',
+    mode: 'subagent',
+    name: 'quality',
     permission: {
-      bash: "allow",
-      edit: "allow",
-      webfetch: "allow",
+      bash: 'allow',
+      edit: 'allow',
+      webfetch: 'allow',
     },
     temperature: 0.1,
     top_p: 0.9,

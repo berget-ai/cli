@@ -1,19 +1,19 @@
-import chalk from "chalk";
-import { Command } from "commander";
+import chalk from 'chalk';
+import { Command } from 'commander';
 
-import { ApiKey, ApiKeyService } from "../services/api-key-service";
-import { DefaultApiKeyManager } from "../utils/default-api-key";
-import { handleError } from "../utils/error-handler";
+import { ApiKey, ApiKeyService } from '../services/api-key-service';
+import { DefaultApiKeyManager } from '../utils/default-api-key';
+import { handleError } from '../utils/error-handler';
 
 /**
  * Register API key commands
  */
 export function registerApiKeyCommands(program: Command): void {
-  const apiKey = program.command(ApiKeyService.COMMAND_GROUP).description("Manage API keys");
+  const apiKey = program.command(ApiKeyService.COMMAND_GROUP).description('Manage API keys');
 
   apiKey
     .command(ApiKeyService.COMMANDS.LIST)
-    .description("List all API keys")
+    .description('List all API keys')
     .action(async () => {
       try {
         const apiKeyService = ApiKeyService.getInstance();
@@ -21,13 +21,15 @@ export function registerApiKeyCommands(program: Command): void {
 
         if (keys.length === 0) {
           console.log(
-            chalk.yellow("No API keys found. Create one with `berget api-key create --name <name>`")
+            chalk.yellow(
+              'No API keys found. Create one with `berget api-key create --name <name>`',
+            ),
           );
           return;
         }
 
-        console.log(chalk.bold("🔑 Your API keys:"));
-        console.log("");
+        console.log(chalk.bold('🔑 Your API keys:'));
+        console.log('');
 
         // Create a more readable table with better spacing and colors
         const idWidth = 10;
@@ -38,25 +40,25 @@ export function registerApiKeyCommands(program: Command): void {
         const usedWidth = 15;
 
         console.log(
-          chalk.dim("ID".padEnd(idWidth)) +
-            chalk.dim("NAME".padEnd(nameWidth)) +
-            chalk.dim("PREFIX".padEnd(prefixWidth)) +
-            chalk.dim("STATUS".padEnd(statusWidth)) +
-            chalk.dim("CREATED".padEnd(createdWidth)) +
-            chalk.dim("LAST USED")
+          chalk.dim('ID'.padEnd(idWidth)) +
+            chalk.dim('NAME'.padEnd(nameWidth)) +
+            chalk.dim('PREFIX'.padEnd(prefixWidth)) +
+            chalk.dim('STATUS'.padEnd(statusWidth)) +
+            chalk.dim('CREATED'.padEnd(createdWidth)) +
+            chalk.dim('LAST USED'),
         );
 
         console.log(
           chalk.dim(
-            "─".repeat(
-              idWidth + nameWidth + prefixWidth + statusWidth + createdWidth + usedWidth + 5
-            )
-          )
+            '─'.repeat(
+              idWidth + nameWidth + prefixWidth + statusWidth + createdWidth + usedWidth + 5,
+            ),
+          ),
         );
 
         keys.forEach((key: ApiKey) => {
-          const lastUsed = key.lastUsed ? formatLastUsed(key.lastUsed) : chalk.yellow("Never used");
-          const status = key.active ? chalk.green("● Active") : chalk.red("● Inactive");
+          const lastUsed = key.lastUsed ? formatLastUsed(key.lastUsed) : chalk.yellow('Never used');
+          const status = key.active ? chalk.green('● Active') : chalk.red('● Inactive');
 
           // Show only first 8 characters of ID for easier reading
           const shortId = chalk.cyan(String(key.id).slice(0, 8));
@@ -64,13 +66,13 @@ export function registerApiKeyCommands(program: Command): void {
           // Format the prefix with better truncation
           const prefixString =
             key.prefix.length > prefixWidth
-              ? key.prefix.slice(0, Math.max(0, prefixWidth - 3)) + "..."
+              ? key.prefix.slice(0, Math.max(0, prefixWidth - 3)) + '...'
               : chalk.gray(key.prefix);
 
           // Truncate name if too long
           const nameString =
             key.name.length > nameWidth
-              ? key.name.slice(0, Math.max(0, nameWidth - 3)) + "..."
+              ? key.name.slice(0, Math.max(0, nameWidth - 3)) + '...'
               : key.name;
 
           // Format created date
@@ -82,35 +84,35 @@ export function registerApiKeyCommands(program: Command): void {
               prefixString.padEnd(prefixWidth) +
               status.padEnd(statusWidth) +
               createdDate.padEnd(createdWidth) +
-              lastUsed
+              lastUsed,
           );
         });
 
-        console.log("");
-        console.log(chalk.dim("Use `berget api-key create --name <name>` to create a new API key"));
-        console.log(chalk.dim("Use `berget api-key delete <id>` to delete an API key"));
-        console.log(chalk.dim("Use `berget api-key rotate <id>` to rotate an API key"));
+        console.log('');
+        console.log(chalk.dim('Use `berget api-key create --name <name>` to create a new API key'));
+        console.log(chalk.dim('Use `berget api-key delete <id>` to delete an API key'));
+        console.log(chalk.dim('Use `berget api-key rotate <id>` to rotate an API key'));
       } catch (error) {
-        handleError("Failed to list API keys", error);
+        handleError('Failed to list API keys', error);
       }
     });
 
   apiKey
     .command(ApiKeyService.COMMANDS.CREATE)
-    .description("Create a new API key")
-    .option("--name <name>", "Name of the API key")
-    .option("--description <description>", "Description of the API key")
+    .description('Create a new API key')
+    .option('--name <name>', 'Name of the API key')
+    .option('--description <description>', 'Description of the API key')
 
-    .action(async options => {
+    .action(async (options) => {
       try {
         if (!options.name) {
-          console.error(chalk.red("Error: --name is required"));
-          console.log("");
-          console.log("Usage: berget api-key create --name <name> [--description <description>]");
+          console.error(chalk.red('Error: --name is required'));
+          console.log('');
+          console.log('Usage: berget api-key create --name <name> [--description <description>]');
           return;
         }
 
-        console.log(chalk.blue("Creating API key..."));
+        console.log(chalk.blue('Creating API key...'));
 
         const apiKeyService = ApiKeyService.getInstance();
         const result = await apiKeyService.create({
@@ -118,38 +120,38 @@ export function registerApiKeyCommands(program: Command): void {
           name: options.name,
         });
 
-        console.log("");
-        console.log(chalk.green("✓ API key created"));
-        console.log("");
-        console.log(chalk.bold("API key details:"));
-        console.log("");
-        console.log(`${chalk.dim("ID:")}          ${result.id}`);
-        console.log(`${chalk.dim("Name:")}        ${result.name}`);
+        console.log('');
+        console.log(chalk.green('✓ API key created'));
+        console.log('');
+        console.log(chalk.bold('API key details:'));
+        console.log('');
+        console.log(`${chalk.dim('ID:')}          ${result.id}`);
+        console.log(`${chalk.dim('Name:')}        ${result.name}`);
         if (result.description) {
-          console.log(`${chalk.dim("Description:")} ${result.description}`);
+          console.log(`${chalk.dim('Description:')} ${result.description}`);
         }
-        console.log(`${chalk.dim("Created:")}     ${new Date(result.created).toLocaleString()}`);
-        console.log("");
-        console.log(chalk.bold("API key:"));
+        console.log(`${chalk.dim('Created:')}     ${new Date(result.created).toLocaleString()}`);
+        console.log('');
+        console.log(chalk.bold('API key:'));
         console.log(chalk.cyan(result.key));
-        console.log("");
-        console.log(chalk.yellow("⚠️  IMPORTANT: Save this API key in a secure location."));
-        console.log(chalk.yellow("   It will not be displayed again."));
+        console.log('');
+        console.log(chalk.yellow('⚠️  IMPORTANT: Save this API key in a secure location.'));
+        console.log(chalk.yellow('   It will not be displayed again.'));
 
-        console.log("");
+        console.log('');
         console.log(
-          chalk.dim("Use this key in your applications to authenticate with the Berget API.")
+          chalk.dim('Use this key in your applications to authenticate with the Berget API.'),
         );
       } catch (error) {
-        handleError("Failed to create API key", error);
+        handleError('Failed to create API key', error);
       }
     });
 
   apiKey
     .command(ApiKeyService.COMMANDS.DELETE)
-    .description("Delete an API key")
-    .argument("<identifier>", "ID (first 8 chars), full ID, or name of the API key to delete")
-    .action(async identifier => {
+    .description('Delete an API key')
+    .argument('<identifier>', 'ID (first 8 chars), full ID, or name of the API key to delete')
+    .action(async (identifier) => {
       try {
         const apiKeyService = ApiKeyService.getInstance();
 
@@ -164,46 +166,46 @@ export function registerApiKeyCommands(program: Command): void {
 
         // Check for exact matches first (full ID or exact name)
         let exactMatches = keys.filter(
-          key => String(key.id) === identifier || key.name === identifier
+          (key) => String(key.id) === identifier || key.name === identifier,
         );
 
         // If no exact matches, check for short ID matches
         if (exactMatches.length === 0) {
-          exactMatches = keys.filter(key => String(key.id).slice(0, 8) === identifier);
+          exactMatches = keys.filter((key) => String(key.id).slice(0, 8) === identifier);
         }
 
         // If still no matches, check for partial name matches
         if (exactMatches.length === 0) {
-          exactMatches = keys.filter(key =>
-            key.name.toLowerCase().includes(identifier.toLowerCase())
+          exactMatches = keys.filter((key) =>
+            key.name.toLowerCase().includes(identifier.toLowerCase()),
           );
         }
 
         // Handle multiple matches
         if (exactMatches.length > 1) {
           console.error(chalk.red(`Error: Multiple API keys found matching "${identifier}"`));
-          console.log("");
-          console.log("Please be more specific. Matching keys:");
+          console.log('');
+          console.log('Please be more specific. Matching keys:');
           for (const key of exactMatches) {
             const shortId = String(key.id).slice(0, 8);
             console.log(`  ${shortId.padEnd(8)} ${key.name}`);
           }
-          console.log("");
-          console.log("Use the first 8 characters of the ID to specify which key to delete.");
+          console.log('');
+          console.log('Use the first 8 characters of the ID to specify which key to delete.');
           return;
         }
 
         // Handle no matches
         if (exactMatches.length === 0) {
           console.error(chalk.red(`Error: No API key found matching "${identifier}"`));
-          console.log("");
-          console.log("Available API keys:");
+          console.log('');
+          console.log('Available API keys:');
           for (const key of keys) {
             const shortId = String(key.id).slice(0, 8);
             console.log(`  ${shortId.padEnd(8)} ${key.name}`);
           }
-          console.log("");
-          console.log("Use the first 8 characters of the ID, full ID, or name to delete.");
+          console.log('');
+          console.log('Use the first 8 characters of the ID, full ID, or name to delete.');
           return;
         }
 
@@ -217,57 +219,57 @@ export function registerApiKeyCommands(program: Command): void {
         await apiKeyService.delete(keyId);
 
         console.log(chalk.green(`✓ API key ${shortId} (${matchingKey.name}) has been deleted`));
-        console.log("");
+        console.log('');
         console.log(
-          chalk.dim("Applications using this key will no longer be able to authenticate.")
+          chalk.dim('Applications using this key will no longer be able to authenticate.'),
         );
-        console.log(chalk.dim("Use `berget api-key list` to see your remaining API keys."));
+        console.log(chalk.dim('Use `berget api-key list` to see your remaining API keys.'));
       } catch (error) {
-        handleError("Failed to delete API key", error);
+        handleError('Failed to delete API key', error);
       }
     });
 
   apiKey
     .command(ApiKeyService.COMMANDS.ROTATE)
-    .description("Rotate an API key (creates a new one and invalidates the old one)")
-    .argument("<id>", "ID of the API key to rotate")
-    .action(async id => {
+    .description('Rotate an API key (creates a new one and invalidates the old one)')
+    .argument('<id>', 'ID of the API key to rotate')
+    .action(async (id) => {
       try {
         console.log(chalk.blue(`Rotating API key ${id}...`));
-        console.log(chalk.dim("This will invalidate the old key and generate a new one."));
+        console.log(chalk.dim('This will invalidate the old key and generate a new one.'));
 
         const apiKeyService = ApiKeyService.getInstance();
         const result = await apiKeyService.rotate(id);
 
-        console.log("");
-        console.log(chalk.green("✓ API key rotated"));
-        console.log("");
-        console.log(chalk.bold("New API key details:"));
-        console.log("");
-        console.log(`${chalk.dim("ID:")}          ${result.id}`);
-        console.log(`${chalk.dim("Name:")}        ${result.name}`);
+        console.log('');
+        console.log(chalk.green('✓ API key rotated'));
+        console.log('');
+        console.log(chalk.bold('New API key details:'));
+        console.log('');
+        console.log(`${chalk.dim('ID:')}          ${result.id}`);
+        console.log(`${chalk.dim('Name:')}        ${result.name}`);
         if (result.description) {
-          console.log(`${chalk.dim("Description:")} ${result.description}`);
+          console.log(`${chalk.dim('Description:')} ${result.description}`);
         }
-        console.log(`${chalk.dim("Created:")}     ${new Date(result.created).toLocaleString()}`);
-        console.log("");
-        console.log(chalk.bold("New API key:"));
+        console.log(`${chalk.dim('Created:')}     ${new Date(result.created).toLocaleString()}`);
+        console.log('');
+        console.log(chalk.bold('New API key:'));
         console.log(chalk.cyan(result.key));
-        console.log("");
-        console.log(chalk.yellow("⚠️  IMPORTANT: Update your applications with this new API key."));
-        console.log(chalk.yellow("   The old key has been invalidated and will no longer work."));
-        console.log(chalk.yellow("   This new key will not be displayed again."));
+        console.log('');
+        console.log(chalk.yellow('⚠️  IMPORTANT: Update your applications with this new API key.'));
+        console.log(chalk.yellow('   The old key has been invalidated and will no longer work.'));
+        console.log(chalk.yellow('   This new key will not be displayed again.'));
       } catch (error) {
-        handleError("Failed to rotate API key", error);
+        handleError('Failed to rotate API key', error);
       }
     });
 
   apiKey
     .command(ApiKeyService.COMMANDS.DESCRIBE)
-    .description("Show usage statistics for an API key")
-    .argument("<id>", "ID of the API key")
-    .option("--start <date>", "Start date (YYYY-MM-DD)")
-    .option("--end <date>", "End date (YYYY-MM-DD)")
+    .description('Show usage statistics for an API key')
+    .argument('<id>', 'ID of the API key')
+    .option('--start <date>', 'Start date (YYYY-MM-DD)')
+    .option('--end <date>', 'End date (YYYY-MM-DD)')
     .action(async (id, _options) => {
       try {
         console.log(chalk.blue(`Fetching usage statistics for API key ${id}...`));
@@ -275,24 +277,24 @@ export function registerApiKeyCommands(program: Command): void {
         const apiKeyService = ApiKeyService.getInstance();
         const usage = await apiKeyService.describe(id);
 
-        console.log("");
+        console.log('');
         console.log(chalk.bold(`Usage statistics for API key: ${usage.name} (${id})`));
-        console.log("");
+        console.log('');
 
         // Period information
         console.log(chalk.dim(`Period: ${usage.period.start} to ${usage.period.end}`));
-        console.log("");
+        console.log('');
 
         // Request statistics
-        console.log(chalk.bold("Request statistics:"));
+        console.log(chalk.bold('Request statistics:'));
         console.log(`Total requests: ${chalk.cyan(usage.requests.total.toLocaleString())}`);
 
         // Daily breakdown if available
         if (usage.requests.daily && usage.requests.daily.length > 0) {
-          console.log("");
-          console.log(chalk.bold("Daily breakdown:"));
-          console.log(chalk.dim("─".repeat(30)));
-          console.log(chalk.dim("DATE".padEnd(12) + "REQUESTS"));
+          console.log('');
+          console.log(chalk.bold('Daily breakdown:'));
+          console.log(chalk.dim('─'.repeat(30)));
+          console.log(chalk.dim('DATE'.padEnd(12) + 'REQUESTS'));
 
           usage.requests.daily.forEach((day: { count: number; date: string }) => {
             console.log(`${day.date.padEnd(12)}${day.count.toLocaleString()}`);
@@ -301,15 +303,15 @@ export function registerApiKeyCommands(program: Command): void {
 
         // Model usage if available
         if (usage.models && usage.models.length > 0) {
-          console.log("");
-          console.log(chalk.bold("Model usage:"));
-          console.log(chalk.dim("─".repeat(70)));
+          console.log('');
+          console.log(chalk.bold('Model usage:'));
+          console.log(chalk.dim('─'.repeat(70)));
           console.log(
-            chalk.dim("MODEL".padEnd(20)) +
-              chalk.dim("REQUESTS".padEnd(10)) +
-              chalk.dim("INPUT".padEnd(12)) +
-              chalk.dim("OUTPUT".padEnd(12)) +
-              chalk.dim("TOTAL TOKENS")
+            chalk.dim('MODEL'.padEnd(20)) +
+              chalk.dim('REQUESTS'.padEnd(10)) +
+              chalk.dim('INPUT'.padEnd(12)) +
+              chalk.dim('OUTPUT'.padEnd(12)) +
+              chalk.dim('TOTAL TOKENS'),
           );
 
           usage.models.forEach(
@@ -327,30 +329,30 @@ export function registerApiKeyCommands(program: Command): void {
                   model.requests.toString().padEnd(10) +
                   model.tokens.input.toLocaleString().padEnd(12) +
                   model.tokens.output.toLocaleString().padEnd(12) +
-                  model.tokens.total.toLocaleString()
+                  model.tokens.total.toLocaleString(),
               );
-            }
+            },
           );
         }
 
-        console.log("");
+        console.log('');
         console.log(
-          chalk.dim("Use these statistics to understand your API usage and optimize your costs.")
+          chalk.dim('Use these statistics to understand your API usage and optimize your costs.'),
         );
       } catch (error) {
-        handleError("Failed to get API key usage", error);
+        handleError('Failed to get API key usage', error);
       }
     });
 
   apiKey
     .command(ApiKeyService.COMMANDS.SET_DEFAULT)
-    .description("Set an API key as the default for chat commands")
-    .argument("<id>", "ID of the API key to set as default")
-    .action(async id => {
+    .description('Set an API key as the default for chat commands')
+    .argument('<id>', 'ID of the API key to set as default')
+    .action(async (id) => {
       try {
         const apiKeyService = ApiKeyService.getInstance();
         const keys = await apiKeyService.list();
-        const selectedKey = keys.find(key => key.id.toString() === id);
+        const selectedKey = keys.find((key) => key.id.toString() === id);
 
         if (!selectedKey) {
           console.error(chalk.red(`Error: API key with ID ${id} not found`));
@@ -367,46 +369,46 @@ export function registerApiKeyCommands(program: Command): void {
           id,
           selectedKey.name,
           selectedKey.prefix,
-          rotatedKey.key
+          rotatedKey.key,
         );
 
         console.log(
-          chalk.green(`✓ API key "${selectedKey.name}" set as default for chat commands`)
+          chalk.green(`✓ API key "${selectedKey.name}" set as default for chat commands`),
         );
-        console.log("");
-        console.log(chalk.dim("This API key will be used by default when running chat commands"));
-        console.log(chalk.dim("You can override it with --api-key or --api-key-id options"));
+        console.log('');
+        console.log(chalk.dim('This API key will be used by default when running chat commands'));
+        console.log(chalk.dim('You can override it with --api-key or --api-key-id options'));
       } catch (error) {
-        handleError("Failed to set default API key", error);
+        handleError('Failed to set default API key', error);
       }
     });
 
   apiKey
     .command(ApiKeyService.COMMANDS.GET_DEFAULT)
-    .description("Show the current default API key")
+    .description('Show the current default API key')
     .action(() => {
       try {
         const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
         const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData();
 
         if (!defaultApiKeyData) {
-          console.log(chalk.yellow("No default API key set"));
-          console.log("");
-          console.log("To set a default API key, run:");
-          console.log(chalk.cyan("  berget api-keys set-default <id>"));
+          console.log(chalk.yellow('No default API key set'));
+          console.log('');
+          console.log('To set a default API key, run:');
+          console.log(chalk.cyan('  berget api-keys set-default <id>'));
           return;
         }
 
-        console.log(chalk.bold("Default API key:"));
-        console.log("");
-        console.log(`${chalk.dim("ID:")}     ${defaultApiKeyData.id}`);
-        console.log(`${chalk.dim("Name:")}   ${defaultApiKeyData.name}`);
-        console.log(`${chalk.dim("Prefix:")} ${defaultApiKeyData.prefix}`);
-        console.log("");
-        console.log(chalk.dim("This API key will be used by default when running chat commands"));
-        console.log(chalk.dim("You can override it with --api-key or --api-key-id options"));
+        console.log(chalk.bold('Default API key:'));
+        console.log('');
+        console.log(`${chalk.dim('ID:')}     ${defaultApiKeyData.id}`);
+        console.log(`${chalk.dim('Name:')}   ${defaultApiKeyData.name}`);
+        console.log(`${chalk.dim('Prefix:')} ${defaultApiKeyData.prefix}`);
+        console.log('');
+        console.log(chalk.dim('This API key will be used by default when running chat commands'));
+        console.log(chalk.dim('You can override it with --api-key or --api-key-id options'));
       } catch (error) {
-        handleError("Failed to get default API key", error);
+        handleError('Failed to get default API key', error);
       }
     });
 }
@@ -418,8 +420,8 @@ function formatDate(dateString: string): string {
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return chalk.green("Today");
-  if (diffDays === 1) return chalk.yellow("Yesterday");
+  if (diffDays === 0) return chalk.green('Today');
+  if (diffDays === 1) return chalk.yellow('Yesterday');
   if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
   if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
   if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);
@@ -432,8 +434,8 @@ function formatLastUsed(dateString: string): string {
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return chalk.green("Today");
-  if (diffDays === 1) return chalk.yellow("Yesterday");
+  if (diffDays === 0) return chalk.green('Today');
+  if (diffDays === 1) return chalk.yellow('Yesterday');
   if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
   if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
   if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);

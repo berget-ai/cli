@@ -1,4 +1,4 @@
-import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
 
 /**
  * Service for managing Kubernetes resources
@@ -28,7 +28,7 @@ export class KubectlService {
    * This endpoint is not available in the API
    */
   public async apply(_filename: string): Promise<boolean> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 
   /**
@@ -37,7 +37,7 @@ export class KubectlService {
    * This endpoint is not available in the API
    */
   public async createNamespace(_name: string): Promise<boolean> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 
   /**
@@ -46,6 +46,6 @@ export class KubectlService {
    * This endpoint is not available in the API
    */
   public async get(_resource: string, _namespace?: string): Promise<any[]> {
-    throw new Error("This functionality is not available in the API");
+    throw new Error('This functionality is not available in the API');
   }
 }

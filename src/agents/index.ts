@@ -1,12 +1,12 @@
-import type { Agent } from "./types.js";
+import type { Agent } from './types.js';
 
-import { agent as app } from "./app.js";
-import { agent as backend } from "./backend.js";
-import { agent as devops } from "./devops.js";
-import { agent as frontend } from "./frontend.js";
-import { agent as fullstack } from "./fullstack.js";
-import { agent as quality } from "./quality.js";
-import { agent as security } from "./security.js";
+import { agent as app } from './app.js';
+import { agent as backend } from './backend.js';
+import { agent as devops } from './devops.js';
+import { agent as frontend } from './frontend.js';
+import { agent as fullstack } from './fullstack.js';
+import { agent as quality } from './quality.js';
+import { agent as security } from './security.js';
 
 const agents: Record<string, Agent> = {
   app,
@@ -70,4 +70,4 @@ export function toPiPrompt(agent: Agent): string {
   return agent.systemPrompt;
 }
 
-export { type Agent, type AgentConfig } from "./types.js";
+export { type Agent, type AgentConfig } from './types.js';

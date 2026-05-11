@@ -1,7 +1,7 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
-import { logger } from "./logger";
+import { logger } from './logger';
 
 /**
  * Centralized agent configuration loader
@@ -10,13 +10,13 @@ import { logger } from "./logger";
 
 export interface AgentConfig {
   description?: string;
-  mode: "primary" | "subagent";
+  mode: 'primary' | 'subagent';
   model: string;
   note?: string;
   permission: {
-    bash: "allow" | "deny";
-    edit: "allow" | "deny";
-    webfetch: "allow" | "deny";
+    bash: 'allow' | 'deny';
+    edit: 'allow' | 'deny';
+    webfetch: 'allow' | 'deny';
   };
   prompt?: string;
   temperature: number;
@@ -61,7 +61,7 @@ export class ConfigLoader {
 
   private constructor(configPath?: string) {
     // Default to opencode.json in current working directory
-    this.configPath = configPath || path.join(process.cwd(), "opencode.json");
+    this.configPath = configPath || path.join(process.cwd(), 'opencode.json');
   }
 
   /**
@@ -139,15 +139,15 @@ export class ConfigLoader {
       const config = this.loadConfig();
 
       // Extract from config or fall back to defaults
-      const primary = config.model || "berget/glm-4.7";
-      const small = config.small_model || "berget/gpt-oss";
+      const primary = config.model || 'berget/glm-4.7';
+      const small = config.small_model || 'berget/gpt-oss';
 
       return { primary, small };
     } catch {
       // Fallback to defaults when no config exists (init scenario)
       return {
-        primary: "berget/glm-4.7",
-        small: "berget/gpt-oss",
+        primary: 'berget/glm-4.7',
+        small: 'berget/gpt-oss',
       };
     }
   }
@@ -157,7 +157,7 @@ export class ConfigLoader {
    */
   public getPrimaryAgentNames(): string[] {
     const agents = this.getAllAgentConfigs();
-    return Object.keys(agents).filter(name => agents[name].mode === "primary");
+    return Object.keys(agents).filter((name) => agents[name].mode === 'primary');
   }
 
   /**
@@ -190,21 +190,21 @@ export class ConfigLoader {
 
     // Fallback to defaults
     return {
-      "glm-4.7": {
+      'glm-4.7': {
         limit: { context: 90_000, output: 4000 },
-        name: "GLM-4.7",
+        name: 'GLM-4.7',
       },
-      "gpt-oss": {
+      'gpt-oss': {
         limit: { context: 128_000, output: 4000 },
         modalities: {
-          input: ["text", "image"],
-          output: ["text"],
+          input: ['text', 'image'],
+          output: ['text'],
         },
-        name: "GPT-OSS",
+        name: 'GPT-OSS',
       },
-      "llama-8b": {
+      'llama-8b': {
         limit: { context: 128_000, output: 4000 },
-        name: "llama-3.1-8b",
+        name: 'llama-3.1-8b',
       },
     };
   }
@@ -214,7 +214,7 @@ export class ConfigLoader {
    */
   public getSubagentNames(): string[] {
     const agents = this.getAllAgentConfigs();
-    return Object.keys(agents).filter(name => agents[name].mode === "subagent");
+    return Object.keys(agents).filter((name) => agents[name].mode === 'subagent');
   }
 
   /**
@@ -225,12 +225,12 @@ export class ConfigLoader {
       const config = this.loadConfig();
       return (
         config.watcher || {
-          ignore: ["node_modules", "dist", ".git", "coverage"],
+          ignore: ['node_modules', 'dist', '.git', 'coverage'],
         }
       );
     } catch {
       // Config file doesn't exist, return default watcher config
-      return { ignore: ["node_modules", "dist", ".git", "coverage"] };
+      return { ignore: ['node_modules', 'dist', '.git', 'coverage'] };
     }
   }
 
@@ -254,7 +254,7 @@ export class ConfigLoader {
         throw new Error(`Configuration file not found: ${this.configPath}`);
       }
 
-      const configContent = fs.readFileSync(this.configPath, "utf8");
+      const configContent = fs.readFileSync(this.configPath, 'utf8');
       this.config = JSON.parse(configContent) as OpenCodeConfig;
 
       logger.debug(`Loaded configuration from ${this.configPath}`);
@@ -262,7 +262,7 @@ export class ConfigLoader {
     } catch (error) {
       logger.error(`Failed to load configuration from ${this.configPath}:`, error);
       throw new Error(
-        `Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

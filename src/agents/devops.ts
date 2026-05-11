@@ -1,14 +1,14 @@
-import { Agent } from "./types.js";
+import { Agent } from './types.js';
 
 export const agent: Agent = {
   config: {
-    description: "Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.",
-    mode: "primary",
-    name: "devops",
+    description: 'Declarative GitOps infra with FluxCD, Kustomize, Helm, operators.',
+    mode: 'primary',
+    name: 'devops',
     permission: {
-      bash: "allow",
-      edit: "allow",
-      webfetch: "allow",
+      bash: 'allow',
+      edit: 'allow',
+      webfetch: 'allow',
     },
     temperature: 0.3,
     top_p: 0.8,

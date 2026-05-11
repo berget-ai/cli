@@ -1,15 +1,15 @@
-import chalk from "chalk";
-import { Option, program } from "commander";
+import chalk from 'chalk';
+import { Option, program } from 'commander';
 
-import { version } from "./package.json";
-import { registerCommands } from "./src/commands";
-import { checkBergetConfig } from "./src/utils/config-checker";
-process.env.DOTENV_CONFIG_OVERRIDE = "true";
-import "dotenv/config";
+import { version } from './package.json';
+import { registerCommands } from './src/commands';
+import { checkBergetConfig } from './src/utils/config-checker';
+process.env.DOTENV_CONFIG_OVERRIDE = 'true';
+import 'dotenv/config';
 
 // Set version and description
 program
-  .name("berget")
+  .name('berget')
   .description(
     `______                     _      ___  _____ 
 | ___ \\                   | |    / _ \\|_   _|
@@ -19,12 +19,12 @@ program
 \\____/ \\___|_|  \\__, |\\___|\\_\\_ \\_| |_/\\___/ 
                  __/ |                      
                 |___/   AI on European terms
-Version: ${version}`
+Version: ${version}`,
   )
-  .version(version, "-v, --version")
-  .addOption(new Option("--local").default(false).hideHelp())
-  .addOption(new Option("--stage").default(false).hideHelp())
-  .option("--debug", "Enable debug output", false);
+  .version(version, '-v, --version')
+  .addOption(new Option('--local').default(false).hideHelp())
+  .addOption(new Option('--stage').default(false).hideHelp())
+  .option('--debug', 'Enable debug output', false);
 
 // Register all commands
 registerCommands(program);
@@ -40,42 +40,42 @@ if (process.argv.length <= 2) {
 
 // Add helpful suggestions for common command mistakes
 const commonMistakes: Record<string, string> = {
-  "create-key": "api-keys create",
-  init: "code init",
-  "list-clusters": "clusters list",
-  "list-keys": "api-keys list",
-  "list-models": "models list",
-  login: "auth login",
-  logout: "auth logout",
-  usage: "billing usage",
-  whoami: "auth whoami",
+  'create-key': 'api-keys create',
+  init: 'code init',
+  'list-clusters': 'clusters list',
+  'list-keys': 'api-keys list',
+  'list-models': 'models list',
+  login: 'auth login',
+  logout: 'auth logout',
+  usage: 'billing usage',
+  whoami: 'auth whoami',
 };
 
 // Add error handler for unknown commands
-program.on("command:*", operands => {
+program.on('command:*', (operands) => {
   const unknownCommand = operands[0] as string;
   console.error(chalk.red(`Error: unknown command '${unknownCommand}'`));
 
   // Check if this is a known mistake and suggest the correct command
   if (unknownCommand in commonMistakes) {
     console.log(
-      chalk.yellow(`Did you mean? ${chalk.bold(`berget ${commonMistakes[unknownCommand]}`)}`)
+      chalk.yellow(`Did you mean? ${chalk.bold(`berget ${commonMistakes[unknownCommand]}`)}`),
     );
   } else {
     // Try to find similar commands
-    const availableCommands = program.commands.map(cmd => cmd.name());
+    const availableCommands = program.commands.map((cmd) => cmd.name());
     const similarCommands = availableCommands.filter(
-      cmd => cmd.includes(unknownCommand) || unknownCommand.includes(cmd)
+      (cmd) => cmd.includes(unknownCommand) || unknownCommand.includes(cmd),
     );
 
     if (similarCommands.length > 0) {
-      console.log(chalk.yellow("Similar commands:"));
+      console.log(chalk.yellow('Similar commands:'));
       for (const cmd of similarCommands) {
         console.log(chalk.yellow(`  ${chalk.bold(`berget ${cmd}`)}`));
       }
     }
 
-    console.log(chalk.blue("\nRun `berget --help` for a list of available commands."));
+    console.log(chalk.blue('\nRun `berget --help` for a list of available commands.'));
   }
 
   process.exit(1);
