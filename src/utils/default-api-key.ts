@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import chalk from "chalk";
 import { ApiKeyService } from "../services/api-key-service";
 import readline from "readline";
 import { logger } from "./logger";

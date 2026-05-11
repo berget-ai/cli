@@ -1,4 +1,3 @@
-import { createAuthenticatedClient } from "../client";
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
 export interface FluxInstallOptions {
@@ -19,7 +18,6 @@ export interface FluxBootstrapOptions {
  */
 export class FluxService {
   private static instance: FluxService;
-  private client = createAuthenticatedClient();
 
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.FLUX;
@@ -41,7 +39,7 @@ export class FluxService {
    * Command: berget flux install
    * This endpoint is not available in the API
    */
-  public async install(options: FluxInstallOptions): Promise<boolean> {
+  public async install(_options: FluxInstallOptions): Promise<boolean> {
     throw new Error("This functionality is not available in the API");
   }
 
@@ -50,7 +48,7 @@ export class FluxService {
    * Command: berget flux bootstrap
    * This endpoint is not available in the API
    */
-  public async bootstrap(options: FluxBootstrapOptions): Promise<boolean> {
+  public async bootstrap(_options: FluxBootstrapOptions): Promise<boolean> {
     throw new Error("This functionality is not available in the API");
   }
 }

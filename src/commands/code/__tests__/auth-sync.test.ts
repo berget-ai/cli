@@ -11,7 +11,7 @@ import {
   type AuthDeps,
 } from "../auth-sync";
 import { FakeFileStore } from "./fake-file-store";
-import { FakePrompter, CANCEL, select, confirm } from "./fake-prompter";
+import { FakePrompter, select, confirm } from "./fake-prompter";
 import { FakeAuthService } from "./fake-auth-service";
 import { FakeApiKeyService } from "./fake-api-key-service";
 

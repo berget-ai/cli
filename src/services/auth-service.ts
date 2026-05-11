@@ -1,10 +1,4 @@
-import {
-  createAuthenticatedClient,
-  saveAuthToken,
-  clearAuthToken,
-  apiClient,
-  API_BASE_URL,
-} from "../client";
+import { createAuthenticatedClient, saveAuthToken, clearAuthToken } from "../client";
 import chalk from "chalk";
 import { handleError } from "../utils/error-handler";
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
@@ -35,7 +29,6 @@ function makeBrowserAuth(debug?: boolean): BrowserAuth {
  */
 export class AuthService {
   private static instance: AuthService;
-  private client = createAuthenticatedClient();
 
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.AUTH;

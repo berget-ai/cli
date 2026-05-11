@@ -1,4 +1,3 @@
-import { createAuthenticatedClient } from "../client";
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
 export interface HelmRepoAddOptions {
@@ -19,7 +18,6 @@ export interface HelmInstallOptions {
  */
 export class HelmService {
   private static instance: HelmService;
-  private client = createAuthenticatedClient();
 
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.HELM;
@@ -41,7 +39,7 @@ export class HelmService {
    * Command: berget helm add-repo
    * This endpoint is not available in the API
    */
-  public async addRepo(options: HelmRepoAddOptions): Promise<boolean> {
+  public async addRepo(_options: HelmRepoAddOptions): Promise<boolean> {
     throw new Error("This functionality is not available in the API");
   }
 
@@ -50,7 +48,7 @@ export class HelmService {
    * Command: berget helm install
    * This endpoint is not available in the API
    */
-  public async install(options: HelmInstallOptions): Promise<any> {
+  public async install(_options: HelmInstallOptions): Promise<any> {
     throw new Error("This functionality is not available in the API");
   }
 }

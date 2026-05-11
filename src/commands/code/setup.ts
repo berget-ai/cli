@@ -10,7 +10,7 @@ import { FsFileStore } from "./adapters/fs-file-store.js";
 import { SpawnCommandRunner } from "./adapters/spawn-command-runner.js";
 import { AuthService } from "../../services/auth-service.js";
 import { ApiKeyService } from "../../services/api-key-service.js";
-import { getAllAgents, toMarkdown, toPiPrompt, type Agent } from "../../agents/index.js";
+import { getAllAgents, toMarkdown, toPiPrompt } from "../../agents/index.js";
 import * as os from "os";
 
 const OPENCODE_PLUGIN = "@bergetai/opencode-auth@1.0.16";

@@ -294,7 +294,7 @@ export function registerApiKeyCommands(program: Command): void {
     .argument("<id>", "ID of the API key")
     .option("--start <date>", "Start date (YYYY-MM-DD)")
     .option("--end <date>", "End date (YYYY-MM-DD)")
-    .action(async (id, options) => {
+    .action(async (id, _options) => {
       try {
         console.log(chalk.blue(`Fetching usage statistics for API key ${id}...`));
 

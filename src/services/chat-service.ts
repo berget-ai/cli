@@ -289,21 +289,7 @@ export class ChatService {
   }
 
   /**
-   * Handle the case when no API key is available
-   */
-  private handleNoApiKey(): never {
-    // We've exhausted all options for getting an API key
-    logger.warn("No API key available. You need to either:");
-    logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
-    logger.warn("2. Set a default API key with: berget api-keys set-default <id>");
-    logger.warn("3. Provide an API key with the --api-key option");
-    logger.warn("4. Set the BERGET_API_KEY environment variable");
-    logger.warn("\nExample:");
-    logger.warn("  export BERGET_API_KEY=your_api_key_here");
-    logger.warn("  # or for a single command:");
-    logger.warn("  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it");
-    throw new Error("No API key available. Please provide an API key or set a default API key.");
-  }
+
 
   /**
    * Handle streaming response from the API

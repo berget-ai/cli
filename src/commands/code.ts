@@ -42,27 +42,6 @@ async function confirm(question: string, autoYes = false): Promise<boolean> {
 }
 
 /**
- * Helper function to get user input
- */
-async function getInput(question: string, defaultValue: string, autoYes = false): Promise<string> {
-  if (autoYes) {
-    return defaultValue;
-  }
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise<string>(resolve => {
-    rl.question(question, answer => {
-      rl.close();
-      resolve(answer.trim() || defaultValue);
-    });
-  });
-}
-
-/**
  * Get project name from current directory or package.json
  */
 function getProjectName(): string {
@@ -84,89 +63,6 @@ function getProjectName(): string {
  */
 function getAgentTemplatesDir(): string {
   return path.resolve(__dirname, "../../templates/agents");
-}
-
-/**
- * Parse a markdown agent file with YAML frontmatter into an agent config object
- */
-function parseAgentMarkdown(content: string): Record<string, any> {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!frontmatterMatch) {
-    throw new Error("Invalid agent markdown: missing frontmatter");
-  }
-
-  const yamlStr = frontmatterMatch[1];
-  const promptBody = frontmatterMatch[2].trim();
-
-  const config: Record<string, any> = { prompt: promptBody };
-
-  for (const line of yamlStr.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-
-    const colonIdx = trimmed.indexOf(":");
-    if (colonIdx === -1) continue;
-
-    const key = trimmed.substring(0, colonIdx).trim();
-    const value = trimmed.substring(colonIdx + 1).trim();
-
-    if (key === "permission") continue;
-
-    if (value === "true") {
-      config[key] = true;
-    } else if (value === "false") {
-      config[key] = false;
-    } else if (!isNaN(Number(value)) && value !== "") {
-      config[key] = Number(value);
-    } else {
-      config[key] = value;
-    }
-  }
-
-  const permission: Record<string, string> = {};
-  const permMatch = yamlStr.match(/permission:\s*\n((?:\s+\w+:.*\n?)*)/);
-  if (permMatch) {
-    for (const permLine of permMatch[1].split("\n")) {
-      const permTrimmed = permLine.trim();
-      if (!permTrimmed) continue;
-      const permColonIdx = permTrimmed.indexOf(":");
-      if (permColonIdx === -1) continue;
-      const permKey = permTrimmed.substring(0, permColonIdx).trim();
-      const permValue = permTrimmed.substring(permColonIdx + 1).trim();
-      if (permKey && permValue) {
-        permission[permKey] = permValue;
-      }
-    }
-  }
-  if (Object.keys(permission).length > 0) {
-    config.permission = permission;
-  }
-
-  return config;
-}
-
-/**
- * Load the latest agent configuration from bundled markdown templates
- */
-async function loadLatestAgentConfig(): Promise<any> {
-  const templatesDir = getAgentTemplatesDir();
-  const agents: Record<string, any> = {};
-
-  const files = fs.readdirSync(templatesDir).filter(f => f.endsWith(".md"));
-
-  for (const file of files) {
-    const agentName = path.basename(file, ".md");
-    const filePath = path.join(templatesDir, file);
-    const content = fs.readFileSync(filePath, "utf8");
-
-    try {
-      agents[agentName] = parseAgentMarkdown(content);
-    } catch (error) {
-      console.warn(chalk.yellow(`Warning: Failed to parse agent template ${file}: ${error}`));
-    }
-  }
-
-  return agents;
 }
 
 /**
@@ -556,16 +452,8 @@ export function registerCodeCommands(program: Command): void {
         const templatesDir = getAgentTemplatesDir();
         const templateFiles = fs.readdirSync(templatesDir).filter(f => f.endsWith(".md"));
 
-        const latestConfig = {
-          $schema: "https://opencode.ai/config.json",
-          plugin: ["@bergetai/opencode-auth@1.0.16"],
-        };
-
         // Check if agent definitions need updating
         let agentsNeedUpdate = false;
-        const existingAgentFiles = fs.existsSync(agentsDir)
-          ? fs.readdirSync(agentsDir).filter(f => f.endsWith(".md"))
-          : [];
 
         for (const file of templateFiles) {
           const src = path.join(templatesDir, file);

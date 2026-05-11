@@ -2,7 +2,6 @@ import { Command } from "commander";
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 import { createAuthenticatedClient } from "../client";
 import { handleError } from "../utils/error-handler";
-import chalk from "chalk";
 
 /**
  * Register user commands

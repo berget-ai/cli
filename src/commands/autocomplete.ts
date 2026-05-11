@@ -5,7 +5,7 @@ import chalk from "chalk";
  * Register autocomplete commands
  */
 export function registerAutocompleteCommands(program: Command): void {
-  const autocomplete = program
+  program
     .command("autocomplete")
     .command("install")
     .description("Install shell autocompletion")
