@@ -99,23 +99,6 @@ describe('runSetup', () => {
 			await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError)
 		})
 
-		it('throws CancelledError when user cancels at reconfiguration', async () => {
-			const deps = makeDeps({
-				prompter: new FakePrompter([
-					select('opencode'),
-					select('project'),
-					confirm(false, 'Reconfigure'),
-				]),
-			})
-			
-			const files = deps.files as FakeFileStore
-			files.seed('/home/user/project/opencode.json', JSON.stringify({
-				plugin: ['@bergetai/opencode-auth@1.0.16']
-			}))
-
-			await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError)
-		})
-
 		it('throws CancelledError when user cancels at write confirmation', async () => {
 			const deps = makeDeps({
 				prompter: new FakePrompter([
@@ -186,7 +169,6 @@ describe('runSetup', () => {
 				prompter: new FakePrompter([
 					select('opencode'),
 					select('project'),
-					confirm(true, 'Reconfigure'),
 				]),
 			})
 			
