@@ -67,7 +67,7 @@ describe('runSetup', () => {
       const written = files.getWrittenFiles();
       expect(written.has('/home/user/project/opencode.json')).toBe(true);
       const config = JSON.parse(written.get('/home/user/project/opencode.json')!);
-      expect(config.plugin).toContain('@bergetai/opencode-auth@1.0.16');
+      expect(config.plugin).toContain('@bergetai/opencode-auth');
     });
 
     it('sets up opencode globally without existing config', async () => {
@@ -219,7 +219,7 @@ describe('runSetup', () => {
       const config = JSON.parse(written.get('/home/user/project/opencode.json')!);
       expect(config.customField).toBe('should-preserve');
       expect(config.plugin).toContain('other-plugin');
-      expect(config.plugin).toContain('@bergetai/opencode-auth@1.0.16');
+      expect(config.plugin).toContain('@bergetai/opencode-auth');
     });
 
     it('preserves jsonc comments when updating', async () => {
@@ -250,7 +250,7 @@ describe('runSetup', () => {
       expect(content).toContain('// This is my custom config');
       expect(content).toContain('/* block comment explaining plugin */');
       expect(content).toContain('"customField": "should-preserve"');
-      expect(content).toContain('@bergetai/opencode-auth@1.0.16');
+      expect(content).toContain('@bergetai/opencode-auth');
     });
 
     it('shows no changes needed when config is already up to date', async () => {
@@ -265,7 +265,7 @@ describe('runSetup', () => {
         JSON.stringify(
           {
             $schema: 'https://opencode.ai/config.json',
-            plugin: ['@bergetai/opencode-auth@1.0.16'],
+            plugin: ['@bergetai/opencode-auth'],
           },
           null,
           2,
@@ -278,7 +278,7 @@ describe('runSetup', () => {
       const written = files.getWrittenFiles();
       const content = written.get('/home/user/project/opencode.json')!;
       const config = JSON.parse(content);
-      expect(config.plugin).toEqual(['@bergetai/opencode-auth@1.0.16']);
+      expect(config.plugin).toEqual(['@bergetai/opencode-auth']);
       expect(content).toContain('$schema');
     });
 
