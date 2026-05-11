@@ -230,7 +230,7 @@ export class ChatService {
       }
 
       // Remove apiKey and onChunk from options before sending to API
-      const { apiKey: _apiKey, onChunk: _onChunk, ...requestOptions } = options;
+      const { apiKey, onChunk, ...requestOptions } = options;
 
       logger.debug("Request options:");
       logger.debug(
