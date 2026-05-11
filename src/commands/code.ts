@@ -292,16 +292,18 @@ export function registerCodeCommands(program: Command): void {
     .command(COMMAND_GROUPS.CODE)
     .description('AI-powered coding assistant with OpenCode')
 
-  code
-    .command('setup')
-    .description('Interactive setup for Berget AI coding tools')
-    .action(async () => {
-      try {
-        await runSetupCommand()
-      } catch (error) {
-        handleError('Setup failed', error)
-      }
-    })
+  if (process.env.BERGET_EXPERIMENTAL) {
+    code
+      .command('setup')
+      .description('Interactive setup for Berget AI coding tools')
+      .action(async () => {
+        try {
+          await runSetupCommand()
+        } catch (error) {
+          handleError('Setup failed', error)
+        }
+      })
+  }
 
   code
     .command(SUBCOMMANDS.CODE.INIT)

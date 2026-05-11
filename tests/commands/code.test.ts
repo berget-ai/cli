@@ -502,4 +502,51 @@ describe('Code Commands', () => {
       ).rejects.toThrow('Env update failed')
     })
   })
+
+  describe('experimental features', () => {
+    let originalEnv: string | undefined
+
+    beforeEach(() => {
+      originalEnv = process.env.BERGET_EXPERIMENTAL
+    })
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.BERGET_EXPERIMENTAL
+      } else {
+        process.env.BERGET_EXPERIMENTAL = originalEnv
+      }
+    })
+
+    it('should NOT show setup command when BERGET_EXPERIMENTAL is not set', () => {
+      delete process.env.BERGET_EXPERIMENTAL
+
+      const freshProgram = new Command()
+      registerCodeCommands(freshProgram)
+
+      const codeCommand = freshProgram.commands.find((cmd) => cmd.name() === 'code')
+      const setupCommand = codeCommand?.commands.find(
+        (cmd) => cmd.name() === 'setup',
+      )
+
+      expect(setupCommand).toBeUndefined()
+    })
+
+    it('should show setup command when BERGET_EXPERIMENTAL is set', () => {
+      process.env.BERGET_EXPERIMENTAL = '1'
+
+      const freshProgram = new Command()
+      registerCodeCommands(freshProgram)
+
+      const codeCommand = freshProgram.commands.find((cmd) => cmd.name() === 'code')
+      const setupCommand = codeCommand?.commands.find(
+        (cmd) => cmd.name() === 'setup',
+      )
+
+      expect(setupCommand).toBeDefined()
+      expect(setupCommand?.description()).toBe(
+        'Interactive setup for Berget AI coding tools',
+      )
+    })
+  })
 })
