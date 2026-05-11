@@ -31,8 +31,13 @@ export class FakeAuthService implements AuthServicePort {
       return Promise.resolve({ success: false, error: 'Login failed' })
     }
 
+    const farFuture = Math.floor(Date.now() / 1000) + 3600 * 24 * 365 // 1 year from now in seconds
+    
     const accessToken = this._validToken
-      ? makeJwt({ realm_access: { roles: this._hasSeat ? ['berget_code_seat'] : ['default-roles-berget'] } })
+      ? makeJwt({ 
+          realm_access: { roles: this._hasSeat ? ['berget_code_seat'] : ['default-roles-berget'] },
+          exp: farFuture,
+        })
       : 'invalid.token.here'
 
     return Promise.resolve({

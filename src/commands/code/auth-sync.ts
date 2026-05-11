@@ -32,16 +32,37 @@ const TOOL_API_KEY_TYPES: Record<'opencode' | 'pi', string> = {
   pi: 'api_key',
 }
 
+function extractJwtExpiresAt(accessToken: string): number {
+  try {
+    const parts = accessToken.split('.')
+    if (parts.length !== 3) return 0
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8')
+    const decoded = JSON.parse(payload)
+    if (typeof decoded.exp === 'number') {
+      return decoded.exp * 1000 // JWT exp is in seconds, convert to milliseconds
+    }
+  } catch {
+    // If decoding fails, return 0 (treated as expired)
+  }
+  return 0
+}
+
 export async function readCliAuth(files: FileStore, homeDir: string): Promise<CliAuth | null> {
   const content = await files.readFile(CLI_AUTH_PATH(homeDir))
   if (!content) return null
   try {
     const parsed = JSON.parse(content)
-    if (parsed.access_token && parsed.refresh_token && parsed.expires_at) {
+    if (parsed.access_token && parsed.refresh_token) {
+      // Extract the actual expiry time from the JWT token instead of using the stored expires_at
+      const jwtExpiresAt = extractJwtExpiresAt(parsed.access_token)
+      if (jwtExpiresAt === 0) {
+        // Invalid token, return null
+        return null
+      }
       return {
         access_token: parsed.access_token,
         refresh_token: parsed.refresh_token,
-        expires_at: parsed.expires_at,
+        expires_at: jwtExpiresAt,
       }
     }
     return null
@@ -101,13 +122,16 @@ export async function syncOAuthToTool(
     }
   }
 
+  // Use the JWT's actual expiry time for consistency
+  const jwtExpiresAt = extractJwtExpiresAt(cliAuth.access_token)
+  
   const updated = {
     ...existing,
     berget: {
       type: 'oauth',
       access: cliAuth.access_token,
       refresh: cliAuth.refresh_token,
-      expires: cliAuth.expires_at,
+      expires: jwtExpiresAt,
     },
   }
 
@@ -194,10 +218,20 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
 
     s.stop('Successfully logged in to Berget.')
 
+    const jwtExpiresAt = extractJwtExpiresAt(loginResult.accessToken!)
+    if (jwtExpiresAt === 0) {
+      s.stop('Login succeeded but received invalid token.')
+      prompter.note(
+        'Please try logging in again or contact support.',
+        'Authentication Error',
+      )
+      return { authenticated: false }
+    }
+
     cliAuth = {
       access_token: loginResult.accessToken!,
       refresh_token: loginResult.refreshToken!,
-      expires_at: Date.now() + (loginResult.expiresIn! * 1000),
+      expires_at: jwtExpiresAt,
     }
   }
 

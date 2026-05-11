@@ -30,6 +30,7 @@ const HOME = '/home/user'
 const fakeCliAuth = (overrides: Partial<CliAuth> = {}): CliAuth => ({
   access_token: makeJwt({
     realm_access: { roles: ['default-roles-berget'] },
+    exp: 9999999999999, // JWT exp in seconds (different from expires_at in ms)
   }),
   refresh_token: 'refreshtoken',
   expires_at: 9999999999999,
@@ -49,7 +50,14 @@ describe('readCliAuth', () => {
     files.seed(HOME + '/.berget/auth.json', JSON.stringify(auth))
 
     const result = await readCliAuth(files, HOME)
-    expect(result).toEqual(auth)
+    // The JWT's exp claim should be extracted and converted to milliseconds
+    const jwtPayload = JSON.parse(Buffer.from(auth.access_token.split('.')[1], 'base64url').toString())
+    const expectedAuth = {
+      access_token: auth.access_token,
+      refresh_token: auth.refresh_token,
+      expires_at: (jwtPayload.exp as number) * 1000,
+    }
+    expect(result).toEqual(expectedAuth)
   })
 
   it('returns null for malformed JSON', async () => {
@@ -157,11 +165,13 @@ describe('syncOAuthToTool', () => {
     const written = files.getWrittenFiles()
     const content = written.get(HOME + '/.local/share/opencode/auth.json')!
     const parsed = JSON.parse(content)
+    // The expires field should now use the JWT's exp claim (converted to milliseconds)
+    const jwtPayload = JSON.parse(Buffer.from(auth.access_token.split('.')[1], 'base64url').toString())
     expect(parsed.berget).toEqual({
       type: 'oauth',
       access: auth.access_token,
       refresh: auth.refresh_token,
-      expires: auth.expires_at,
+      expires: (jwtPayload.exp as number) * 1000,
     })
   })
 
@@ -324,7 +334,7 @@ describe('configureAuth', () => {
     files.seed(
       HOME + '/.berget/auth.json',
       JSON.stringify({
-        access_token: makeJwt({ realm_access: { roles: ['berget_code_seat'] } }),
+        access_token: makeJwt({ realm_access: { roles: ['berget_code_seat'] }, exp: farFuture }),
         refresh_token: 'ref',
         expires_at: farFuture,
       }),
@@ -348,6 +358,7 @@ describe('configureAuth', () => {
     const files = new FakeFileStore()
     const jwt = makeJwt({
       realm_access: { roles: ['berget_code_seat'] },
+      exp: 9999999999999,
     })
     files.seed(HOME + '/.berget/auth.json', JSON.stringify({
       access_token: jwt,
@@ -373,6 +384,7 @@ describe('configureAuth', () => {
     const files = new FakeFileStore()
     const jwt = makeJwt({
       realm_access: { roles: ['berget_code_seat'] },
+      exp: 9999999999999,
     })
     files.seed(HOME + '/.berget/auth.json', JSON.stringify({
       access_token: jwt,
@@ -433,7 +445,7 @@ describe('configureAuth', () => {
     expect(result.authenticated).toBe(false)
   })
 
-  it('still syncs oauth when jwt decode fails', async () => {
+  it('fails authentication when jwt decode fails', async () => {
     const prompter = new FakePrompter([])
 
     const deps = makeAuthDeps({
@@ -442,11 +454,9 @@ describe('configureAuth', () => {
     })
     const result = await configureAuth(deps, 'opencode')
 
-    expect(result.authenticated).toBe(true)
+    expect(result.authenticated).toBe(false) // Should fail due to invalid JWT
     const written = (deps.files as FakeFileStore).getWrittenFiles()
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!)
-    expect(parsed.berget.type).toBe('oauth')
-    expect(prompter.calls.some(c => (c as any).method === 'note')).toBe(true) // warning note shown
+    expect(written.size).toBe(0) // No files should be written
   })
 
   it('preserves existing providers during sync', async () => {
@@ -456,7 +466,7 @@ describe('configureAuth', () => {
       JSON.stringify({ openai: { type: 'api', key: 'sk-openai' } }),
     )
     files.seed(HOME + '/.berget/auth.json', JSON.stringify({
-      access_token: makeJwt({ realm_access: { roles: ['berget_code_seat'] } }),
+      access_token: makeJwt({ realm_access: { roles: ['berget_code_seat'], exp: 9999999999999 } }),
       refresh_token: 'ref',
       expires_at: 9999999999999,
     }))

@@ -11,6 +11,26 @@ interface TokenData {
 }
 
 /**
+ * Extract the expiration time from a JWT token
+ * @param accessToken The JWT access token
+ * @returns The expiration timestamp in milliseconds, or 0 if invalid
+ */
+function extractJwtExpiresAt(accessToken: string): number {
+  try {
+    const parts = accessToken.split('.')
+    if (parts.length !== 3) return 0
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8')
+    const decoded = JSON.parse(payload)
+    if (typeof decoded.exp === 'number') {
+      return decoded.exp * 1000 // JWT exp is in seconds, convert to milliseconds
+    }
+  } catch {
+    // If decoding fails, return 0 (treated as expired)
+  }
+  return 0
+}
+
+/**
  * Manages authentication tokens including refresh functionality
  */
 export class TokenManager {
@@ -131,17 +151,21 @@ export class TokenManager {
    * Set new token data
    * @param accessToken The new access token
    * @param refreshToken The new refresh token
-   * @param expiresIn Expiration time in seconds
+   * @param expiresIn Expiration time in seconds (fallback if JWT parsing fails)
    */
   public setTokens(
     accessToken: string,
     refreshToken: string,
     expiresIn: number,
   ): void {
+    // Extract the actual expiry time from the JWT token
+    const jwtExpiresAt = extractJwtExpiresAt(accessToken)
+    const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000
+    
     this.tokenData = {
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_at: Date.now() + expiresIn * 1000,
+      expires_at: expiresAt,
     }
     this.saveToken()
   }
@@ -149,13 +173,17 @@ export class TokenManager {
   /**
    * Update just the access token and its expiration
    * @param accessToken The new access token
-   * @param expiresIn Expiration time in seconds
+   * @param expiresIn Expiration time in seconds (fallback if JWT parsing fails)
    */
   public updateAccessToken(accessToken: string, expiresIn: number): void {
     if (!this.tokenData) return
 
+    // Extract the actual expiry time from the JWT token
+    const jwtExpiresAt = extractJwtExpiresAt(accessToken)
+    const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000
+
     this.tokenData.access_token = accessToken
-    this.tokenData.expires_at = Date.now() + expiresIn * 1000
+    this.tokenData.expires_at = expiresAt
     this.saveToken()
   }
 
