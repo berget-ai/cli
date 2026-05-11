@@ -13,7 +13,7 @@ jobs:
     runs-on: [infra-runner-set]
     strategy:
       matrix:
-        node-version: [20]
+        node-version: [22]
 
     steps:
       - name: Checkout code
