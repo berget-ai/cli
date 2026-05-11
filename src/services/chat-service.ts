@@ -96,7 +96,7 @@ export class ChatService {
       if (hasValidAuth && !hasExplicitApiKey) {
         logger.debug('Using authenticated client with refresh token support');
         // Create a copy without apiKey to let the authenticated client handle auth automatically
-        const { apiKey: _apiKey, ...optionsWithoutKey } = optionsCopy;
+        const { apiKey: _, ...optionsWithoutKey } = optionsCopy;
         return this.executeCompletion(optionsWithoutKey, {});
       }
 
@@ -278,7 +278,7 @@ export class ChatService {
       }
 
       // Remove apiKey and onChunk from options before sending to API
-      const { apiKey: _apiKey, onChunk, ...requestOptions } = options;
+      const { apiKey: _, onChunk, ...requestOptions } = options;
 
       logger.debug('Request options:');
       logger.debug(

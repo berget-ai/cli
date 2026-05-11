@@ -9,7 +9,7 @@ export function checkBergetConfig(): void {
   if (fs.existsSync(configPath)) {
     try {
       const config = fs.readFileSync(configPath, 'utf8');
-      const match = config.match(/cluster:\s*(.+)/);
+      const match = /cluster:\s*(.+)/.exec(config);
       if (match && match[1]) {
         const clusterName = match[1].trim();
         console.log(`🔄 Berget: Switched to cluster "${clusterName}"`);

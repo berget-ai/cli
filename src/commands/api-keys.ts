@@ -429,15 +429,5 @@ function formatDate(dateString: string): string {
 }
 
 function formatLastUsed(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return chalk.green('Today');
-  if (diffDays === 1) return chalk.yellow('Yesterday');
-  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
-  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
-  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);
-  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`);
+  return formatDate(dateString);
 }
