@@ -1,25 +1,26 @@
-import { describe, it, expect } from "vitest";
-import { validateOpenCodeConfig, fixOpenCodeConfig } from "../../src/utils/opencode-validator";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+import { fixOpenCodeConfig, validateOpenCodeConfig } from "../../src/utils/opencode-validator";
 
 describe("OpenCode Validator", () => {
   it("should validate a correct OpenCode configuration", () => {
     const validConfig = {
       $schema: "https://opencode.ai/config.json",
-      username: "test-user",
-      model: "gpt-4",
       agent: {
         test: {
           model: "gpt-4",
-          temperature: 0.7,
-          prompt: "Test agent",
           permission: {
-            edit: "allow",
             bash: "allow",
+            edit: "allow",
             webfetch: "allow",
           },
+          prompt: "Test agent",
+          temperature: 0.7,
         },
       },
+      model: "gpt-4",
+      username: "test-user",
     };
 
     const result = validateOpenCodeConfig(validConfig);
@@ -29,20 +30,20 @@ describe("OpenCode Validator", () => {
 
   it("should reject invalid configuration", () => {
     const invalidConfig = {
-      username: 123, // Should be string
-      model: "gpt-4",
       agent: {
         test: {
           model: "gpt-4",
-          temperature: "high", // Should be number
-          prompt: "Test agent",
           permission: {
-            edit: "invalid", // Should be enum value
             bash: "allow",
+            edit: "invalid", // Should be enum value
             webfetch: "allow",
           },
+          prompt: "Test agent",
+          temperature: "high", // Should be number
         },
       },
+      model: "gpt-4",
+      username: 123, // Should be string
     };
 
     const result = validateOpenCodeConfig(invalidConfig);
@@ -53,23 +54,23 @@ describe("OpenCode Validator", () => {
 
   it("should fix common configuration issues", () => {
     const configWithIssues = {
-      username: "test-user",
-      model: "gpt-4",
-      tools: {
-        compact: { threshold: 80000 }, // Should be boolean
-      },
       maxTokens: 4000, // Invalid property
+      model: "gpt-4",
       provider: {
         berget: {
           models: {
             "test-model": {
-              name: "Test Model",
-              maxTokens: 4000, // Should be moved to limit.context
               contextWindow: 8000, // Should be moved to limit.context
+              maxTokens: 4000, // Should be moved to limit.context
+              name: "Test Model",
             },
           },
         },
       },
+      tools: {
+        compact: { threshold: 80_000 }, // Should be boolean
+      },
+      username: "test-user",
     };
 
     const fixed = fixOpenCodeConfig(configWithIssues);
@@ -108,7 +109,7 @@ describe("OpenCode Validator", () => {
 
     if (!result.valid) {
       console.log("Fixed opencode.json validation errors:");
-      result.errors?.forEach(err => console.log(`  - ${err}`));
+      if (result.errors) for (const error of result.errors) console.log(`  - ${error}`);
     }
   });
 });

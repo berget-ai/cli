@@ -1,19 +1,20 @@
 import { describe, expect, it } from "vitest";
+
 import {
-  readCliAuth,
-  isToolAuthenticated,
+  type AuthDeps,
+  type CliAuth,
+  configureAuth,
   decodeJwtPayload,
   hasBergetCodeSeat,
-  syncOAuthToTool,
+  isToolAuthenticated,
+  readCliAuth,
   syncApiKeyToTool,
-  configureAuth,
-  type CliAuth,
-  type AuthDeps,
+  syncOAuthToTool,
 } from "../auth-sync";
-import { FakeFileStore } from "./fake-file-store";
-import { FakePrompter, select, confirm } from "./fake-prompter";
-import { FakeAuthService } from "./fake-auth-service";
 import { FakeApiKeyService } from "./fake-api-key-service";
+import { FakeAuthService } from "./fake-auth-service";
+import { FakeFileStore } from "./fake-file-store";
+import { confirm, FakePrompter, select } from "./fake-prompter";
 
 function base64urlEncode(data: string): string {
   return Buffer.from(data).toString("base64url");
@@ -29,11 +30,11 @@ const HOME = "/home/user";
 
 const fakeCliAuth = (overrides: Partial<CliAuth> = {}): CliAuth => ({
   access_token: makeJwt({
+    exp: 9_999_999_999_999, // JWT exp in seconds (different from expires_at in ms)
     realm_access: { roles: ["default-roles-berget"] },
-    exp: 9999999999999, // JWT exp in seconds (different from expires_at in ms)
   }),
+  expires_at: 9_999_999_999_999,
   refresh_token: "refreshtoken",
-  expires_at: 9999999999999,
   ...overrides,
 });
 
@@ -56,8 +57,8 @@ describe("readCliAuth", () => {
     );
     const expectedAuth = {
       access_token: auth.access_token,
-      refresh_token: auth.refresh_token,
       expires_at: (jwtPayload.exp as number) * 1000,
+      refresh_token: auth.refresh_token,
     };
     expect(result).toEqual(expectedAuth);
   });
@@ -88,7 +89,7 @@ describe("isToolAuthenticated", () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + "/.local/share/opencode/auth.json",
-      JSON.stringify({ berget: { type: "oauth", access: "tok" } })
+      JSON.stringify({ berget: { access: "tok", type: "oauth" } })
     );
     const result = await isToolAuthenticated(files, HOME, "opencode");
     expect(result).toBe(true);
@@ -114,7 +115,7 @@ describe("isToolAuthenticated", () => {
 
 describe("decodeJwtPayload", () => {
   it("decodes a valid JWT payload", () => {
-    const payload = { sub: "123", realm_access: { roles: ["admin"] } };
+    const payload = { realm_access: { roles: ["admin"] }, sub: "123" };
     const jwt = makeJwt(payload);
     expect(decodeJwtPayload(jwt)).toEqual(payload);
   });
@@ -169,10 +170,10 @@ describe("syncOAuthToTool", () => {
       Buffer.from(auth.access_token.split(".")[1], "base64url").toString()
     );
     expect(parsed.berget).toEqual({
-      type: "oauth",
       access: auth.access_token,
-      refresh: auth.refresh_token,
       expires: (jwtPayload.exp as number) * 1000,
+      refresh: auth.refresh_token,
+      type: "oauth",
     });
   });
 
@@ -192,7 +193,7 @@ describe("syncOAuthToTool", () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + "/.local/share/opencode/auth.json",
-      JSON.stringify({ openai: { type: "api", key: "sk-openai" } })
+      JSON.stringify({ openai: { key: "sk-openai", type: "api" } })
     );
 
     const auth = fakeCliAuth();
@@ -200,7 +201,7 @@ describe("syncOAuthToTool", () => {
 
     const written = files.getWrittenFiles();
     const parsed = JSON.parse(written.get(HOME + "/.local/share/opencode/auth.json")!);
-    expect(parsed.openai).toEqual({ type: "api", key: "sk-openai" });
+    expect(parsed.openai).toEqual({ key: "sk-openai", type: "api" });
     expect(parsed.berget.type).toBe("oauth");
   });
 
@@ -213,8 +214,8 @@ describe("syncOAuthToTool", () => {
     const chmodCalls = files.getChmodCalls();
     expect(chmodCalls).toHaveLength(1);
     expect(chmodCalls[0]).toEqual({
-      path: HOME + "/.local/share/opencode/auth.json",
       mode: 0o600,
+      path: HOME + "/.local/share/opencode/auth.json",
     });
   });
 });
@@ -229,8 +230,8 @@ describe("syncApiKeyToTool", () => {
     const content = written.get(HOME + "/.local/share/opencode/auth.json")!;
     const parsed = JSON.parse(content);
     expect(parsed.berget).toEqual({
-      type: "api",
       key: "sk_ber_test",
+      type: "api",
     });
   });
 
@@ -243,8 +244,8 @@ describe("syncApiKeyToTool", () => {
     const content = written.get(HOME + "/.pi/agent/auth.json")!;
     const parsed = JSON.parse(content);
     expect(parsed.berget).toEqual({
-      type: "api_key",
       key: "sk_ber_pi",
+      type: "api_key",
     });
   });
 
@@ -252,14 +253,14 @@ describe("syncApiKeyToTool", () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + "/.local/share/opencode/auth.json",
-      JSON.stringify({ anthropic: { type: "api", key: "sk-ant" } })
+      JSON.stringify({ anthropic: { key: "sk-ant", type: "api" } })
     );
 
     await syncApiKeyToTool(files, HOME, "opencode", "sk_ber_test");
 
     const written = files.getWrittenFiles();
     const parsed = JSON.parse(written.get(HOME + "/.local/share/opencode/auth.json")!);
-    expect(parsed.anthropic).toEqual({ type: "api", key: "sk-ant" });
+    expect(parsed.anthropic).toEqual({ key: "sk-ant", type: "api" });
   });
 
   it("sets 0o600 permissions on the auth file", async () => {
@@ -270,8 +271,8 @@ describe("syncApiKeyToTool", () => {
     const chmodCalls = files.getChmodCalls();
     expect(chmodCalls).toHaveLength(1);
     expect(chmodCalls[0]).toEqual({
-      path: HOME + "/.local/share/opencode/auth.json",
       mode: 0o600,
+      path: HOME + "/.local/share/opencode/auth.json",
     });
   });
 });
@@ -279,11 +280,11 @@ describe("syncApiKeyToTool", () => {
 describe("configureAuth", () => {
   const makeAuthDeps = (overrides: Partial<AuthDeps> = {}): AuthDeps =>
     ({
-      prompter: new FakePrompter([]),
-      files: new FakeFileStore(),
-      authService: new FakeAuthService(true),
       apiKeyService: new FakeApiKeyService("sk_ber_test"),
+      authService: new FakeAuthService(true),
+      files: new FakeFileStore(),
       homeDir: HOME,
+      prompter: new FakePrompter([]),
       ...overrides,
     }) as AuthDeps;
 
@@ -331,16 +332,16 @@ describe("configureAuth", () => {
     files.seed(
       HOME + "/.berget/auth.json",
       JSON.stringify({
-        access_token: makeJwt({ realm_access: { roles: ["berget_code_seat"] }, exp: farFuture }),
-        refresh_token: "ref",
+        access_token: makeJwt({ exp: farFuture, realm_access: { roles: ["berget_code_seat"] } }),
         expires_at: farFuture,
+        refresh_token: "ref",
       })
     );
 
     const prompter = new FakePrompter([select("reconfigure"), select("subscription")]);
 
     const authService = new FakeAuthService(true);
-    const deps = makeAuthDeps({ files, prompter, authService });
+    const deps = makeAuthDeps({ authService, files, prompter });
     const result = await configureAuth(deps, "opencode");
 
     expect(result.authenticated).toBe(true);
@@ -351,15 +352,15 @@ describe("configureAuth", () => {
   it("Case B: login success + berget_code_seat → chooses subscription", async () => {
     const files = new FakeFileStore();
     const jwt = makeJwt({
+      exp: 9_999_999_999_999,
       realm_access: { roles: ["berget_code_seat"] },
-      exp: 9999999999999,
     });
     files.seed(
       HOME + "/.berget/auth.json",
       JSON.stringify({
         access_token: jwt,
+        expires_at: 9_999_999_999_999,
         refresh_token: "ref",
-        expires_at: 9999999999999,
       })
     );
 
@@ -378,15 +379,15 @@ describe("configureAuth", () => {
   it("Case B variant: login success + seat → chooses api_key", async () => {
     const files = new FakeFileStore();
     const jwt = makeJwt({
+      exp: 9_999_999_999_999,
       realm_access: { roles: ["berget_code_seat"] },
-      exp: 9999999999999,
     });
     files.seed(
       HOME + "/.berget/auth.json",
       JSON.stringify({
         access_token: jwt,
+        expires_at: 9_999_999_999_999,
         refresh_token: "ref",
-        expires_at: 9999999999999,
       })
     );
 
@@ -406,7 +407,7 @@ describe("configureAuth", () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([confirm(true)]);
 
-    const deps = makeAuthDeps({ files, prompter, authService: new FakeAuthService(true, false) });
+    const deps = makeAuthDeps({ authService: new FakeAuthService(true, false), files, prompter });
     const result = await configureAuth(deps, "opencode");
 
     expect(result.authenticated).toBe(true);
@@ -420,7 +421,7 @@ describe("configureAuth", () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([confirm(false)]);
 
-    const deps = makeAuthDeps({ files, prompter, authService: new FakeAuthService(true, false) });
+    const deps = makeAuthDeps({ authService: new FakeAuthService(true, false), files, prompter });
     const result = await configureAuth(deps, "opencode");
 
     expect(result.authenticated).toBe(false);
@@ -431,7 +432,7 @@ describe("configureAuth", () => {
     const files = new FakeFileStore();
     const authService = new FakeAuthService(false);
 
-    const deps = makeAuthDeps({ files, authService });
+    const deps = makeAuthDeps({ authService, files });
     const result = await configureAuth(deps, "opencode");
 
     expect(result.authenticated).toBe(false);
@@ -441,8 +442,8 @@ describe("configureAuth", () => {
     const prompter = new FakePrompter([]);
 
     const deps = makeAuthDeps({
-      prompter,
       authService: new FakeAuthService(true, true, false), // valid login, has seat, but invalid token
+      prompter,
     });
     const result = await configureAuth(deps, "opencode");
 
@@ -455,16 +456,16 @@ describe("configureAuth", () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + "/.local/share/opencode/auth.json",
-      JSON.stringify({ openai: { type: "api", key: "sk-openai" } })
+      JSON.stringify({ openai: { key: "sk-openai", type: "api" } })
     );
     files.seed(
       HOME + "/.berget/auth.json",
       JSON.stringify({
         access_token: makeJwt({
-          realm_access: { roles: ["berget_code_seat"], exp: 9999999999999 },
+          realm_access: { exp: 9_999_999_999_999, roles: ["berget_code_seat"] },
         }),
+        expires_at: 9_999_999_999_999,
         refresh_token: "ref",
-        expires_at: 9999999999999,
       })
     );
 
@@ -475,7 +476,7 @@ describe("configureAuth", () => {
 
     const written = files.getWrittenFiles();
     const parsed = JSON.parse(written.get(HOME + "/.local/share/opencode/auth.json")!);
-    expect(parsed.openai).toEqual({ type: "api", key: "sk-openai" });
+    expect(parsed.openai).toEqual({ key: "sk-openai", type: "api" });
     expect(parsed.berget).toBeDefined();
   });
 });

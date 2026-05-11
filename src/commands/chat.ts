@@ -1,30 +1,14 @@
-import { Command } from "commander";
 import chalk from "chalk";
-import readline from "readline";
+import { Command } from "commander";
+import readline from "node:readline";
+
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
-import { ChatService, ChatMessage, ChatCompletionOptions } from "../services/chat-service";
 import { ApiKeyService } from "../services/api-key-service";
 import { AuthService } from "../services/auth-service";
-import { handleError } from "../utils/error-handler";
+import { ChatCompletionOptions, ChatMessage, ChatService } from "../services/chat-service";
 import { DefaultApiKeyManager } from "../utils/default-api-key";
-import { renderMarkdown, containsMarkdown } from "../utils/markdown-renderer";
-
-/**
- * Helper function to get user confirmation
- */
-async function confirm(question: string): Promise<boolean> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise<boolean>(resolve => {
-    rl.question(question, answer => {
-      rl.close();
-      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
-    });
-  });
-}
+import { handleError } from "../utils/error-handler";
+import { containsMarkdown, renderMarkdown } from "../utils/markdown-renderer";
 
 /**
  * Register chat commands
@@ -38,8 +22,8 @@ export function registerChatCommands(program: Command): void {
     .argument("[message]", "Message to send directly (skips interactive mode)")
     .option("-m, --model <model>", "Model to use (default: glm-4.7)")
 
-    .option("-t, --temperature <temp>", "Temperature (0-1)", parseFloat)
-    .option("--max-tokens <tokens>", "Maximum tokens to generate", parseInt)
+    .option("-t, --temperature <temp>", "Temperature (0-1)", Number.parseFloat)
+    .option("--max-tokens <tokens>", "Maximum tokens to generate", Number.parseInt)
     .option("-k, --api-key <key>", "API key to use for this chat session")
     .option("--api-key-id <id>", "ID of the API key to use from your saved keys")
     .option("--no-stream", "Disable streaming (streaming is enabled by default)")
@@ -52,15 +36,17 @@ export function registerChatCommands(program: Command): void {
         let apiKeyId = options.apiKeyId;
 
         // Check for environment variable first
-        const envApiKey = process.env.BERGET_API_KEY;
-        if (envApiKey) {
+        const environmentApiKey = process.env.BERGET_API_KEY;
+        if (environmentApiKey) {
           console.log(chalk.dim(`Using API key from BERGET_API_KEY environment variable`));
-          apiKey = envApiKey;
+          apiKey = environmentApiKey;
 
           // Debug the API key (first few characters only)
           if (process.argv.includes("--debug")) {
             console.log(
-              chalk.yellow(`DEBUG: API key from env starts with: ${envApiKey.substring(0, 4)}...`)
+              chalk.yellow(
+                `DEBUG: API key from env starts with: ${environmentApiKey.slice(0, 4)}...`
+              )
             );
           }
         }
@@ -128,13 +114,7 @@ export function registerChatCommands(program: Command): void {
             const keys = await apiKeyService.list();
             const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
 
-            if (!selectedKey) {
-              console.log(
-                chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
-                )
-              );
-            } else {
+            if (selectedKey) {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
 
               // We need to rotate the key to get the actual key value
@@ -151,6 +131,12 @@ export function registerChatCommands(program: Command): void {
               } else {
                 console.log(chalk.yellow("Using default authentication instead."));
               }
+            } else {
+              console.log(
+                chalk.yellow(
+                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
+                )
+              );
             }
           } catch (error) {
             // Check if this is an authentication error
@@ -195,8 +181,8 @@ export function registerChatCommands(program: Command): void {
         // Add system message if provided
         if (options.system) {
           messages.push({
-            role: "system",
             content: options.system,
+            role: "system",
           });
         }
 
@@ -224,18 +210,18 @@ export function registerChatCommands(program: Command): void {
         if (inputMessage) {
           // Add user message
           messages.push({
-            role: "user",
             content: inputMessage,
+            role: "user",
           });
 
           try {
             // Call the API
             const completionOptions: ChatCompletionOptions = {
-              model: options.model || "openai/gpt-oss",
-              messages: messages,
-              temperature: options.temperature !== undefined ? options.temperature : 0.7,
               max_tokens: options.maxTokens || 4096,
+              messages: messages,
+              model: options.model || "openai/gpt-oss",
               stream: options.stream !== false,
+              temperature: options.temperature === undefined ? 0.7 : options.temperature,
             };
 
             // Only add apiKey if it actually exists
@@ -351,18 +337,18 @@ export function registerChatCommands(program: Command): void {
 
             // Add user message
             messages.push({
-              role: "user",
               content: input,
+              role: "user",
             });
 
             try {
               // Call the API
               const completionOptions: ChatCompletionOptions = {
-                model: options.model || "openai/gpt-oss",
-                messages: messages,
-                temperature: options.temperature !== undefined ? options.temperature : 0.7,
                 max_tokens: options.maxTokens || 4096,
+                messages: messages,
+                model: options.model || "openai/gpt-oss",
                 stream: options.stream !== false,
+                temperature: options.temperature === undefined ? 0.7 : options.temperature,
               };
 
               // Only add apiKey if it actually exists
@@ -424,8 +410,8 @@ export function registerChatCommands(program: Command): void {
 
                 // Add assistant response to messages
                 messages.push({
-                  role: "assistant",
                   content: assistantResponse,
+                  role: "assistant",
                 });
 
                 // Continue the conversation
@@ -458,8 +444,8 @@ export function registerChatCommands(program: Command): void {
 
               // Add to messages array
               messages.push({
-                role: "assistant",
                 content: assistantMessage,
+                role: "assistant",
               });
 
               // Display the response
@@ -522,13 +508,7 @@ export function registerChatCommands(program: Command): void {
             const keys = await apiKeyService.list();
             const selectedKey = keys.find(key => key.id.toString() === options.apiKeyId);
 
-            if (!selectedKey) {
-              console.log(
-                chalk.yellow(
-                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
-                )
-              );
-            } else {
+            if (selectedKey) {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
 
               // We need to rotate the key to get the actual key value
@@ -545,6 +525,12 @@ export function registerChatCommands(program: Command): void {
               } else {
                 console.log(chalk.yellow("Using default authentication instead."));
               }
+            } else {
+              console.log(
+                chalk.yellow(
+                  `API key with ID ${options.apiKeyId} not found. Using default authentication.`
+                )
+              );
             }
           } catch (error) {
             console.error(chalk.red("Error fetching API key:"));
@@ -585,4 +571,21 @@ export function registerChatCommands(program: Command): void {
         handleError("Failed to list chat models", error);
       }
     });
+}
+
+/**
+ * Helper function to get user confirmation
+ */
+async function confirm(question: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise<boolean>(resolve => {
+    rl.question(question, answer => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+    });
+  });
 }

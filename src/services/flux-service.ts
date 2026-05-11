@@ -1,15 +1,15 @@
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
-export interface FluxInstallOptions {
-  cluster: string;
-}
-
 export interface FluxBootstrapOptions {
-  provider: string;
   owner?: string;
-  repository?: string;
   path?: string;
   personal?: boolean;
+  provider: string;
+  repository?: string;
+}
+
+export interface FluxInstallOptions {
+  cluster: string;
 }
 
 /**
@@ -17,13 +17,13 @@ export interface FluxBootstrapOptions {
  * Command group: flux
  */
 export class FluxService {
-  private static instance: FluxService;
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.FLUX;
 
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.FLUX;
+
+  private static instance: FluxService;
 
   private constructor() {}
 
@@ -35,20 +35,20 @@ export class FluxService {
   }
 
   /**
-   * Install Flux CD
-   * Command: berget flux install
-   * This endpoint is not available in the API
-   */
-  public async install(_options: FluxInstallOptions): Promise<boolean> {
-    throw new Error("This functionality is not available in the API");
-  }
-
-  /**
    * Bootstrap Flux CD
    * Command: berget flux bootstrap
    * This endpoint is not available in the API
    */
   public async bootstrap(_options: FluxBootstrapOptions): Promise<boolean> {
+    throw new Error("This functionality is not available in the API");
+  }
+
+  /**
+   * Install Flux CD
+   * Command: berget flux install
+   * This endpoint is not available in the API
+   */
+  public async install(_options: FluxInstallOptions): Promise<boolean> {
     throw new Error("This functionality is not available in the API");
   }
 }

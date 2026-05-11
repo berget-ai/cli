@@ -113,7 +113,7 @@ function provideTroubleshootingTips(
   if (
     errorCode?.includes("SERVER_ERROR") ||
     errorType === "server_error" ||
-    (errorCode && parseInt(errorCode) >= 500)
+    (errorCode && Number.parseInt(errorCode) >= 500)
   ) {
     console.error(chalk.yellow("   🖥️  Server issue detected:"));
     console.error(chalk.white("   • This is a temporary problem on our end"));

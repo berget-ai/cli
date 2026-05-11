@@ -1,17 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   ConfigLoader,
+  getAllAgentConfigs,
   getModelConfig,
   getProviderModels,
-  getAllAgentConfigs,
 } from "../../src/utils/config-loader";
 
 // Mock fs module
 const mockFs = vi.hoisted(() => ({
   existsSync: vi.fn(),
+  mkdirSync: vi.fn(),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
-  mkdirSync: vi.fn(),
 }));
 
 vi.mock("fs", () => mockFs);
@@ -65,20 +66,20 @@ describe("ConfigLoader", () => {
 
         expect(models).toEqual({
           "glm-4.7": {
+            limit: { context: 90_000, output: 4000 },
             name: "GLM-4.7",
-            limit: { output: 4000, context: 90000 },
           },
           "gpt-oss": {
-            name: "GPT-OSS",
-            limit: { output: 4000, context: 128000 },
+            limit: { context: 128_000, output: 4000 },
             modalities: {
               input: ["text", "image"],
               output: ["text"],
             },
+            name: "GPT-OSS",
           },
           "llama-8b": {
+            limit: { context: 128_000, output: 4000 },
             name: "llama-3.1-8b",
-            limit: { output: 4000, context: 128000 },
           },
         });
       });
@@ -88,20 +89,20 @@ describe("ConfigLoader", () => {
 
         expect(models).toEqual({
           "glm-4.7": {
+            limit: { context: 90_000, output: 4000 },
             name: "GLM-4.7",
-            limit: { output: 4000, context: 90000 },
           },
           "gpt-oss": {
-            name: "GPT-OSS",
-            limit: { output: 4000, context: 128000 },
+            limit: { context: 128_000, output: 4000 },
             modalities: {
               input: ["text", "image"],
               output: ["text"],
             },
+            name: "GPT-OSS",
           },
           "llama-8b": {
+            limit: { context: 128_000, output: 4000 },
             name: "llama-3.1-8b",
-            limit: { output: 4000, context: 128000 },
           },
         });
       });
@@ -132,18 +133,16 @@ describe("ConfigLoader", () => {
 
   describe("when config file exists", () => {
     const mockConfig = {
-      model: "custom-model",
-      small_model: "custom-small-model",
       agent: {
         fullstack: {
-          model: "custom-agent-model",
-          temperature: 0.5,
           mode: "primary" as const,
+          model: "custom-agent-model",
           permission: {
-            edit: "allow" as const,
             bash: "allow" as const,
+            edit: "allow" as const,
             webfetch: "allow" as const,
           },
+          temperature: 0.5,
         },
       },
       command: {
@@ -151,18 +150,20 @@ describe("ConfigLoader", () => {
           description: "Test command",
         },
       },
-      watcher: {
-        ignore: ["custom-ignore"],
-      },
+      model: "custom-model",
       provider: {
         berget: {
           models: {
             "custom-model": {
+              limit: { context: 160_000, output: 8000 },
               name: "Custom Model",
-              limit: { output: 8000, context: 160000 },
             },
           },
         },
+      },
+      small_model: "custom-small-model",
+      watcher: {
+        ignore: ["custom-ignore"],
       },
     };
 
@@ -188,8 +189,8 @@ describe("ConfigLoader", () => {
 
         expect(models).toEqual({
           "custom-model": {
+            limit: { context: 160_000, output: 8000 },
             name: "Custom Model",
-            limit: { output: 8000, context: 160000 },
           },
         });
       });
@@ -238,20 +239,20 @@ describe("ConfigLoader", () => {
 
       expect(models).toEqual({
         "glm-4.7": {
+          limit: { context: 90_000, output: 4000 },
           name: "GLM-4.7",
-          limit: { output: 4000, context: 90000 },
         },
         "gpt-oss": {
-          name: "GPT-OSS",
-          limit: { output: 4000, context: 128000 },
+          limit: { context: 128_000, output: 4000 },
           modalities: {
             input: ["text", "image"],
             output: ["text"],
           },
+          name: "GPT-OSS",
         },
         "llama-8b": {
+          limit: { context: 128_000, output: 4000 },
           name: "llama-3.1-8b",
-          limit: { output: 4000, context: 128000 },
         },
       });
     });

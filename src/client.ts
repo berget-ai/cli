@@ -1,8 +1,12 @@
-import createClient from "openapi-fetch";
-import type { paths } from "./types/api";
 import chalk from "chalk";
-import { TokenManager } from "./utils/token-manager";
+import createClient from "openapi-fetch";
+
+import type { paths } from "./types/api";
+
 import { logger } from "./utils/logger";
+import { TokenManager } from "./utils/token-manager";
+
+type ApiMethod = (...args: unknown[]) => Promise<any>;
 
 // API Base URL
 // Use --local flag to test against local API
@@ -28,13 +32,13 @@ if (isLocalMode && !process.env.BERGET_API_URL) {
 export const apiClient = createClient<paths>({
   baseUrl: API_BASE_URL,
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
+    "Content-Type": "application/json",
   },
 });
 
 // Authentication functions
-export const getAuthToken = (): string | null => {
+export const getAuthToken = (): null | string => {
   const tokenManager = TokenManager.getInstance();
   return tokenManager.getAccessToken();
 };
@@ -66,41 +70,41 @@ export const createAuthenticatedClient = () => {
     baseUrl: API_BASE_URL,
     headers: tokenManager.getAccessToken()
       ? {
+          Accept: "application/json",
           Authorization: `Bearer ${tokenManager.getAccessToken()}`,
           "Content-Type": "application/json",
-          Accept: "application/json",
         }
       : {
-          "Content-Type": "application/json",
           Accept: "application/json",
+          "Content-Type": "application/json",
         },
   });
 
   // Wrap the client to handle token refresh
   return new Proxy(client, {
-    get(target, prop: string | symbol) {
+    get(target, property: string | symbol) {
       // For HTTP methods (GET, POST, etc.), add token refresh logic
       if (
-        typeof target[prop as keyof typeof target] === "function" &&
-        ["GET", "POST", "PUT", "DELETE", "PATCH"].includes(String(prop))
+        typeof target[property as keyof typeof target] === "function" &&
+        ["DELETE", "GET", "PATCH", "POST", "PUT"].includes(String(property))
       ) {
-        return async (...args: any[]) => {
+        return async (...arguments_: any[]) => {
           // Check if token is expired before making the request
           if (tokenManager.isTokenExpired() && tokenManager.getRefreshToken()) {
             await refreshAccessToken(tokenManager);
           }
 
           // Update the Authorization header with the current token
-          if (!args[1]?.headers?.Authorization && tokenManager.getAccessToken()) {
-            if (!args[1]) args[1] = {};
-            if (!args[1].headers) args[1].headers = {};
-            args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
+          if (!arguments_[1]?.headers?.Authorization && tokenManager.getAccessToken()) {
+            if (!arguments_[1]) arguments_[1] = {};
+            if (!arguments_[1].headers) arguments_[1].headers = {};
+            arguments_[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
           }
 
           // Make the original request
           let result;
           try {
-            result = await (target[prop as keyof typeof target] as Function)(...args);
+            result = await (target[property as keyof typeof target] as ApiMethod)(...arguments_);
           } catch (requestError) {
             logger.debug(
               `Request error: ${
@@ -148,11 +152,11 @@ export const createAuthenticatedClient = () => {
               }
             } catch {
               // If we can't parse the error structure, do a simple string check
-              const errorStr = String(result.error);
+              const errorString = String(result.error);
               if (
-                errorStr.toLowerCase().includes("unauthorized") ||
-                errorStr.toLowerCase().includes("token") ||
-                errorStr.toLowerCase().includes("auth")
+                errorString.toLowerCase().includes("unauthorized") ||
+                errorString.toLowerCase().includes("token") ||
+                errorString.toLowerCase().includes("auth")
               ) {
                 isAuthError = true;
               }
@@ -167,12 +171,12 @@ export const createAuthenticatedClient = () => {
                 logger.debug("Token refreshed successfully, retrying request");
 
                 // Update the Authorization header with the new token
-                if (!args[1]) args[1] = {};
-                if (!args[1].headers) args[1].headers = {};
-                args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
+                if (!arguments_[1]) arguments_[1] = {};
+                if (!arguments_[1].headers) arguments_[1].headers = {};
+                arguments_[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
 
                 // Retry the request
-                return await (target[prop as keyof typeof target] as Function)(...args);
+                return await (target[property as keyof typeof target] as ApiMethod)(...arguments_);
               } else {
                 logger.debug("Token refresh failed");
 
@@ -190,7 +194,7 @@ export const createAuthenticatedClient = () => {
       }
 
       // For other properties, just return the original
-      return target[prop as keyof typeof target];
+      return target[property as keyof typeof target];
     },
   });
 };
@@ -214,15 +218,15 @@ async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> 
       const response = await fetch(
         `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
         {
-          method: "POST",
+          body: new URLSearchParams({
+            client_id: KEYCLOAK_CLIENT_ID,
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+          }),
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: KEYCLOAK_CLIENT_ID,
-            refresh_token: refreshToken,
-          }),
+          method: "POST",
         }
       );
 

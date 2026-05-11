@@ -1,5 +1,6 @@
 import { Command } from "commander";
-import { ClusterService, Cluster } from "../services/cluster-service";
+
+import { Cluster, ClusterService } from "../services/cluster-service";
 import { handleError } from "../utils/error-handler";
 
 /**

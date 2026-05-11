@@ -3,14 +3,946 @@
  * Do not make direct changes to the file.
  */
 
-/** OneOf type helpers */
-type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
-type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
-type OneOf<T extends any[]> = T extends [infer Only]
-  ? Only
-  : T extends [infer A, infer B, ...infer Rest]
-    ? OneOf<[XOR<A, B>, ...Rest]>
-    : never;
+export type $defs = Record<string, never>;
+export interface components {
+  headers: never;
+  parameters: {};
+  pathItems: never;
+  requestBodies: never;
+  responses: never;
+  schemas: {
+    ApiKey: {
+      /** @description Whether the API key is active */
+      active: boolean;
+      /**
+       * Format: date-time
+       * @description Creation timestamp
+       */
+      created: string;
+      /** @description Description of the API key */
+      description: null | string;
+      /** @description Unique identifier for the API key */
+      id: number;
+      /**
+       * Format: date-time
+       * @description Last usage timestamp
+       */
+      lastUsed: null | string;
+      /**
+       * Format: date-time
+       * @description Last modification timestamp
+       */
+      modified: string;
+      /** @description Name of the API key */
+      name: string;
+      /** @description API key prefix (for display purposes) */
+      prefix: string;
+    };
+    ApiKeyListResponse: components["schemas"]["ApiKey"][];
+    ApiKeyModelUsage: {
+      /** @description Model identifier */
+      id: string;
+      /** @description Model display name */
+      name: string;
+      /** @description Total number of requests to this model */
+      requests: number;
+      /** @description Token usage statistics */
+      tokens: {
+        /** @description Total input tokens */
+        input: number;
+        /** @description Total output tokens */
+        output: number;
+        /** @description Total tokens (input + output) */
+        total: number;
+      };
+    };
+    ApiKeyResponse: {
+      /** @description Whether the API key is active */
+      active: boolean;
+      /**
+       * Format: date-time
+       * @description Creation timestamp
+       */
+      created: string;
+      /** @description Description of the API key */
+      description: null | string;
+      /** @description Unique identifier for the API key */
+      id: number;
+      /**
+       * Format: date-time
+       * @description Last usage timestamp
+       */
+      lastUsed: null | string;
+      /**
+       * Format: date-time
+       * @description Last modification timestamp
+       */
+      modified: string;
+      /** @description Name of the API key */
+      name: string;
+      /** @description API key prefix (for display purposes) */
+      prefix: string;
+    };
+    ApiKeyUsageEntry: {
+      /** @description Number of requests on this date */
+      count: number;
+      /** @description Date in YYYY-MM-DD format */
+      date: string;
+    };
+    ApiKeyUsageResponse: {
+      /** @description API key ID */
+      id: number;
+      /** @description Usage statistics per model */
+      models: components["schemas"]["ApiKeyModelUsage"][];
+      /** @description API key name */
+      name: string;
+      /** @description Time period for the usage data */
+      period: {
+        /** @description End date of the period (YYYY-MM-DD) */
+        end: string;
+        /** @description Start date of the period (YYYY-MM-DD) */
+        start: string;
+      };
+      /** @description Request statistics */
+      requests: {
+        /** @description Daily request counts */
+        daily: components["schemas"]["ApiKeyUsageEntry"][];
+        /** @description Total number of requests */
+        total: number;
+      };
+    };
+    AppInstallation: {
+      /** @description App template ID */
+      appId: string;
+      /** @description Applied configuration */
+      configuration: {
+        [key: string]: boolean | number | string;
+      };
+      /** @description Creation timestamp */
+      created: string;
+      /** @description Installation ID */
+      id: string;
+      /** @description Status message or error */
+      message?: string;
+      /** @description App name */
+      name: string;
+      /** @description Kubernetes namespace */
+      namespace: string;
+      /**
+       * @description Installation status
+       * @enum {string}
+       */
+      status: "failed" | "installing" | "pending" | "running";
+      /** @description Access URL if available */
+      url?: string;
+    };
+    AppInstallationList: {
+      data: {
+        /** @description App template ID */
+        appId: string;
+        /** @description Applied configuration */
+        configuration: {
+          [key: string]: boolean | number | string;
+        };
+        /** @description Creation timestamp */
+        created: string;
+        /** @description Installation ID */
+        id: string;
+        /** @description Status message or error */
+        message?: string;
+        /** @description App name */
+        name: string;
+        /** @description Kubernetes namespace */
+        namespace: string;
+        /**
+         * @description Installation status
+         * @enum {string}
+         */
+        status: "failed" | "installing" | "pending" | "running";
+        /** @description Access URL if available */
+        url?: string;
+      }[];
+      /** @enum {string} */
+      object: "list";
+    };
+    AppInstallRequest: {
+      /** @description ID of the app to install */
+      appId: string;
+      /** @description Configuration values */
+      configuration: {
+        [key: string]: boolean | number | string;
+      };
+      /** @description Kubernetes namespace to install into */
+      namespace: string;
+    };
+    AppTemplate: {
+      /** @description Category the app belongs to */
+      category: string;
+      /** @description Configuration options */
+      configuration: OneOf<
+        [
+          {
+            /** @description Default value if any */
+            default?: string;
+            /** @description Configuration field name */
+            name: string;
+            /** @description Whether this field is required */
+            required: boolean;
+            /**
+             * @description String input type
+             * @enum {string}
+             */
+            type: "string";
+          },
+          {
+            /** @description Default value if any */
+            default?: number;
+            /** @description Configuration field name */
+            name: string;
+            /** @description Whether this field is required */
+            required: boolean;
+            /**
+             * @description Number input type
+             * @enum {string}
+             */
+            type: "number";
+          },
+          {
+            /** @description Default value if any */
+            default?: boolean;
+            /** @description Configuration field name */
+            name: string;
+            /** @description Whether this field is required */
+            required: boolean;
+            /**
+             * @description Boolean toggle type
+             * @enum {string}
+             */
+            type: "boolean";
+          },
+          {
+            /** @description Default selected option */
+            default?: string;
+            /** @description Configuration field name */
+            name: string;
+            /** @description Available options to select from */
+            options: string[];
+            /** @description Whether this field is required */
+            required: boolean;
+            /**
+             * @description Dropdown select type
+             * @enum {string}
+             */
+            type: "select";
+          },
+          {
+            /** @description Default value if any */
+            default?: string;
+            /** @description Configuration field name */
+            name: string;
+            /** @description Whether this field is required */
+            required: boolean;
+            /**
+             * @description Password input type
+             * @enum {string}
+             */
+            type: "password";
+          },
+        ]
+      >[];
+      /** @description Short description of the app */
+      description: string;
+      /** @description List of key features */
+      features: string[];
+      /** @description Icon identifier */
+      icon: string;
+      /** @description Unique identifier for the app */
+      id: string;
+      /** @description Ingress configuration if applicable */
+      ingress?: {
+        /** @description Whether ingress is enabled for this app */
+        enabled: boolean;
+        /** @description Hostname pattern for the ingress */
+        hostname: string;
+        /** @description Path for the ingress */
+        path: string;
+        /** @description Whether TLS is enabled */
+        tls: boolean;
+      };
+      /** @description Number of installations */
+      installs: string;
+      /** @description Display name of the app */
+      name: string;
+      /** @description User rating */
+      rating: number;
+      /** @description Resource requirements */
+      requirements: {
+        /** @description Required CPU cores */
+        cpu: number;
+        /** @description Required memory in GB */
+        memory: number;
+        /** @description Required storage in GB */
+        storage: number;
+      };
+    };
+    AppTemplateList: {
+      data: {
+        /** @description Category the app belongs to */
+        category: string;
+        /** @description Configuration options */
+        configuration: OneOf<
+          [
+            {
+              /** @description Default value if any */
+              default?: string;
+              /** @description Configuration field name */
+              name: string;
+              /** @description Whether this field is required */
+              required: boolean;
+              /**
+               * @description String input type
+               * @enum {string}
+               */
+              type: "string";
+            },
+            {
+              /** @description Default value if any */
+              default?: number;
+              /** @description Configuration field name */
+              name: string;
+              /** @description Whether this field is required */
+              required: boolean;
+              /**
+               * @description Number input type
+               * @enum {string}
+               */
+              type: "number";
+            },
+            {
+              /** @description Default value if any */
+              default?: boolean;
+              /** @description Configuration field name */
+              name: string;
+              /** @description Whether this field is required */
+              required: boolean;
+              /**
+               * @description Boolean toggle type
+               * @enum {string}
+               */
+              type: "boolean";
+            },
+            {
+              /** @description Default selected option */
+              default?: string;
+              /** @description Configuration field name */
+              name: string;
+              /** @description Available options to select from */
+              options: string[];
+              /** @description Whether this field is required */
+              required: boolean;
+              /**
+               * @description Dropdown select type
+               * @enum {string}
+               */
+              type: "select";
+            },
+            {
+              /** @description Default value if any */
+              default?: string;
+              /** @description Configuration field name */
+              name: string;
+              /** @description Whether this field is required */
+              required: boolean;
+              /**
+               * @description Password input type
+               * @enum {string}
+               */
+              type: "password";
+            },
+          ]
+        >[];
+        /** @description Short description of the app */
+        description: string;
+        /** @description List of key features */
+        features: string[];
+        /** @description Icon identifier */
+        icon: string;
+        /** @description Unique identifier for the app */
+        id: string;
+        /** @description Ingress configuration if applicable */
+        ingress?: {
+          /** @description Whether ingress is enabled for this app */
+          enabled: boolean;
+          /** @description Hostname pattern for the ingress */
+          hostname: string;
+          /** @description Path for the ingress */
+          path: string;
+          /** @description Whether TLS is enabled */
+          tls: boolean;
+        };
+        /** @description Number of installations */
+        installs: string;
+        /** @description Display name of the app */
+        name: string;
+        /** @description User rating */
+        rating: number;
+        /** @description Resource requirements */
+        requirements: {
+          /** @description Required CPU cores */
+          cpu: number;
+          /** @description Required memory in GB */
+          memory: number;
+          /** @description Required storage in GB */
+          storage: number;
+        };
+      }[];
+      /** @enum {string} */
+      object: "list";
+    };
+    AuthToken: {
+      accessToken: string;
+      expiresIn: number;
+      user?: {
+        /** Format: email */
+        email: string;
+        id: string;
+        name: string;
+      };
+    };
+    ChatCompletionRequest: {
+      /** @default 4096 */
+      max_tokens?: number;
+      messages: components["schemas"]["ChatMessage"][];
+      model: string;
+      /** @default false */
+      stream?: boolean;
+      temperature?: number;
+      /** @default 1 */
+      top_p?: number;
+    };
+    ChatCompletionResponse: {
+      choices: {
+        /** @enum {string} */
+        finish_reason: "content_filter" | "length" | "stop";
+        index: number;
+        message: {
+          /** @description The model's response */
+          content: string;
+          /** @enum {string} */
+          role: "assistant";
+        };
+      }[];
+      /** @description Unix timestamp of when the completion was created */
+      created: number;
+      /** @description Unique identifier for this completion */
+      id: string;
+      /** @description The model used for completion */
+      model: string;
+      /** @enum {string} */
+      object: "chat.completion";
+      usage: {
+        completion_tokens: number;
+        prompt_tokens: number;
+        total_tokens: number;
+      };
+    };
+    ChatMessage: {
+      content: string;
+      /**
+       * @default user
+       * @enum {string}
+       */
+      role?: "assistant" | "system" | "user";
+    };
+    Cluster: {
+      /**
+       * Format: date-time
+       * @description Creation timestamp
+       */
+      created: string;
+      /** @description Unique identifier for the cluster */
+      id: string;
+      /** @description Display name of the cluster */
+      name: string;
+      /** @description Number of nodes in the cluster */
+      nodes: number;
+      /** @description Cloud provider (AWS, GCP, Azure, etc.) */
+      provider: string;
+      /** @description Cloud region where the cluster is deployed */
+      region: string;
+      /**
+       * @description Current status of the cluster
+       * @enum {string}
+       */
+      status: "degraded" | "healthy" | "unhealthy" | "unknown";
+      /** @description Kubernetes version */
+      version: string;
+    };
+    /** @description Cost breakdown */
+    ClusterCost: {
+      /** @description Cost for CPU resources */
+      cpu: number;
+      /** @description Currency code (e.g., USD, EUR) */
+      currency: string;
+      /** @description Cost for memory resources */
+      memory: number;
+      /** @description Cost for network resources */
+      network: number;
+      /** @description Cost for storage resources */
+      storage: number;
+      /** @description Total cost */
+      total: number;
+    };
+    /** @description Detailed cost breakdown with daily data */
+    ClusterCostWithDaily: components["schemas"]["ClusterCost"] & {
+      /** @description Daily cost breakdown */
+      daily: components["schemas"]["DailyCost"][];
+    };
+    ClusterDetailedUsage: {
+      cost: components["schemas"]["ClusterCostWithDaily"];
+      /** @description Unique cluster identifier */
+      id: string;
+      /** @description Cluster name */
+      name: string;
+      /** @description Number of nodes in the cluster */
+      nodes: number;
+      /** @description Time period for the usage data */
+      period: {
+        /** @description End date of the period (YYYY-MM-DD) */
+        end: string;
+        /** @description Start date of the period (YYYY-MM-DD) */
+        start: string;
+      };
+      /** @description Detailed resource usage metrics with trends */
+      resources: {
+        cpu: components["schemas"]["ResourceMetricWithTrend"];
+        memory: components["schemas"]["ResourceMetricWithTrend"];
+        storage: components["schemas"]["ResourceMetricWithTrend"];
+      };
+      /** @description Current cluster status */
+      status: string;
+    };
+    ClusterList: {
+      data: components["schemas"]["Cluster"][];
+      /** @enum {string} */
+      object: "list";
+    };
+    ClustersUsageResponse: {
+      /** @description List of clusters with usage data */
+      clusters: components["schemas"]["ClusterUsage"][];
+      /** @description Time period for the usage data */
+      period: {
+        /** @description End date of the period (YYYY-MM-DD) */
+        end: string;
+        /** @description Start date of the period (YYYY-MM-DD) */
+        start: string;
+      };
+      /** @description Aggregated totals */
+      total: {
+        /** @description Total cost breakdown across all clusters */
+        cost: {
+          /** @description Total CPU cost across all clusters */
+          cpu: number;
+          /** @description Currency code (e.g., USD, EUR) */
+          currency: string;
+          /** @description Total memory cost across all clusters */
+          memory: number;
+          /** @description Total network cost across all clusters */
+          network: number;
+          /** @description Total storage cost across all clusters */
+          storage: number;
+          /** @description Total cost across all clusters */
+          total: number;
+        };
+      };
+    };
+    ClusterUsage: {
+      cost: components["schemas"]["ClusterCost"];
+      /** @description Unique cluster identifier */
+      id: string;
+      /** @description Cluster name */
+      name: string;
+      /** @description Number of nodes in the cluster */
+      nodes: number;
+      /** @description Resource usage metrics */
+      resources: {
+        cpu: components["schemas"]["ResourceMetric"];
+        memory: components["schemas"]["ResourceMetric"];
+        storage: components["schemas"]["ResourceMetric"];
+      };
+      /** @description Current cluster status */
+      status: string;
+    };
+    CreateApiKey: {
+      /** @description Description of the API key */
+      description?: string;
+      /** @description Name of the API key */
+      name: string;
+    };
+    CreateApiKeyResponse: {
+      /**
+       * Format: date-time
+       * @description Creation timestamp
+       */
+      created: string;
+      /** @description Description of the API key */
+      description: null | string;
+      /** @description Unique identifier for the API key */
+      id: number;
+      /** @description The API key - only returned once at creation */
+      key: string;
+      /** @description Name of the API key */
+      name: string;
+    };
+    CreatePaymentMethod: {
+      setDefault?: boolean;
+      token: string;
+      /** @enum {string} */
+      type: "card" | "sepa";
+    };
+    CreateUser: {
+      company_id: number;
+      /** Format: email */
+      email: string;
+      name: string;
+      phone: null | string;
+      /** @enum {string} */
+      role: "admin" | "member";
+      settings?: {
+        language?: string;
+        notifications: boolean;
+        /** @enum {string} */
+        theme?: "dark" | "light" | "system";
+        timezone: string;
+      };
+    };
+    DailyCost: {
+      /** @description CPU cost for this day */
+      cpu: number;
+      /** @description Date in YYYY-MM-DD format */
+      date: string;
+      /** @description Memory cost for this day */
+      memory: number;
+      /** @description Network cost for this day */
+      network: number;
+      /** @description Storage cost for this day */
+      storage: number;
+      /** @description Total cost for this day */
+      total: number;
+    };
+    DailyTokenUsage: {
+      cost: components["schemas"]["TokenCost"];
+      /** @description Usage date in YYYY-MM-DD format */
+      date: string;
+      /** @description Number of input tokens used */
+      input_tokens: number;
+      /** @description Model identifier */
+      model?: string;
+      /** @description Number of output tokens generated */
+      output_tokens: number;
+      /** @description Total tokens (input + output) */
+      total_tokens: number;
+    };
+    DeviceAuthInitResponse: {
+      /** @description Code used by the device to poll for authentication status */
+      device_code: string;
+      /** @description Expiration time in seconds */
+      expires_in: number;
+      /** @description Polling interval in seconds */
+      interval: number;
+      /** @description Code displayed to the user for authentication */
+      user_code: string;
+      /** @description URL where the user should enter the user_code */
+      verification_url: string;
+    };
+    DeviceAuthPendingResponse: {
+      /**
+       * @description Authentication is still pending
+       * @enum {string}
+       */
+      status: "pending";
+    };
+    DeviceAuthRequest: {
+      /** @description The device code obtained from the device authorization request */
+      device_code: string;
+    };
+    DeviceAuthTokenResponse: {
+      /** @description Access token expiration time in seconds */
+      expires_in: number;
+      /** @description Refresh token expiration time in seconds */
+      refresh_expires_in: number;
+      /** @description Refresh token */
+      refresh_token: string;
+      /** @description Access token */
+      token: string;
+    };
+    ErrorResponse: {
+      code?: string;
+      details?: unknown;
+      error: string;
+    };
+    HealthCheck: {
+      environment: string;
+      npmVersion: string;
+      status: string;
+      timestamp: string;
+      version: string;
+    };
+    InviteUser: {
+      /** @description Company ID to invite the user to (defaults to current user's company) */
+      companyId?: number;
+      /**
+       * Format: email
+       * @description Email address of the person to invite
+       */
+      email: string;
+      /**
+       * @description Role to assign to the new team member
+       * @enum {string}
+       */
+      role: "admin" | "member";
+    };
+    Invoice: {
+      amount: number;
+      currency: string;
+      customer: {
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: email */
+        email: string;
+        id: string;
+        name: string;
+      };
+      customerId: string;
+      id: string;
+      /** Format: date-time */
+      issuingDate: string;
+      number: string;
+      /** @enum {string} */
+      paymentStatus: "failed" | "pending" | "succeeded";
+    };
+    Model: {
+      /** @description Whether the model is active */
+      active: boolean;
+      /** @description Description of the model */
+      description: string;
+      /** @description Unique identifier for the model */
+      id: string;
+      /** @description Name of the model */
+      name: string;
+    };
+    ModelList: components["schemas"]["Model"][];
+    ModelTokenUsageResponse: {
+      /** @description Model identifier */
+      model: string;
+      period: components["schemas"]["TokenUsagePeriod"];
+      total: components["schemas"]["TokenUsageTotal"];
+      /** @description Daily token usage data */
+      usage: components["schemas"]["DailyTokenUsage"][];
+    };
+    PaymentMethod: {
+      brand?: string;
+      expMonth?: number;
+      expYear?: number;
+      id: string;
+      isDefault: boolean;
+      last4: string;
+      /** @enum {string} */
+      type: "card" | "sepa";
+    };
+    RefreshTokenRequest: {
+      /** @description Whether this is a device token */
+      is_device_token?: boolean;
+      /** @description The refresh token to use */
+      refresh_token: string;
+    };
+    RefreshTokenResponse: {
+      /** @description Seconds until the access token expires */
+      expires_in: number;
+      /** @description Seconds until the refresh token expires */
+      refresh_expires_in: number;
+      /** @description The new refresh token */
+      refresh_token: string;
+      /** @description The new access token */
+      token: string;
+    };
+    ResourceMetric: {
+      /** @description Total allocated resources */
+      allocated: number;
+      /** @description Available resources */
+      available: number;
+      /** @description Unit of measurement (e.g., cores, GB) */
+      unit: string;
+      /** @description Currently used resources */
+      used: number;
+    };
+    ResourceMetricWithTrend: components["schemas"]["ResourceMetric"] & {
+      /** @description Historical usage trend data */
+      usage_trend: {
+        /** @description Date in YYYY-MM-DD format */
+        date: string;
+        /** @description Resource usage value for this date */
+        value: number;
+      }[];
+    };
+    /** @description Cost information for this usage */
+    TokenCost: {
+      /** @description Cost amount */
+      amount: number;
+      /** @description Currency code (e.g., USD, EUR) */
+      currency: string;
+    };
+    /** @description Time period for the usage data */
+    TokenUsagePeriod: {
+      /** @description End date of the period (YYYY-MM-DD) */
+      end: string;
+      /** @description Start date of the period (YYYY-MM-DD) */
+      start: string;
+    };
+    TokenUsageResponse: {
+      period: components["schemas"]["TokenUsagePeriod"];
+      total: components["schemas"]["TokenUsageTotal"];
+      /** @description Daily token usage data */
+      usage: components["schemas"]["DailyTokenUsage"][];
+    };
+    /** @description Aggregated usage totals */
+    TokenUsageTotal: {
+      cost: components["schemas"]["TokenCost"];
+      /** @description Total input tokens for the period */
+      input_tokens: number;
+      /** @description Total output tokens for the period */
+      output_tokens: number;
+      /** @description Total tokens for the period */
+      total_tokens: number;
+    };
+    UpdateSubscription: {
+      planId: string;
+      quantity?: number;
+    };
+    UpdateUser: {
+      /** Format: email */
+      email?: string;
+      name?: string;
+      phone?: null | string;
+      settings?: {
+        language?: string;
+        notifications: boolean;
+        /** @enum {string} */
+        theme?: "dark" | "light" | "system";
+        timezone: string;
+      };
+    };
+    Usage: {
+      current_period: {
+        /** Format: date-time */
+        end_date: string;
+        /** Format: date-time */
+        start_date: string;
+      };
+      metrics: {
+        cost: number;
+        currency: string;
+        name: string;
+        unit: string;
+        value: number;
+      }[];
+      total: {
+        amount: number;
+        currency: string;
+      };
+    };
+    User: {
+      /** Format: uri */
+      avatarUrl: string;
+      /** Format: email */
+      email: null | string;
+      id: string;
+      login: string;
+      name: null | string;
+    };
+    /** @description Complete user profile including company details */
+    UserProfile: {
+      /** @description Whether the user account is active */
+      active: boolean | null;
+      /** @description Associated company details */
+      company?: {
+        /** @description City */
+        city: null | string;
+        /** @description Company country information */
+        country: null | {
+          /** @description ISO country code */
+          code: string;
+          /** @description Country ID */
+          id: number;
+          /** @description Country name */
+          name: string;
+        };
+        /**
+         * Format: email
+         * @description Company email address
+         */
+        email: string;
+        /** @description Company unique identifier */
+        id: number;
+        /** @description Legal company name */
+        name: string;
+        /** @description Company phone number */
+        phone: null | string;
+        /** @description Street address */
+        street: null | string;
+        /** @description VAT identification number */
+        vat: string;
+      };
+      /** @description ID of the company the user belongs to */
+      company_id: number;
+      /**
+       * Format: date-time
+       * @description When the user was created
+       */
+      createdAt: null | string;
+      /**
+       * Format: email
+       * @description User's email address
+       */
+      email: string;
+      /** @description Unique identifier for the user */
+      id: string;
+      /** @description Username for login */
+      login: string;
+      /** @description Full name of the user */
+      name: string;
+      /** @description Contact phone number */
+      phone: null | string;
+      /**
+       * @description User role determining permissions
+       * @enum {string}
+       */
+      role: "admin" | "member";
+      /** @description User preferences and settings */
+      settings?: {
+        /** @description Preferred interface language */
+        language?: string;
+        /** @description Email notification preferences */
+        notifications: boolean;
+        /**
+         * @description UI theme preference
+         * @enum {string}
+         */
+        theme?: "dark" | "light" | "system";
+        /** @description User's preferred timezone */
+        timezone: string;
+      };
+      /**
+       * Format: date-time
+       * @description Last update timestamp
+       */
+      updatedAt: null | string;
+    };
+  };
+}
+export type external = Record<string, never>;
+
+export type operations = Record<string, never>;
 
 export interface paths {
   "/v1/api-keys": {
@@ -191,15 +1123,15 @@ export interface paths {
      */
     get: {
       parameters: {
-        query?: {
-          /** @description Start date in YYYY-MM-DD format */
-          start_date?: string;
-          /** @description End date in YYYY-MM-DD format */
-          end_date?: string;
-        };
         path: {
           /** @description API key ID */
           id: string;
+        };
+        query?: {
+          /** @description End date in YYYY-MM-DD format */
+          end_date?: string;
+          /** @description Start date in YYYY-MM-DD format */
+          start_date?: string;
         };
       };
       responses: {
@@ -214,64 +1146,6 @@ export interface paths {
           content: never;
         };
         /** @description API key not found */
-        404: {
-          content: never;
-        };
-        /** @description Server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/v1/apps/templates": {
-    /**
-     * List app templates
-     * @description Retrieves a list of all available application templates that can be installed in your cluster
-     */
-    get: {
-      responses: {
-        /** @description List of app templates */
-        200: {
-          content: {
-            "application/json": components["schemas"]["AppTemplateList"];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          content: never;
-        };
-        /** @description Server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/v1/apps/templates/{appId}": {
-    /**
-     * Get app template details
-     * @description Retrieves detailed information about a specific app template
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description App template ID */
-          appId: string;
-        };
-      };
-      responses: {
-        /** @description App template details */
-        200: {
-          content: {
-            "application/json": components["schemas"]["AppTemplate"];
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          content: never;
-        };
-        /** @description App template not found */
         404: {
           content: never;
         };
@@ -343,6 +1217,36 @@ export interface paths {
   };
   "/v1/apps/installations/{installationId}": {
     /**
+     * Uninstall an app
+     * @description Removes an installed application from your cluster
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Installation ID */
+          installationId: string;
+        };
+      };
+      responses: {
+        /** @description App uninstallation initiated */
+        204: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+        /** @description Installation not found */
+        404: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
      * Get installation details
      * @description Retrieves detailed information about a specific app installation
      */
@@ -374,28 +1278,22 @@ export interface paths {
         };
       };
     };
+  };
+  "/v1/apps/templates": {
     /**
-     * Uninstall an app
-     * @description Removes an installed application from your cluster
+     * List app templates
+     * @description Retrieves a list of all available application templates that can be installed in your cluster
      */
-    delete: {
-      parameters: {
-        path: {
-          /** @description Installation ID */
-          installationId: string;
-        };
-      };
+    get: {
       responses: {
-        /** @description App uninstallation initiated */
-        204: {
-          content: never;
+        /** @description List of app templates */
+        200: {
+          content: {
+            "application/json": components["schemas"]["AppTemplateList"];
+          };
         };
         /** @description Unauthorized */
         401: {
-          content: never;
-        };
-        /** @description Installation not found */
-        404: {
           content: never;
         };
         /** @description Server error */
@@ -405,35 +1303,35 @@ export interface paths {
       };
     };
   };
-  "/v1/auth/login": {
+  "/v1/apps/templates/{appId}": {
     /**
-     * OAuth login
-     * @description Initiates OAuth login flow via Keycloak.
-     *
-     * ## CLI Authentication
-     *
-     * For a simpler experience, you can use our CLI tool to authenticate:
-     * ```
-     * npx berget auth login
-     * ```
-     *
-     * After logging in, you can create an API key with:
-     * ```
-     * npx berget api-keys create --name my-api-key
-     * ```
+     * Get app template details
+     * @description Retrieves detailed information about a specific app template
      */
     get: {
       parameters: {
-        query?: {
-          /** @description URL to redirect to after successful login */
-          redirect_uri?: string;
-          /** @description How to return the token after successful login (default is redirect) */
-          response_type?: "redirect" | "json";
+        path: {
+          /** @description App template ID */
+          appId: string;
         };
       };
       responses: {
-        /** @description Redirects to Keycloak for login */
-        302: {
+        /** @description App template details */
+        200: {
+          content: {
+            "application/json": components["schemas"]["AppTemplate"];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+        /** @description App template not found */
+        404: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
           content: never;
         };
       };
@@ -535,6 +1433,59 @@ export interface paths {
       };
     };
   };
+  "/v1/auth/login": {
+    /**
+     * OAuth login
+     * @description Initiates OAuth login flow via Keycloak.
+     *
+     * ## CLI Authentication
+     *
+     * For a simpler experience, you can use our CLI tool to authenticate:
+     * ```
+     * npx berget auth login
+     * ```
+     *
+     * After logging in, you can create an API key with:
+     * ```
+     * npx berget api-keys create --name my-api-key
+     * ```
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description URL to redirect to after successful login */
+          redirect_uri?: string;
+          /** @description How to return the token after successful login (default is redirect) */
+          response_type?: "json" | "redirect";
+        };
+      };
+      responses: {
+        /** @description Redirects to Keycloak for login */
+        302: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/v1/auth/logout": {
+    /**
+     * Logout
+     * @description Clears cookies and redirects to Keycloak logout
+     */
+    get: {
+      parameters: {
+        query?: {
+          redirect_uri?: string;
+        };
+      };
+      responses: {
+        /** @description Redirects to logout page */
+        302: {
+          content: never;
+        };
+      };
+    };
+  };
   "/v1/auth/refresh": {
     /**
      * Refresh access token
@@ -579,41 +1530,6 @@ export interface paths {
             "application/json": {
               url?: string;
             };
-          };
-        };
-      };
-    };
-  };
-  "/v1/auth/logout": {
-    /**
-     * Logout
-     * @description Clears cookies and redirects to Keycloak logout
-     */
-    get: {
-      parameters: {
-        query?: {
-          redirect_uri?: string;
-        };
-      };
-      responses: {
-        /** @description Redirects to logout page */
-        302: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/v1/billing/usage": {
-    /**
-     * Get current usage
-     * @description Retrieves current billing period usage metrics and costs. Shows detailed breakdown of API calls, compute resources, and other billable items. This helps you understand your current billing status.
-     */
-    get: {
-      responses: {
-        /** @description Current usage metrics */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Usage"];
           };
         };
       };
@@ -729,6 +1645,22 @@ export interface paths {
         /** @description Subscription updated */
         200: {
           content: never;
+        };
+      };
+    };
+  };
+  "/v1/billing/usage": {
+    /**
+     * Get current usage
+     * @description Retrieves current billing period usage metrics and costs. Shows detailed breakdown of API calls, compute resources, and other billable items. This helps you understand your current billing status.
+     */
+    get: {
+      responses: {
+        /** @description Current usage metrics */
+        200: {
+          content: {
+            "application/json": components["schemas"]["Usage"];
+          };
         };
       };
     };
@@ -1016,6 +1948,33 @@ export interface paths {
       };
     };
   };
+  "/v1/users/invite": {
+    /**
+     * Invite team member
+     * @description Invites a new team member to join your organization. They will receive an email with instructions to set up their account.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["InviteUser"];
+        };
+      };
+      responses: {
+        /** @description Invitation sent successfully */
+        200: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+        /** @description Forbidden - insufficient permissions */
+        403: {
+          content: never;
+        };
+      };
+    };
+  };
   "/v1/users/me": {
     /**
      * Get current user profile
@@ -1039,6 +1998,35 @@ export interface paths {
     };
   };
   "/v1/users/{id}": {
+    /**
+     * Delete user
+     * @description Deletes your own user account
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description User deleted */
+        204: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Cannot delete other users */
+        403: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
     /**
      * Get user details
      * @description Retrieves details for a specific user
@@ -1112,1006 +2100,18 @@ export interface paths {
         };
       };
     };
-    /**
-     * Delete user
-     * @description Deletes your own user account
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description User deleted */
-        204: {
-          content: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Cannot delete other users */
-        403: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/v1/users/invite": {
-    /**
-     * Invite team member
-     * @description Invites a new team member to join your organization. They will receive an email with instructions to set up their account.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["InviteUser"];
-        };
-      };
-      responses: {
-        /** @description Invitation sent successfully */
-        200: {
-          content: never;
-        };
-        /** @description Unauthorized */
-        401: {
-          content: never;
-        };
-        /** @description Forbidden - insufficient permissions */
-        403: {
-          content: never;
-        };
-      };
-    };
   };
 }
 
 export type webhooks = Record<string, never>;
 
-export interface components {
-  schemas: {
-    ApiKey: {
-      /** @description Unique identifier for the API key */
-      id: number;
-      /** @description Name of the API key */
-      name: string;
-      /** @description Description of the API key */
-      description: string | null;
-      /** @description Whether the API key is active */
-      active: boolean;
-      /**
-       * Format: date-time
-       * @description Creation timestamp
-       */
-      created: string;
-      /**
-       * Format: date-time
-       * @description Last modification timestamp
-       */
-      modified: string;
-      /**
-       * Format: date-time
-       * @description Last usage timestamp
-       */
-      lastUsed: string | null;
-      /** @description API key prefix (for display purposes) */
-      prefix: string;
-    };
-    ApiKeyResponse: {
-      /** @description Unique identifier for the API key */
-      id: number;
-      /** @description Name of the API key */
-      name: string;
-      /** @description Description of the API key */
-      description: string | null;
-      /** @description Whether the API key is active */
-      active: boolean;
-      /**
-       * Format: date-time
-       * @description Creation timestamp
-       */
-      created: string;
-      /**
-       * Format: date-time
-       * @description Last modification timestamp
-       */
-      modified: string;
-      /**
-       * Format: date-time
-       * @description Last usage timestamp
-       */
-      lastUsed: string | null;
-      /** @description API key prefix (for display purposes) */
-      prefix: string;
-    };
-    CreateApiKey: {
-      /** @description Name of the API key */
-      name: string;
-      /** @description Description of the API key */
-      description?: string;
-    };
-    CreateApiKeyResponse: {
-      /** @description Unique identifier for the API key */
-      id: number;
-      /** @description Name of the API key */
-      name: string;
-      /** @description Description of the API key */
-      description: string | null;
-      /** @description The API key - only returned once at creation */
-      key: string;
-      /**
-       * Format: date-time
-       * @description Creation timestamp
-       */
-      created: string;
-    };
-    ApiKeyUsageEntry: {
-      /** @description Date in YYYY-MM-DD format */
-      date: string;
-      /** @description Number of requests on this date */
-      count: number;
-    };
-    ApiKeyModelUsage: {
-      /** @description Model identifier */
-      id: string;
-      /** @description Model display name */
-      name: string;
-      /** @description Total number of requests to this model */
-      requests: number;
-      /** @description Token usage statistics */
-      tokens: {
-        /** @description Total input tokens */
-        input: number;
-        /** @description Total output tokens */
-        output: number;
-        /** @description Total tokens (input + output) */
-        total: number;
-      };
-    };
-    ApiKeyUsageResponse: {
-      /** @description API key ID */
-      id: number;
-      /** @description API key name */
-      name: string;
-      /** @description Request statistics */
-      requests: {
-        /** @description Total number of requests */
-        total: number;
-        /** @description Daily request counts */
-        daily: components["schemas"]["ApiKeyUsageEntry"][];
-      };
-      /** @description Usage statistics per model */
-      models: components["schemas"]["ApiKeyModelUsage"][];
-      /** @description Time period for the usage data */
-      period: {
-        /** @description Start date of the period (YYYY-MM-DD) */
-        start: string;
-        /** @description End date of the period (YYYY-MM-DD) */
-        end: string;
-      };
-    };
-    ApiKeyListResponse: components["schemas"]["ApiKey"][];
-    AppTemplate: {
-      /** @description Unique identifier for the app */
-      id: string;
-      /** @description Display name of the app */
-      name: string;
-      /** @description Category the app belongs to */
-      category: string;
-      /** @description Short description of the app */
-      description: string;
-      /** @description Number of installations */
-      installs: string;
-      /** @description User rating */
-      rating: number;
-      /** @description Icon identifier */
-      icon: string;
-      /** @description List of key features */
-      features: string[];
-      /** @description Resource requirements */
-      requirements: {
-        /** @description Required CPU cores */
-        cpu: number;
-        /** @description Required memory in GB */
-        memory: number;
-        /** @description Required storage in GB */
-        storage: number;
-      };
-      /** @description Configuration options */
-      configuration: OneOf<
-        [
-          {
-            /** @description Configuration field name */
-            name: string;
-            /**
-             * @description String input type
-             * @enum {string}
-             */
-            type: "string";
-            /** @description Whether this field is required */
-            required: boolean;
-            /** @description Default value if any */
-            default?: string;
-          },
-          {
-            /** @description Configuration field name */
-            name: string;
-            /**
-             * @description Number input type
-             * @enum {string}
-             */
-            type: "number";
-            /** @description Whether this field is required */
-            required: boolean;
-            /** @description Default value if any */
-            default?: number;
-          },
-          {
-            /** @description Configuration field name */
-            name: string;
-            /**
-             * @description Boolean toggle type
-             * @enum {string}
-             */
-            type: "boolean";
-            /** @description Whether this field is required */
-            required: boolean;
-            /** @description Default value if any */
-            default?: boolean;
-          },
-          {
-            /** @description Configuration field name */
-            name: string;
-            /**
-             * @description Dropdown select type
-             * @enum {string}
-             */
-            type: "select";
-            /** @description Whether this field is required */
-            required: boolean;
-            /** @description Default selected option */
-            default?: string;
-            /** @description Available options to select from */
-            options: string[];
-          },
-          {
-            /** @description Configuration field name */
-            name: string;
-            /**
-             * @description Password input type
-             * @enum {string}
-             */
-            type: "password";
-            /** @description Whether this field is required */
-            required: boolean;
-            /** @description Default value if any */
-            default?: string;
-          },
-        ]
-      >[];
-      /** @description Ingress configuration if applicable */
-      ingress?: {
-        /** @description Whether ingress is enabled for this app */
-        enabled: boolean;
-        /** @description Hostname pattern for the ingress */
-        hostname: string;
-        /** @description Path for the ingress */
-        path: string;
-        /** @description Whether TLS is enabled */
-        tls: boolean;
-      };
-    };
-    AppTemplateList: {
-      data: {
-        /** @description Unique identifier for the app */
-        id: string;
-        /** @description Display name of the app */
-        name: string;
-        /** @description Category the app belongs to */
-        category: string;
-        /** @description Short description of the app */
-        description: string;
-        /** @description Number of installations */
-        installs: string;
-        /** @description User rating */
-        rating: number;
-        /** @description Icon identifier */
-        icon: string;
-        /** @description List of key features */
-        features: string[];
-        /** @description Resource requirements */
-        requirements: {
-          /** @description Required CPU cores */
-          cpu: number;
-          /** @description Required memory in GB */
-          memory: number;
-          /** @description Required storage in GB */
-          storage: number;
-        };
-        /** @description Configuration options */
-        configuration: OneOf<
-          [
-            {
-              /** @description Configuration field name */
-              name: string;
-              /**
-               * @description String input type
-               * @enum {string}
-               */
-              type: "string";
-              /** @description Whether this field is required */
-              required: boolean;
-              /** @description Default value if any */
-              default?: string;
-            },
-            {
-              /** @description Configuration field name */
-              name: string;
-              /**
-               * @description Number input type
-               * @enum {string}
-               */
-              type: "number";
-              /** @description Whether this field is required */
-              required: boolean;
-              /** @description Default value if any */
-              default?: number;
-            },
-            {
-              /** @description Configuration field name */
-              name: string;
-              /**
-               * @description Boolean toggle type
-               * @enum {string}
-               */
-              type: "boolean";
-              /** @description Whether this field is required */
-              required: boolean;
-              /** @description Default value if any */
-              default?: boolean;
-            },
-            {
-              /** @description Configuration field name */
-              name: string;
-              /**
-               * @description Dropdown select type
-               * @enum {string}
-               */
-              type: "select";
-              /** @description Whether this field is required */
-              required: boolean;
-              /** @description Default selected option */
-              default?: string;
-              /** @description Available options to select from */
-              options: string[];
-            },
-            {
-              /** @description Configuration field name */
-              name: string;
-              /**
-               * @description Password input type
-               * @enum {string}
-               */
-              type: "password";
-              /** @description Whether this field is required */
-              required: boolean;
-              /** @description Default value if any */
-              default?: string;
-            },
-          ]
-        >[];
-        /** @description Ingress configuration if applicable */
-        ingress?: {
-          /** @description Whether ingress is enabled for this app */
-          enabled: boolean;
-          /** @description Hostname pattern for the ingress */
-          hostname: string;
-          /** @description Path for the ingress */
-          path: string;
-          /** @description Whether TLS is enabled */
-          tls: boolean;
-        };
-      }[];
-      /** @enum {string} */
-      object: "list";
-    };
-    AppInstallRequest: {
-      /** @description ID of the app to install */
-      appId: string;
-      /** @description Kubernetes namespace to install into */
-      namespace: string;
-      /** @description Configuration values */
-      configuration: {
-        [key: string]: string | number | boolean;
-      };
-    };
-    AppInstallation: {
-      /** @description Installation ID */
-      id: string;
-      /** @description App template ID */
-      appId: string;
-      /** @description App name */
-      name: string;
-      /** @description Kubernetes namespace */
-      namespace: string;
-      /**
-       * @description Installation status
-       * @enum {string}
-       */
-      status: "pending" | "installing" | "running" | "failed";
-      /** @description Creation timestamp */
-      created: string;
-      /** @description Status message or error */
-      message?: string;
-      /** @description Access URL if available */
-      url?: string;
-      /** @description Applied configuration */
-      configuration: {
-        [key: string]: string | number | boolean;
-      };
-    };
-    AppInstallationList: {
-      data: {
-        /** @description Installation ID */
-        id: string;
-        /** @description App template ID */
-        appId: string;
-        /** @description App name */
-        name: string;
-        /** @description Kubernetes namespace */
-        namespace: string;
-        /**
-         * @description Installation status
-         * @enum {string}
-         */
-        status: "pending" | "installing" | "running" | "failed";
-        /** @description Creation timestamp */
-        created: string;
-        /** @description Status message or error */
-        message?: string;
-        /** @description Access URL if available */
-        url?: string;
-        /** @description Applied configuration */
-        configuration: {
-          [key: string]: string | number | boolean;
-        };
-      }[];
-      /** @enum {string} */
-      object: "list";
-    };
-    AuthToken: {
-      accessToken: string;
-      expiresIn: number;
-      user?: {
-        id: string;
-        name: string;
-        /** Format: email */
-        email: string;
-      };
-    };
-    User: {
-      id: string;
-      login: string;
-      name: string | null;
-      /** Format: email */
-      email: string | null;
-      /** Format: uri */
-      avatarUrl: string;
-    };
-    RefreshTokenRequest: {
-      /** @description The refresh token to use */
-      refresh_token: string;
-      /** @description Whether this is a device token */
-      is_device_token?: boolean;
-    };
-    RefreshTokenResponse: {
-      /** @description The new access token */
-      token: string;
-      /** @description The new refresh token */
-      refresh_token: string;
-      /** @description Seconds until the access token expires */
-      expires_in: number;
-      /** @description Seconds until the refresh token expires */
-      refresh_expires_in: number;
-    };
-    DeviceAuthRequest: {
-      /** @description The device code obtained from the device authorization request */
-      device_code: string;
-    };
-    DeviceAuthInitResponse: {
-      /** @description Code used by the device to poll for authentication status */
-      device_code: string;
-      /** @description Code displayed to the user for authentication */
-      user_code: string;
-      /** @description URL where the user should enter the user_code */
-      verification_url: string;
-      /** @description Expiration time in seconds */
-      expires_in: number;
-      /** @description Polling interval in seconds */
-      interval: number;
-    };
-    DeviceAuthPendingResponse: {
-      /**
-       * @description Authentication is still pending
-       * @enum {string}
-       */
-      status: "pending";
-    };
-    DeviceAuthTokenResponse: {
-      /** @description Access token */
-      token: string;
-      /** @description Refresh token */
-      refresh_token: string;
-      /** @description Access token expiration time in seconds */
-      expires_in: number;
-      /** @description Refresh token expiration time in seconds */
-      refresh_expires_in: number;
-    };
-    Usage: {
-      current_period: {
-        /** Format: date-time */
-        start_date: string;
-        /** Format: date-time */
-        end_date: string;
-      };
-      metrics: {
-        name: string;
-        value: number;
-        unit: string;
-        cost: number;
-        currency: string;
-      }[];
-      total: {
-        amount: number;
-        currency: string;
-      };
-    };
-    Invoice: {
-      id: string;
-      number: string;
-      /** Format: date-time */
-      issuingDate: string;
-      /** @enum {string} */
-      paymentStatus: "pending" | "succeeded" | "failed";
-      amount: number;
-      currency: string;
-      customerId: string;
-      customer: {
-        id: string;
-        name: string;
-        /** Format: email */
-        email: string;
-        /** Format: date-time */
-        createdAt: string;
-      };
-    };
-    PaymentMethod: {
-      id: string;
-      /** @enum {string} */
-      type: "card" | "sepa";
-      last4: string;
-      expMonth?: number;
-      expYear?: number;
-      brand?: string;
-      isDefault: boolean;
-    };
-    CreatePaymentMethod: {
-      /** @enum {string} */
-      type: "card" | "sepa";
-      token: string;
-      setDefault?: boolean;
-    };
-    UpdateSubscription: {
-      planId: string;
-      quantity?: number;
-    };
-    ChatMessage: {
-      /**
-       * @default user
-       * @enum {string}
-       */
-      role?: "system" | "user" | "assistant";
-      content: string;
-    };
-    ChatCompletionRequest: {
-      model: string;
-      messages: components["schemas"]["ChatMessage"][];
-      temperature?: number;
-      /** @default 4096 */
-      max_tokens?: number;
-      /** @default false */
-      stream?: boolean;
-      /** @default 1 */
-      top_p?: number;
-    };
-    ChatCompletionResponse: {
-      /** @description Unique identifier for this completion */
-      id: string;
-      /** @enum {string} */
-      object: "chat.completion";
-      /** @description Unix timestamp of when the completion was created */
-      created: number;
-      /** @description The model used for completion */
-      model: string;
-      choices: {
-        message: {
-          /** @enum {string} */
-          role: "assistant";
-          /** @description The model's response */
-          content: string;
-        };
-        /** @enum {string} */
-        finish_reason: "stop" | "length" | "content_filter";
-        index: number;
-      }[];
-      usage: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-      };
-    };
-    Cluster: {
-      /** @description Unique identifier for the cluster */
-      id: string;
-      /** @description Display name of the cluster */
-      name: string;
-      /** @description Cloud provider (AWS, GCP, Azure, etc.) */
-      provider: string;
-      /** @description Cloud region where the cluster is deployed */
-      region: string;
-      /** @description Kubernetes version */
-      version: string;
-      /** @description Number of nodes in the cluster */
-      nodes: number;
-      /**
-       * @description Current status of the cluster
-       * @enum {string}
-       */
-      status: "healthy" | "degraded" | "unhealthy" | "unknown";
-      /**
-       * Format: date-time
-       * @description Creation timestamp
-       */
-      created: string;
-    };
-    ClusterList: {
-      data: components["schemas"]["Cluster"][];
-      /** @enum {string} */
-      object: "list";
-    };
-    ResourceMetric: {
-      /** @description Total allocated resources */
-      allocated: number;
-      /** @description Currently used resources */
-      used: number;
-      /** @description Available resources */
-      available: number;
-      /** @description Unit of measurement (e.g., cores, GB) */
-      unit: string;
-    };
-    /** @description Cost breakdown */
-    ClusterCost: {
-      /** @description Cost for CPU resources */
-      cpu: number;
-      /** @description Cost for memory resources */
-      memory: number;
-      /** @description Cost for storage resources */
-      storage: number;
-      /** @description Cost for network resources */
-      network: number;
-      /** @description Total cost */
-      total: number;
-      /** @description Currency code (e.g., USD, EUR) */
-      currency: string;
-    };
-    ClusterUsage: {
-      /** @description Unique cluster identifier */
-      id: string;
-      /** @description Cluster name */
-      name: string;
-      /** @description Resource usage metrics */
-      resources: {
-        cpu: components["schemas"]["ResourceMetric"];
-        memory: components["schemas"]["ResourceMetric"];
-        storage: components["schemas"]["ResourceMetric"];
-      };
-      cost: components["schemas"]["ClusterCost"];
-      /** @description Number of nodes in the cluster */
-      nodes: number;
-      /** @description Current cluster status */
-      status: string;
-    };
-    ResourceMetricWithTrend: components["schemas"]["ResourceMetric"] & {
-      /** @description Historical usage trend data */
-      usage_trend: {
-        /** @description Date in YYYY-MM-DD format */
-        date: string;
-        /** @description Resource usage value for this date */
-        value: number;
-      }[];
-    };
-    DailyCost: {
-      /** @description Date in YYYY-MM-DD format */
-      date: string;
-      /** @description CPU cost for this day */
-      cpu: number;
-      /** @description Memory cost for this day */
-      memory: number;
-      /** @description Storage cost for this day */
-      storage: number;
-      /** @description Network cost for this day */
-      network: number;
-      /** @description Total cost for this day */
-      total: number;
-    };
-    /** @description Detailed cost breakdown with daily data */
-    ClusterCostWithDaily: components["schemas"]["ClusterCost"] & {
-      /** @description Daily cost breakdown */
-      daily: components["schemas"]["DailyCost"][];
-    };
-    ClusterDetailedUsage: {
-      /** @description Unique cluster identifier */
-      id: string;
-      /** @description Cluster name */
-      name: string;
-      /** @description Detailed resource usage metrics with trends */
-      resources: {
-        cpu: components["schemas"]["ResourceMetricWithTrend"];
-        memory: components["schemas"]["ResourceMetricWithTrend"];
-        storage: components["schemas"]["ResourceMetricWithTrend"];
-      };
-      cost: components["schemas"]["ClusterCostWithDaily"];
-      /** @description Number of nodes in the cluster */
-      nodes: number;
-      /** @description Current cluster status */
-      status: string;
-      /** @description Time period for the usage data */
-      period: {
-        /** @description Start date of the period (YYYY-MM-DD) */
-        start: string;
-        /** @description End date of the period (YYYY-MM-DD) */
-        end: string;
-      };
-    };
-    ClustersUsageResponse: {
-      /** @description List of clusters with usage data */
-      clusters: components["schemas"]["ClusterUsage"][];
-      /** @description Time period for the usage data */
-      period: {
-        /** @description Start date of the period (YYYY-MM-DD) */
-        start: string;
-        /** @description End date of the period (YYYY-MM-DD) */
-        end: string;
-      };
-      /** @description Aggregated totals */
-      total: {
-        /** @description Total cost breakdown across all clusters */
-        cost: {
-          /** @description Total CPU cost across all clusters */
-          cpu: number;
-          /** @description Total memory cost across all clusters */
-          memory: number;
-          /** @description Total storage cost across all clusters */
-          storage: number;
-          /** @description Total network cost across all clusters */
-          network: number;
-          /** @description Total cost across all clusters */
-          total: number;
-          /** @description Currency code (e.g., USD, EUR) */
-          currency: string;
-        };
-      };
-    };
-    Model: {
-      /** @description Unique identifier for the model */
-      id: string;
-      /** @description Name of the model */
-      name: string;
-      /** @description Description of the model */
-      description: string;
-      /** @description Whether the model is active */
-      active: boolean;
-    };
-    ModelList: components["schemas"]["Model"][];
-    /** @description Cost information for this usage */
-    TokenCost: {
-      /** @description Cost amount */
-      amount: number;
-      /** @description Currency code (e.g., USD, EUR) */
-      currency: string;
-    };
-    DailyTokenUsage: {
-      /** @description Usage date in YYYY-MM-DD format */
-      date: string;
-      /** @description Model identifier */
-      model?: string;
-      /** @description Number of input tokens used */
-      input_tokens: number;
-      /** @description Number of output tokens generated */
-      output_tokens: number;
-      /** @description Total tokens (input + output) */
-      total_tokens: number;
-      cost: components["schemas"]["TokenCost"];
-    };
-    /** @description Aggregated usage totals */
-    TokenUsageTotal: {
-      /** @description Total input tokens for the period */
-      input_tokens: number;
-      /** @description Total output tokens for the period */
-      output_tokens: number;
-      /** @description Total tokens for the period */
-      total_tokens: number;
-      cost: components["schemas"]["TokenCost"];
-    };
-    /** @description Time period for the usage data */
-    TokenUsagePeriod: {
-      /** @description Start date of the period (YYYY-MM-DD) */
-      start: string;
-      /** @description End date of the period (YYYY-MM-DD) */
-      end: string;
-    };
-    TokenUsageResponse: {
-      /** @description Daily token usage data */
-      usage: components["schemas"]["DailyTokenUsage"][];
-      total: components["schemas"]["TokenUsageTotal"];
-      period: components["schemas"]["TokenUsagePeriod"];
-    };
-    ModelTokenUsageResponse: {
-      /** @description Model identifier */
-      model: string;
-      /** @description Daily token usage data */
-      usage: components["schemas"]["DailyTokenUsage"][];
-      total: components["schemas"]["TokenUsageTotal"];
-      period: components["schemas"]["TokenUsagePeriod"];
-    };
-    /** @description Complete user profile including company details */
-    UserProfile: {
-      /** @description Unique identifier for the user */
-      id: string;
-      /**
-       * Format: email
-       * @description User's email address
-       */
-      email: string;
-      /** @description Full name of the user */
-      name: string;
-      /** @description Contact phone number */
-      phone: string | null;
-      /** @description ID of the company the user belongs to */
-      company_id: number;
-      /** @description Username for login */
-      login: string;
-      /**
-       * @description User role determining permissions
-       * @enum {string}
-       */
-      role: "admin" | "member";
-      /** @description Whether the user account is active */
-      active: boolean | null;
-      /**
-       * Format: date-time
-       * @description When the user was created
-       */
-      createdAt: string | null;
-      /**
-       * Format: date-time
-       * @description Last update timestamp
-       */
-      updatedAt: string | null;
-      /** @description User preferences and settings */
-      settings?: {
-        /** @description Email notification preferences */
-        notifications: boolean;
-        /** @description User's preferred timezone */
-        timezone: string;
-        /** @description Preferred interface language */
-        language?: string;
-        /**
-         * @description UI theme preference
-         * @enum {string}
-         */
-        theme?: "light" | "dark" | "system";
-      };
-      /** @description Associated company details */
-      company?: {
-        /** @description Company unique identifier */
-        id: number;
-        /** @description Legal company name */
-        name: string;
-        /** @description VAT identification number */
-        vat: string;
-        /**
-         * Format: email
-         * @description Company email address
-         */
-        email: string;
-        /** @description Company phone number */
-        phone: string | null;
-        /** @description Street address */
-        street: string | null;
-        /** @description City */
-        city: string | null;
-        /** @description Company country information */
-        country: {
-          /** @description Country ID */
-          id: number;
-          /** @description Country name */
-          name: string;
-          /** @description ISO country code */
-          code: string;
-        } | null;
-      };
-    };
-    CreateUser: {
-      name: string;
-      /** Format: email */
-      email: string;
-      phone: string | null;
-      company_id: number;
-      /** @enum {string} */
-      role: "admin" | "member";
-      settings?: {
-        notifications: boolean;
-        timezone: string;
-        language?: string;
-        /** @enum {string} */
-        theme?: "light" | "dark" | "system";
-      };
-    };
-    UpdateUser: {
-      name?: string;
-      /** Format: email */
-      email?: string;
-      phone?: string | null;
-      settings?: {
-        notifications: boolean;
-        timezone: string;
-        language?: string;
-        /** @enum {string} */
-        theme?: "light" | "dark" | "system";
-      };
-    };
-    InviteUser: {
-      /**
-       * Format: email
-       * @description Email address of the person to invite
-       */
-      email: string;
-      /**
-       * @description Role to assign to the new team member
-       * @enum {string}
-       */
-      role: "admin" | "member";
-      /** @description Company ID to invite the user to (defaults to current user's company) */
-      companyId?: number;
-    };
-    ErrorResponse: {
-      error: string;
-      code?: string;
-      details?: unknown;
-    };
-    HealthCheck: {
-      status: string;
-      timestamp: string;
-      version: string;
-      npmVersion: string;
-      environment: string;
-    };
-  };
-  responses: never;
-  parameters: {};
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
-}
+type OneOf<T extends any[]> = T extends [infer Only]
+  ? Only
+  : T extends [infer A, infer B, ...infer Rest]
+    ? OneOf<[XOR<A, B>, ...Rest]>
+    : never;
 
-export type $defs = Record<string, never>;
+/** OneOf type helpers */
+type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
 
-export type external = Record<string, never>;
-
-export type operations = Record<string, never>;
+type XOR<T, U> = T | U extends object ? (T & Without<U, T>) | (U & Without<T, U>) : T | U;

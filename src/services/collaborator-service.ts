@@ -1,9 +1,9 @@
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
 export interface Collaborator {
-  username: string;
   role: string;
   status: string;
+  username: string;
 }
 
 /**
@@ -11,13 +11,13 @@ export interface Collaborator {
  * Command group: users
  */
 export class CollaboratorService {
-  private static instance: CollaboratorService;
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.USERS;
 
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.USERS;
+
+  private static instance: CollaboratorService;
 
   private constructor() {}
 

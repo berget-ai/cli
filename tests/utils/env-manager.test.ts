@@ -1,8 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import fs from "fs";
-import { writeFile } from "fs/promises";
-import path from "path";
-import { updateEnvFile, hasEnvKey } from "../../src/utils/env-manager";
+import fs from "node:fs";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  hasEnvKey as hasEnvironmentKey,
+  updateEnvFile as updateEnvironmentFile,
+} from "../../src/utils/env-manager";
 
 vi.mock("fs");
 vi.mock("fs/promises");
@@ -13,12 +17,12 @@ const mockWriteFile = vi.mocked(writeFile);
 const mockPath = vi.mocked(path);
 
 describe("env-manager", () => {
-  const testEnvPath = "/test/.env";
+  const testEnvironmentPath = "/test/.env";
   const testCwd = "/test";
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPath.join.mockReturnValue(testEnvPath);
+    mockPath.join.mockReturnValue(testEnvironmentPath);
     vi.spyOn(process, "cwd").mockReturnValue(testCwd);
   });
 
@@ -30,15 +34,15 @@ describe("env-manager", () => {
     it("should create a new .env file with the key when file does not exist", async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
+        comment: "Test comment",
         key: "TEST_KEY",
         value: "test_value",
-        comment: "Test comment",
       });
 
-      expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvPath);
+      expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvironmentPath);
       expect(mockWriteFile).toHaveBeenCalledWith(
-        testEnvPath,
+        testEnvironmentPath,
         "# Test comment\nTEST_KEY=test_value\n"
       );
     });
@@ -48,14 +52,14 @@ describe("env-manager", () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(existingContent);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
+        comment: "Test comment",
         key: "NEW_KEY",
         value: "new_value",
-        comment: "Test comment",
       });
 
       expect(mockWriteFile).toHaveBeenCalledWith(
-        testEnvPath,
+        testEnvironmentPath,
         "EXISTING_KEY=existing_value\nNEW_KEY=new_value\n"
       );
     });
@@ -67,7 +71,7 @@ describe("env-manager", () => {
 
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
         key: "TEST_KEY",
         value: "new_value",
       });
@@ -85,14 +89,14 @@ describe("env-manager", () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(existingContent);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
+        force: true,
         key: "TEST_KEY",
         value: "new_value",
-        force: true,
       });
 
       expect(mockWriteFile).toHaveBeenCalledWith(
-        testEnvPath,
+        testEnvironmentPath,
         "EXISTING_KEY=existing_value\nTEST_KEY=new_value\n"
       );
     });
@@ -100,14 +104,14 @@ describe("env-manager", () => {
     it("should handle complex values with quotes and special characters", async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
+        comment: "Complex test",
         key: "COMPLEX_KEY",
         value: 'value with "quotes" and $special',
-        comment: "Complex test",
       });
 
       expect(mockWriteFile).toHaveBeenCalledWith(
-        testEnvPath,
+        testEnvironmentPath,
         '# Complex test\nCOMPLEX_KEY=value with "quotes" and $special\n'
       );
     });
@@ -116,7 +120,7 @@ describe("env-manager", () => {
       const customPath = "/custom/.env";
       mockFs.existsSync.mockReturnValue(false);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
         envPath: customPath,
         key: "TEST_KEY",
         value: "test_value",
@@ -131,7 +135,7 @@ describe("env-manager", () => {
       mockWriteFile.mockRejectedValue(new Error("Write error"));
 
       await expect(
-        updateEnvFile({
+        updateEnvironmentFile({
           key: "TEST_KEY",
           value: "test_value",
         })
@@ -143,10 +147,10 @@ describe("env-manager", () => {
     it("should return false when .env file does not exist", () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      const result = hasEnvKey(testEnvPath, "TEST_KEY");
+      const result = hasEnvironmentKey(testEnvironmentPath, "TEST_KEY");
 
       expect(result).toBe(false);
-      expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvPath);
+      expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvironmentPath);
       expect(mockFs.readFileSync).not.toHaveBeenCalled();
     });
 
@@ -155,7 +159,7 @@ describe("env-manager", () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(existingContent);
 
-      const result = hasEnvKey(testEnvPath, "TEST_KEY");
+      const result = hasEnvironmentKey(testEnvironmentPath, "TEST_KEY");
 
       expect(result).toBe(true);
     });
@@ -165,7 +169,7 @@ describe("env-manager", () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(existingContent);
 
-      const result = hasEnvKey(testEnvPath, "TEST_KEY");
+      const result = hasEnvironmentKey(testEnvironmentPath, "TEST_KEY");
 
       expect(result).toBe(false);
     });
@@ -176,7 +180,7 @@ describe("env-manager", () => {
         throw new Error("Read error");
       });
 
-      const result = hasEnvKey(testEnvPath, "TEST_KEY");
+      const result = hasEnvironmentKey(testEnvironmentPath, "TEST_KEY");
 
       expect(result).toBe(false);
     });
@@ -184,9 +188,9 @@ describe("env-manager", () => {
     it("should use default path when not provided", () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      hasEnvKey(undefined, "TEST_KEY");
+      hasEnvironmentKey(undefined, "TEST_KEY");
 
-      expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvPath);
+      expect(mockFs.existsSync).toHaveBeenCalledWith(testEnvironmentPath);
     });
   });
 });

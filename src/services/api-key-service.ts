@@ -1,29 +1,29 @@
 import { createAuthenticatedClient } from "../client";
-import { handleError } from "../utils/error-handler";
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
+import { handleError } from "../utils/error-handler";
 
 export interface ApiKey {
-  id: number;
-  name: string;
-  description: string | null;
-  created: string;
-  lastUsed: string | null;
-  prefix: string;
   active: boolean;
+  created: string;
+  description: null | string;
+  id: number;
+  lastUsed: null | string;
   modified: string;
-}
-
-export interface CreateApiKeyOptions {
   name: string;
-  description?: string;
+  prefix: string;
 }
 
 export interface ApiKeyResponse {
-  id: number;
-  name: string;
-  description: string | null;
-  key: string;
   created: string;
+  description: null | string;
+  id: number;
+  key: string;
+  name: string;
+}
+
+export interface CreateApiKeyOptions {
+  description?: string;
+  name: string;
 }
 
 /**
@@ -31,14 +31,14 @@ export interface ApiKeyResponse {
  * Command group: api-keys
  */
 export class ApiKeyService {
-  private static instance: ApiKeyService;
-  private client = createAuthenticatedClient();
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.API_KEYS;
-
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.API_KEYS;
+
+  private static instance: ApiKeyService;
+
+  private client = createAuthenticatedClient();
 
   private constructor() {}
 
@@ -47,21 +47,6 @@ export class ApiKeyService {
       ApiKeyService.instance = new ApiKeyService();
     }
     return ApiKeyService.instance;
-  }
-
-  /**
-   * List all API keys
-   * Command: berget api-keys list
-   */
-  public async list(): Promise<ApiKey[]> {
-    try {
-      const { data, error } = await this.client.GET("/v1/api-keys");
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      handleError("Failed to list API keys", error);
-      throw error;
-    }
   }
 
   /**
@@ -92,9 +77,9 @@ export class ApiKeyService {
 
         // Handle specific error cases
         if (typeof error === "object" && error !== null) {
-          const errorObj = error as any;
+          const errorObject = error as any;
 
-          if (errorObj.error?.code === "API_KEY_CREATION_FAILED") {
+          if (errorObject.error?.code === "API_KEY_CREATION_FAILED") {
             let detailedMessage = "Failed to create API key. This could be due to:\n";
             detailedMessage += "• Account limits or quota restrictions\n";
             detailedMessage += "• Insufficient permissions for API key creation\n";
@@ -110,25 +95,25 @@ export class ApiKeyService {
             throw new Error(detailedMessage);
           }
 
-          if (errorObj.error?.code === "USER_NOT_FOUND") {
+          if (errorObject.error?.code === "USER_NOT_FOUND") {
             throw new Error(
               "Your account is still being set up. Please wait a moment and try again.\n\nIf this issue persists, please contact support at support@berget.ai"
             );
           }
 
-          if (errorObj.error?.code === "QUOTA_EXCEEDED") {
+          if (errorObject.error?.code === "QUOTA_EXCEEDED") {
             throw new Error(
               "You have reached your API key limit. Please delete existing keys or contact support to increase your quota."
             );
           }
 
-          if (errorObj.error?.code === "INSUFFICIENT_PERMISSIONS") {
+          if (errorObject.error?.code === "INSUFFICIENT_PERMISSIONS") {
             throw new Error(
               "Your account does not have permission to create API keys. Please contact your administrator."
             );
           }
 
-          if (errorObj.error?.code === "BILLING_REQUIRED") {
+          if (errorObject.error?.code === "BILLING_REQUIRED") {
             throw new Error(
               "A valid billing method is required to create API keys. Please add a payment method."
             );
@@ -189,23 +174,6 @@ export class ApiKeyService {
   }
 
   /**
-   * Rotate an API key
-   * Command: berget api-keys rotate
-   */
-  public async rotate(id: string): Promise<ApiKeyResponse> {
-    try {
-      const { data, error } = await this.client.PUT("/v1/api-keys/{id}/rotate", {
-        params: { path: { id } },
-      });
-      if (error) throw new Error(JSON.stringify(error));
-      return data!;
-    } catch (error) {
-      console.error("Failed to rotate API key:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Get usage statistics for an API key
    * Command: berget api-keys describe
    */
@@ -218,6 +186,38 @@ export class ApiKeyService {
       return data;
     } catch (error) {
       console.error("Failed to get API key usage:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * List all API keys
+   * Command: berget api-keys list
+   */
+  public async list(): Promise<ApiKey[]> {
+    try {
+      const { data, error } = await this.client.GET("/v1/api-keys");
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      handleError("Failed to list API keys", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rotate an API key
+   * Command: berget api-keys rotate
+   */
+  public async rotate(id: string): Promise<ApiKeyResponse> {
+    try {
+      const { data, error } = await this.client.PUT("/v1/api-keys/{id}/rotate", {
+        params: { path: { id } },
+      });
+      if (error) throw new Error(JSON.stringify(error));
+      return data!;
+    } catch (error) {
+      console.error("Failed to rotate API key:", error);
       throw error;
     }
   }

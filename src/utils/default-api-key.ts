@@ -1,15 +1,16 @@
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import readline from "node:readline";
+
 import { ApiKeyService } from "../services/api-key-service";
-import readline from "readline";
 import { logger } from "./logger";
 
 interface DefaultApiKeyData {
   id: string;
+  key: string;
   name: string;
   prefix: string;
-  key: string;
 }
 
 /**
@@ -38,52 +39,17 @@ export class DefaultApiKeyManager {
   }
 
   /**
-   * Load default API key from file
+   * Clear the default API key
    */
-  private loadConfig(): void {
-    try {
-      if (fs.existsSync(this.configFilePath)) {
-        const data = fs.readFileSync(this.configFilePath, "utf8");
-        this.defaultApiKey = JSON.parse(data);
-      }
-    } catch {
-      logger.debug("Failed to load default API key configuration");
-      this.defaultApiKey = null;
-    }
-  }
-
-  /**
-   * Save default API key to file
-   */
-  private saveConfig(): void {
-    try {
-      if (this.defaultApiKey) {
-        fs.writeFileSync(this.configFilePath, JSON.stringify(this.defaultApiKey, null, 2));
-        // Set file permissions to be readable only by the owner
-        fs.chmodSync(this.configFilePath, 0o600);
-      } else {
-        // If default API key is null, remove the file
-        if (fs.existsSync(this.configFilePath)) {
-          fs.unlinkSync(this.configFilePath);
-        }
-      }
-    } catch {
-      logger.debug("Failed to save default API key configuration");
-    }
-  }
-
-  /**
-   * Set the default API key
-   */
-  public setDefaultApiKey(id: string, name: string, prefix: string, key: string): void {
-    this.defaultApiKey = { id, name, prefix, key };
+  public clearDefaultApiKey(): void {
+    this.defaultApiKey = null;
     this.saveConfig();
   }
 
   /**
    * Get the default API key string
    */
-  public getDefaultApiKey(): string | null {
+  public getDefaultApiKey(): null | string {
     return this.defaultApiKey?.key || null;
   }
 
@@ -95,18 +61,10 @@ export class DefaultApiKeyManager {
   }
 
   /**
-   * Clear the default API key
-   */
-  public clearDefaultApiKey(): void {
-    this.defaultApiKey = null;
-    this.saveConfig();
-  }
-
-  /**
    * Prompts the user to select a default API key if none is set
    * @returns The selected API key or null if none was selected
    */
-  public async promptForDefaultApiKey(): Promise<string | null> {
+  public async promptForDefaultApiKey(): Promise<null | string> {
     try {
       logger.debug("promptForDefaultApiKey called");
 
@@ -158,9 +116,9 @@ export class DefaultApiKeyManager {
       logger.info("Select an API key to use as default:");
 
       // Display available API keys
-      apiKeys.forEach((key, index) => {
+      for (const [index, key] of apiKeys.entries()) {
         logger.log(`  ${index + 1}. ${key.name} (${key.prefix}...)`);
-      });
+      }
 
       // Create readline interface for user input
       const rl = readline.createInterface({
@@ -172,11 +130,11 @@ export class DefaultApiKeyManager {
       const selection = await new Promise<number>(resolve => {
         rl.question("Enter number (or press Enter to cancel): ", answer => {
           rl.close();
-          const num = parseInt(answer.trim(), 10);
-          if (isNaN(num) || num < 1 || num > apiKeys.length) {
+          const number_ = Number.parseInt(answer.trim(), 10);
+          if (isNaN(number_) || number_ < 1 || number_ > apiKeys.length) {
             resolve(-1); // Invalid selection
           } else {
-            resolve(num - 1); // Convert to zero-based index
+            resolve(number_ - 1); // Convert to zero-based index
           }
         });
       });
@@ -190,15 +148,15 @@ export class DefaultApiKeyManager {
 
       // Create a new API key with the selected name
       const newKey = await apiKeyService.create({
-        name: `CLI Default (copy of ${selectedKey.name})`,
         description: "Created automatically by the Berget CLI for default use",
+        name: `CLI Default (copy of ${selectedKey.name})`,
       });
 
       // Save the new key as default
       this.setDefaultApiKey(
         newKey.id.toString(),
         newKey.name,
-        newKey.key.substring(0, 8), // Use first 8 chars as prefix
+        newKey.key.slice(0, 8), // Use first 8 chars as prefix
         newKey.key
       );
 
@@ -207,6 +165,49 @@ export class DefaultApiKeyManager {
     } catch (error) {
       logger.error("Failed to set default API key:", error);
       return null;
+    }
+  }
+
+  /**
+   * Set the default API key
+   */
+  public setDefaultApiKey(id: string, name: string, prefix: string, key: string): void {
+    this.defaultApiKey = { id, key, name, prefix };
+    this.saveConfig();
+  }
+
+  /**
+   * Load default API key from file
+   */
+  private loadConfig(): void {
+    try {
+      if (fs.existsSync(this.configFilePath)) {
+        const data = fs.readFileSync(this.configFilePath, "utf8");
+        this.defaultApiKey = JSON.parse(data);
+      }
+    } catch {
+      logger.debug("Failed to load default API key configuration");
+      this.defaultApiKey = null;
+    }
+  }
+
+  /**
+   * Save default API key to file
+   */
+  private saveConfig(): void {
+    try {
+      if (this.defaultApiKey) {
+        fs.writeFileSync(this.configFilePath, JSON.stringify(this.defaultApiKey, null, 2));
+        // Set file permissions to be readable only by the owner
+        fs.chmodSync(this.configFilePath, 0o600);
+      } else {
+        // If default API key is null, remove the file
+        if (fs.existsSync(this.configFilePath)) {
+          fs.unlinkSync(this.configFilePath);
+        }
+      }
+    } catch {
+      logger.debug("Failed to save default API key configuration");
     }
   }
 }

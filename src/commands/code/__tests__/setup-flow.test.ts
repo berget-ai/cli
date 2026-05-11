@@ -1,29 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { runSetup } from "../setup";
+
+import type { ApiKeyServicePort, AuthServicePort } from "../ports/auth-services";
+
 import { CancelledError, CommandFailedError, PrerequisiteError } from "../errors";
-import { FakePrompter, CANCEL, select, confirm, multiselect } from "./fake-prompter";
-import { FakeFileStore } from "./fake-file-store";
-import { FakeCommandRunner } from "./fake-command-runner";
-import { FakeAuthService } from "./fake-auth-service";
+import { runSetup } from "../setup";
 import { FakeApiKeyService } from "./fake-api-key-service";
-import type { AuthServicePort, ApiKeyServicePort } from "../ports/auth-services";
+import { FakeAuthService } from "./fake-auth-service";
+import { FakeCommandRunner } from "./fake-command-runner";
+import { FakeFileStore } from "./fake-file-store";
+import { CANCEL, confirm, FakePrompter, multiselect, select } from "./fake-prompter";
 
 const makeDeps = (
   overrides: Partial<Parameters<typeof runSetup>[0]> = {}
 ): Parameters<typeof runSetup>[0] => {
   return {
-    prompter: overrides.prompter ?? new FakePrompter([]),
-    files: overrides.files ?? new FakeFileStore(),
+    apiKeyService:
+      (overrides.apiKeyService as ApiKeyServicePort) ?? new FakeApiKeyService("sk_ber_test"),
+    authService: (overrides.authService as AuthServicePort) ?? new FakeAuthService(false),
     commands:
       overrides.commands ??
       new FakeCommandRunner()
         .handle("opencode --version", "mocked")
         .handle("pi --version", "mocked"),
-    authService: (overrides.authService as AuthServicePort) ?? new FakeAuthService(false),
-    apiKeyService:
-      (overrides.apiKeyService as ApiKeyServicePort) ?? new FakeApiKeyService("sk_ber_test"),
-    homeDir: "/home/user",
     cwd: "/home/user/project",
+    files: overrides.files ?? new FakeFileStore(),
+    homeDir: "/home/user",
+    prompter: overrides.prompter ?? new FakePrompter([]),
     ...Object.fromEntries(
       Object.entries(overrides).filter(
         ([k]) =>
@@ -87,15 +89,15 @@ describe("runSetup", () => {
 
     it("sets up pi project with fresh install", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner()
+          .handle("pi --version", "mocked") // For checkInstalled
+          .handle("pi install", ""), // For actual install
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"), // Agent selection
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner()
-          .handle("pi --version", "mocked") // For checkInstalled
-          .handle("pi install", ""), // For actual install
       });
 
       await runSetup(deps);
@@ -108,14 +110,14 @@ describe("runSetup", () => {
 
     it("skips agent selection for pi project", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner()
+          .handle("pi --version", "mocked") // For checkInstalled
+          .handle("pi install", ""), // For actual install
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("__skip__"), // Skip agent selection
         ]),
-        commands: new FakeCommandRunner()
-          .handle("pi --version", "mocked") // For checkInstalled
-          .handle("pi install", ""), // For actual install
       });
 
       await runSetup(deps);
@@ -132,8 +134,8 @@ describe("runSetup", () => {
   describe("prerequisites", () => {
     it("throws PrerequisiteError when opencode is not installed", async () => {
       const deps = makeDeps({
-        prompter: new FakePrompter([select("opencode"), select("project")]),
         commands: new FakeCommandRunner(),
+        prompter: new FakePrompter([select("opencode"), select("project")]),
       });
 
       // Simulate opencode not being installed
@@ -178,13 +180,13 @@ describe("runSetup", () => {
 
     it("throws CancelledError when user cancels at agent write confirmation (pi)", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"),
           confirm(false, /Create|Overwrite/),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
       });
 
       await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError);
@@ -282,21 +284,21 @@ describe("runSetup", () => {
 
     it("preserves existing Pi settings when setting defaultProvider", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"),
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
       });
 
       const files = deps.files as FakeFileStore;
       files.seed(
         "/home/user/project/.pi/settings.json",
         JSON.stringify({
-          existingKey: "should-preserve",
           anotherSetting: true,
+          existingKey: "should-preserve",
         })
       );
 
@@ -330,13 +332,13 @@ describe("runSetup", () => {
   describe("command execution", () => {
     it("passes arguments as array (no shell injection)", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"),
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
       });
 
       await runSetup(deps);
@@ -351,10 +353,10 @@ describe("runSetup", () => {
   describe("error handling", () => {
     it("throws CommandFailedError when pi install fails", async () => {
       const deps = makeDeps({
-        prompter: new FakePrompter([select("pi"), select("project")]),
         commands: new FakeCommandRunner()
           .handle("pi --version", "mocked")
           .handle("pi install", new Error("npm error")),
+        prompter: new FakePrompter([select("pi"), select("project")]),
       });
 
       await expect(runSetup(deps)).rejects.toBeInstanceOf(CommandFailedError);
@@ -370,6 +372,7 @@ describe("runSetup", () => {
       );
 
       const deps = makeDeps({
+        files,
         prompter: new FakePrompter([
           select("opencode"),
           select("project"),
@@ -377,36 +380,35 @@ describe("runSetup", () => {
           confirm(true, "Create"), // Config write
           multiselect([]),
         ]),
-        files,
       });
 
       await runSetup(deps);
 
       const prompter = deps.prompter as FakePrompter;
       const notes = prompter.calls.filter(c => c.method === "note");
-      const lastNote = notes[notes.length - 1];
+      const lastNote = notes.at(-1);
       expect(JSON.stringify(lastNote)).toContain("Run: opencode");
       expect(JSON.stringify(lastNote)).not.toContain("/connect");
     });
 
     it("login failure shows manual auth instructions", async () => {
       const deps = makeDeps({
+        authService: new FakeAuthService(false),
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
+        files: new FakeFileStore(), // No pre-seeded auth → auth flow runs
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"),
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
-        authService: new FakeAuthService(false),
-        files: new FakeFileStore(), // No pre-seeded auth → auth flow runs
       });
 
       await runSetup(deps);
 
       const prompter = deps.prompter as FakePrompter;
       const notes = prompter.calls.filter(c => c.method === "note");
-      const lastNote = notes[notes.length - 1];
+      const lastNote = notes.at(-1);
       expect(JSON.stringify(lastNote)).toContain("/login");
     });
 
@@ -414,6 +416,9 @@ describe("runSetup", () => {
       const files = new FakeFileStore();
 
       const deps = makeDeps({
+        authService: new FakeAuthService(true, false), // succeed, no seat
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
+        files,
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
@@ -421,9 +426,6 @@ describe("runSetup", () => {
           select("fullstack"),
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
-        authService: new FakeAuthService(true, false), // succeed, no seat
-        files,
       });
 
       await runSetup(deps);
@@ -440,13 +442,14 @@ describe("runSetup", () => {
       files.seed(
         "/home/user/.berget/auth.json",
         JSON.stringify({
-          access_token: makeJwt({ realm_access: { roles: ["berget_code_seat"] }, exp: farFuture }),
-          refresh_token: "ref",
+          access_token: makeJwt({ exp: farFuture, realm_access: { roles: ["berget_code_seat"] } }),
           expires_at: farFuture * 1000,
+          refresh_token: "ref",
         })
       );
 
       const deps = makeDeps({
+        files,
         prompter: new FakePrompter([
           select("opencode"),
           select("project"),
@@ -454,7 +457,6 @@ describe("runSetup", () => {
           confirm(true, "Create"),
           multiselect([]),
         ]),
-        files,
       });
 
       await runSetup(deps);
@@ -524,13 +526,13 @@ describe("runSetup", () => {
 
     it("sets up agent for pi project", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"),
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
       });
 
       await runSetup(deps);
@@ -542,13 +544,13 @@ describe("runSetup", () => {
 
     it("sets up agent for pi globally", async () => {
       const deps = makeDeps({
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
         prompter: new FakePrompter([
           select("pi"),
           select("global"),
           select("backend"),
           confirm(true, "Create"),
         ]),
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
       });
 
       await runSetup(deps);
@@ -606,14 +608,14 @@ describe("runSetup", () => {
       files.seed("/home/user/project/.pi/SYSTEM.md", "old agent content");
 
       const deps = makeDeps({
+        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
+        files,
         prompter: new FakePrompter([
           select("pi"),
           select("project"),
           select("fullstack"),
           confirm(true, "Overwrite"),
         ]),
-        files,
-        commands: new FakeCommandRunner().handle("pi --version", "mocked").handle("pi install", ""),
       });
 
       await runSetup(deps);

@@ -1,13 +1,14 @@
 import { Command } from "commander";
-import { registerAuthCommands } from "./auth";
+
 import { registerApiKeyCommands } from "./api-keys";
-import { registerClusterCommands } from "./clusters";
+import { registerAuthCommands } from "./auth";
+import { registerAutocompleteCommands } from "./autocomplete";
 import { registerBillingCommands } from "./billing";
+import { registerChatCommands } from "./chat";
+import { registerClusterCommands } from "./clusters";
+import { registerCodeCommands } from "./code";
 import { registerModelCommands } from "./models";
 import { registerUserCommands } from "./users";
-import { registerChatCommands } from "./chat";
-import { registerAutocompleteCommands } from "./autocomplete";
-import { registerCodeCommands } from "./code";
 
 /**
  * Register all command groups with the program

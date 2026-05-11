@@ -7,7 +7,7 @@ export class FakeApiKeyService implements ApiKeyServicePort {
     this._key = key;
   }
 
-  async create(_options: { name: string; description?: string }): Promise<{ key: string }> {
+  async create(_options: { description?: string; name: string }): Promise<{ key: string }> {
     return { key: this._key };
   }
 }

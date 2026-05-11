@@ -1,7 +1,8 @@
-import { Command } from "commander";
 import chalk from "chalk";
-import { AuthService } from "../services/auth-service";
+import { Command } from "commander";
+
 import { clearAuthToken } from "../client";
+import { AuthService } from "../services/auth-service";
 import { handleError } from "../utils/error-handler";
 
 /**

@@ -1,37 +1,9 @@
-import { Command } from "commander";
 import chalk from "chalk";
-import { ApiKeyService, ApiKey } from "../services/api-key-service";
-import { handleError } from "../utils/error-handler";
+import { Command } from "commander";
+
+import { ApiKey, ApiKeyService } from "../services/api-key-service";
 import { DefaultApiKeyManager } from "../utils/default-api-key";
-
-// Helper functions for better date formatting
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return chalk.green("Today");
-  if (diffDays === 1) return chalk.yellow("Yesterday");
-  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
-  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
-  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);
-  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`);
-}
-
-function formatLastUsed(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return chalk.green("Today");
-  if (diffDays === 1) return chalk.yellow("Yesterday");
-  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
-  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
-  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);
-  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`);
-}
+import { handleError } from "../utils/error-handler";
 
 /**
  * Register API key commands
@@ -87,25 +59,27 @@ export function registerApiKeyCommands(program: Command): void {
           const status = key.active ? chalk.green("● Active") : chalk.red("● Inactive");
 
           // Show only first 8 characters of ID for easier reading
-          const shortId = chalk.cyan(String(key.id).substring(0, 8));
+          const shortId = chalk.cyan(String(key.id).slice(0, 8));
 
           // Format the prefix with better truncation
-          const prefixStr =
+          const prefixString =
             key.prefix.length > prefixWidth
-              ? key.prefix.substring(0, prefixWidth - 3) + "..."
+              ? key.prefix.slice(0, Math.max(0, prefixWidth - 3)) + "..."
               : chalk.gray(key.prefix);
 
           // Truncate name if too long
-          const nameStr =
-            key.name.length > nameWidth ? key.name.substring(0, nameWidth - 3) + "..." : key.name;
+          const nameString =
+            key.name.length > nameWidth
+              ? key.name.slice(0, Math.max(0, nameWidth - 3)) + "..."
+              : key.name;
 
           // Format created date
           const createdDate = formatDate(key.created);
 
           console.log(
             shortId.padEnd(idWidth) +
-              nameStr.padEnd(nameWidth) +
-              prefixStr.padEnd(prefixWidth) +
+              nameString.padEnd(nameWidth) +
+              prefixString.padEnd(prefixWidth) +
               status.padEnd(statusWidth) +
               createdDate.padEnd(createdWidth) +
               lastUsed
@@ -140,8 +114,8 @@ export function registerApiKeyCommands(program: Command): void {
 
         const apiKeyService = ApiKeyService.getInstance();
         const result = await apiKeyService.create({
-          name: options.name,
           description: options.description,
+          name: options.name,
         });
 
         console.log("");
@@ -195,7 +169,7 @@ export function registerApiKeyCommands(program: Command): void {
 
         // If no exact matches, check for short ID matches
         if (exactMatches.length === 0) {
-          exactMatches = keys.filter(key => String(key.id).substring(0, 8) === identifier);
+          exactMatches = keys.filter(key => String(key.id).slice(0, 8) === identifier);
         }
 
         // If still no matches, check for partial name matches
@@ -210,10 +184,10 @@ export function registerApiKeyCommands(program: Command): void {
           console.error(chalk.red(`Error: Multiple API keys found matching "${identifier}"`));
           console.log("");
           console.log("Please be more specific. Matching keys:");
-          exactMatches.forEach(key => {
-            const shortId = String(key.id).substring(0, 8);
+          for (const key of exactMatches) {
+            const shortId = String(key.id).slice(0, 8);
             console.log(`  ${shortId.padEnd(8)} ${key.name}`);
-          });
+          }
           console.log("");
           console.log("Use the first 8 characters of the ID to specify which key to delete.");
           return;
@@ -224,10 +198,10 @@ export function registerApiKeyCommands(program: Command): void {
           console.error(chalk.red(`Error: No API key found matching "${identifier}"`));
           console.log("");
           console.log("Available API keys:");
-          keys.forEach(key => {
-            const shortId = String(key.id).substring(0, 8);
+          for (const key of keys) {
+            const shortId = String(key.id).slice(0, 8);
             console.log(`  ${shortId.padEnd(8)} ${key.name}`);
-          });
+          }
           console.log("");
           console.log("Use the first 8 characters of the ID, full ID, or name to delete.");
           return;
@@ -236,7 +210,7 @@ export function registerApiKeyCommands(program: Command): void {
         const matchingKey = exactMatches[0];
 
         const keyId = String(matchingKey.id);
-        const shortId = keyId.substring(0, 8);
+        const shortId = keyId.slice(0, 8);
 
         console.log(chalk.blue(`Deleting API key ${shortId} (${matchingKey.name})...`));
 
@@ -320,7 +294,7 @@ export function registerApiKeyCommands(program: Command): void {
           console.log(chalk.dim("─".repeat(30)));
           console.log(chalk.dim("DATE".padEnd(12) + "REQUESTS"));
 
-          usage.requests.daily.forEach((day: { date: string; count: number }) => {
+          usage.requests.daily.forEach((day: { count: number; date: string }) => {
             console.log(`${day.date.padEnd(12)}${day.count.toLocaleString()}`);
           });
         }
@@ -435,4 +409,33 @@ export function registerApiKeyCommands(program: Command): void {
         handleError("Failed to get default API key", error);
       }
     });
+}
+
+// Helper functions for better date formatting
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return chalk.green("Today");
+  if (diffDays === 1) return chalk.yellow("Yesterday");
+  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
+  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
+  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);
+  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`);
+}
+
+function formatLastUsed(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return chalk.green("Today");
+  if (diffDays === 1) return chalk.yellow("Yesterday");
+  if (diffDays < 7) return chalk.yellow(`${diffDays} days ago`);
+  if (diffDays < 30) return chalk.blue(`${Math.floor(diffDays / 7)} weeks ago`);
+  if (diffDays < 365) return chalk.magenta(`${Math.floor(diffDays / 30)} months ago`);
+  return chalk.gray(`${Math.floor(diffDays / 365)} years ago`);
 }

@@ -1,15 +1,15 @@
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
+export interface HelmInstallOptions {
+  chart: string;
+  name: string;
+  namespace?: string;
+  values?: Record<string, string>;
+}
+
 export interface HelmRepoAddOptions {
   name: string;
   url: string;
-}
-
-export interface HelmInstallOptions {
-  name: string;
-  chart: string;
-  namespace?: string;
-  values?: Record<string, string>;
 }
 
 /**
@@ -17,13 +17,13 @@ export interface HelmInstallOptions {
  * Command group: helm
  */
 export class HelmService {
-  private static instance: HelmService;
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.HELM;
 
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.HELM;
+
+  private static instance: HelmService;
 
   private constructor() {}
 

@@ -1,28 +1,28 @@
-import * as http from "http";
-import * as net from "net";
-import * as crypto from "crypto";
-
-export interface BrowserAuthResult {
-  success: boolean;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  error?: string;
-}
+import * as crypto from "node:crypto";
+import * as http from "node:http";
+import * as net from "node:net";
 
 export interface BrowserAuthOptions {
+  callbackPort: number;
+  clientId: string;
+  debug?: boolean;
   keycloakUrl: string;
   realm: string;
-  clientId: string;
-  callbackPort: number;
-  debug?: boolean;
+}
+
+export interface BrowserAuthResult {
+  accessToken?: string;
+  error?: string;
+  expiresIn?: number;
+  refreshToken?: string;
+  success: boolean;
 }
 
 export class BrowserAuth {
   constructor(private readonly options: BrowserAuthOptions) {}
 
   async start(): Promise<BrowserAuthResult> {
-    const { keycloakUrl, realm, clientId, callbackPort, debug } = this.options;
+    const { callbackPort, clientId, debug, keycloakUrl, realm } = this.options;
 
     // Generate PKCE code verifier and challenge
     const codeVerifier = this.generateCodeVerifier();
@@ -43,14 +43,14 @@ export class BrowserAuth {
 
     // Create a promise that resolves when we receive the callback
     const authResult = await new Promise<{
-      success: boolean;
       code?: string;
       error?: string;
+      success: boolean;
     }>(resolve => {
       let resolved = false;
       const sockets = new Set<net.Socket>();
 
-      const safeResolve = (result: { success: boolean; code?: string; error?: string }) => {
+      const safeResolve = (result: { code?: string; error?: string; success: boolean }) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(timeoutHandle);
@@ -63,8 +63,8 @@ export class BrowserAuth {
         resolve(result);
       };
 
-      const server = http.createServer((req, res) => {
-        const requestUrl = new URL(req.url || "", `http://localhost:${callbackPort}`);
+      const server = http.createServer((request, res) => {
+        const requestUrl = new URL(request.url || "", `http://localhost:${callbackPort}`);
 
         if (requestUrl.pathname === "/callback") {
           const receivedState = requestUrl.searchParams.get("state") || "";
@@ -130,27 +130,27 @@ export class BrowserAuth {
           // Set Connection: close so the browser doesn't keep the socket alive
           // after we respond, and force-end the connection
           if (error) {
-            res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", Connection: "close" });
+            res.writeHead(200, { Connection: "close", "Content-Type": "text/html; charset=utf-8" });
             res.end(
               errorPage(
                 "Authentication Failed",
                 requestUrl.searchParams.get("error_description") || error
               )
             );
-            safeResolve({ success: false, error });
+            safeResolve({ error, success: false });
             return;
           }
 
           if (receivedState !== state) {
-            res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", Connection: "close" });
+            res.writeHead(200, { Connection: "close", "Content-Type": "text/html; charset=utf-8" });
             res.end(
               errorPage("Authentication Failed", "Invalid state parameter. Please try again.")
             );
-            safeResolve({ success: false, error: "Invalid state parameter" });
+            safeResolve({ error: "Invalid state parameter", success: false });
             return;
           }
 
-          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", Connection: "close" });
+          res.writeHead(200, { Connection: "close", "Content-Type": "text/html; charset=utf-8" });
           res.end(`
             <!DOCTYPE html>
             <html lang="en">
@@ -205,7 +205,7 @@ export class BrowserAuth {
               </body>
             </html>
           `);
-          safeResolve({ success: true, code });
+          safeResolve({ code, success: true });
         }
       });
 
@@ -224,7 +224,7 @@ export class BrowserAuth {
       // Set timeout for the server
       const timeoutHandle = setTimeout(
         () => {
-          safeResolve({ success: false, error: "Authentication timed out" });
+          safeResolve({ error: "Authentication timed out", success: false });
         },
         5 * 60 * 1000
       ); // 5 minute timeout
@@ -242,55 +242,55 @@ export class BrowserAuth {
 
     if (!authResult.success || !authResult.code) {
       return {
-        success: false,
         error: authResult.error || "Unknown error",
+        success: false,
       };
     }
 
     // Exchange authorization code for tokens
     const tokenUrl = `${keycloakUrl}/realms/${realm}/protocol/openid-connect/token`;
     const tokenResponse = await fetch(tokenUrl, {
-      method: "POST",
+      body: new URLSearchParams({
+        client_id: clientId,
+        code: authResult.code,
+        code_verifier: codeVerifier,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
+      }).toString(),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: clientId,
-        code: authResult.code,
-        redirect_uri: redirectUri,
-        code_verifier: codeVerifier,
-      }).toString(),
+      method: "POST",
     });
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       return {
-        success: false,
         error: `Failed to exchange code for tokens: ${errorText}`,
+        success: false,
       };
     }
 
     const tokenData = (await tokenResponse.json()) as {
       access_token: string;
-      refresh_token: string;
       expires_in: number;
       refresh_expires_in?: number;
+      refresh_token: string;
     };
 
     return {
-      success: true,
       accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
       expiresIn: tokenData.expires_in,
+      refreshToken: tokenData.refresh_token,
+      success: true,
     };
-  }
-
-  private generateCodeVerifier(): string {
-    return crypto.randomBytes(32).toString("base64url");
   }
 
   private generateCodeChallenge(verifier: string): string {
     return crypto.createHash("sha256").update(verifier).digest("base64url");
+  }
+
+  private generateCodeVerifier(): string {
+    return crypto.randomBytes(32).toString("base64url");
   }
 }

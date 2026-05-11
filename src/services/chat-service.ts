@@ -1,20 +1,20 @@
 import { createAuthenticatedClient } from "../client";
 import { logger } from "../utils/logger";
 
-export interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
+export interface ChatCompletionOptions {
+  apiKey?: string;
+  max_tokens?: number;
+  messages: ChatMessage[];
+  model?: string;
+  onChunk?: (chunk: any) => void;
+  stream?: boolean;
+  temperature?: number;
+  top_p?: number;
 }
 
-export interface ChatCompletionOptions {
-  model?: string;
-  messages: ChatMessage[];
-  temperature?: number;
-  max_tokens?: number;
-  stream?: boolean;
-  top_p?: number;
-  apiKey?: string;
-  onChunk?: (chunk: any) => void;
+export interface ChatMessage {
+  content: string;
+  role: "assistant" | "system" | "user";
 }
 
 /**
@@ -22,17 +22,17 @@ export interface ChatCompletionOptions {
  * Command group: chat
  */
 export class ChatService {
-  private static instance: ChatService;
-  private client = createAuthenticatedClient();
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = "chat";
-
   // Subcommands for this service
   public static readonly COMMANDS = {
-    RUN: "run",
     LIST: "list",
+    RUN: "run",
   };
+
+  private static instance: ChatService;
+
+  private client = createAuthenticatedClient();
 
   private constructor() {}
 
@@ -89,8 +89,8 @@ export class ChatService {
       const hasValidAuth =
         tokenManagerInstance.getAccessToken() && !tokenManagerInstance.isTokenExpired();
 
-      const envApiKeyForAuth = process.env.BERGET_API_KEY;
-      const hasExplicitApiKey = !!optionsCopy.apiKey || !!envApiKeyForAuth;
+      const environmentApiKeyForAuth = process.env.BERGET_API_KEY;
+      const hasExplicitApiKey = !!optionsCopy.apiKey || !!environmentApiKeyForAuth;
 
       // If we have valid auth tokens and no explicit API key, use authenticated client
       if (hasValidAuth && !hasExplicitApiKey) {
@@ -101,10 +101,10 @@ export class ChatService {
       }
 
       // Check for environment variables first - prioritize this over everything else
-      const envApiKey = process.env.BERGET_API_KEY;
-      if (envApiKey) {
+      const environmentApiKey = process.env.BERGET_API_KEY;
+      if (environmentApiKey) {
         logger.debug("Using API key from BERGET_API_KEY environment variable");
-        optionsCopy.apiKey = envApiKey;
+        optionsCopy.apiKey = environmentApiKey;
         // Skip the default API key logic if we already have a key
         return this.executeCompletion(optionsCopy, headers);
       }
@@ -122,8 +122,7 @@ export class ChatService {
           // Import the DefaultApiKeyManager directly
           logger.debug("Importing DefaultApiKeyManager");
 
-          const DefaultApiKeyManager = (await import("../utils/default-api-key"))
-            .DefaultApiKeyManager;
+          const { DefaultApiKeyManager } = await import("../utils/default-api-key");
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
 
           logger.debug("Got DefaultApiKeyManager instance");
@@ -213,6 +212,55 @@ export class ChatService {
   }
 
   /**
+   * List available models
+   * Command: berget chat list
+   */
+  public async listModels(apiKey?: string): Promise<any> {
+    try {
+      // Check for environment variable first, then fallback to provided API key
+      const environmentApiKey = process.env.BERGET_API_KEY;
+      const effectiveApiKey = environmentApiKey || apiKey;
+
+      if (effectiveApiKey) {
+        const headers = {
+          Authorization: effectiveApiKey,
+        };
+
+        const { data, error } = await this.client.GET("/v1/models", { headers });
+        if (error) throw new Error(JSON.stringify(error));
+        return data;
+      } else {
+        const { data, error } = await this.client.GET("/v1/models");
+        if (error) throw new Error(JSON.stringify(error));
+        return data;
+      }
+    } catch (error) {
+      // Improved error handling
+      let errorMessage = "Failed to list models";
+
+      if (error instanceof Error) {
+        try {
+          // Try to parse the error message as JSON
+          const parsedError = JSON.parse(error.message);
+          if (parsedError.error) {
+            errorMessage = `Models error: ${
+              typeof parsedError.error === "string"
+                ? parsedError.error
+                : parsedError.error.message || JSON.stringify(parsedError.error)
+            }`;
+          }
+        } catch {
+          // If parsing fails, use the original error message
+          errorMessage = `Models error: ${error.message}`;
+        }
+      }
+
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
    * Execute the completion request with the provided options
    * @param options The completion options
    * @param headers Additional headers to include
@@ -230,7 +278,7 @@ export class ChatService {
       }
 
       // Remove apiKey and onChunk from options before sending to API
-      const { apiKey, onChunk, ...requestOptions } = options;
+      const { apiKey: _apiKey, onChunk, ...requestOptions } = options;
 
       logger.debug("Request options:");
       logger.debug(
@@ -312,13 +360,13 @@ export class ChatService {
 
       // Make fetch request directly to handle streaming
       const response = await fetch(url.toString(), {
-        method: "POST",
+        body: JSON.stringify(options),
         headers: {
-          "Content-Type": "application/json",
           Accept: "text/event-stream",
+          "Content-Type": "application/json",
           ...headers,
         },
-        body: JSON.stringify(options),
+        method: "POST",
       });
 
       logger.debug(`Response status: ${response.status}`);
@@ -365,9 +413,8 @@ export class ChatService {
         // Keep track of processed lines to update buffer
         let processedLines = 0;
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          logger.debug(`Line ${i}: "${line}"`);
+        for (const [index, line] of lines.entries()) {
+          logger.debug(`Line ${index}: "${line}"`);
 
           if (line.startsWith("data:")) {
             const jsonData = line.slice(5).trim();
@@ -376,14 +423,14 @@ export class ChatService {
             // Skip empty data or [DONE] marker
             if (jsonData === "" || jsonData === "[DONE]") {
               logger.debug(`Skipping empty data or [DONE] marker`);
-              processedLines = i + 1;
+              processedLines = index + 1;
               continue;
             }
 
             // Check if JSON looks complete (basic validation)
             if (!jsonData.startsWith("{")) {
               logger.warn(
-                `JSON data doesn't start with '{', might be partial: "${jsonData.substring(0, 50)}..."`
+                `JSON data doesn't start with '{', might be partial: "${jsonData.slice(0, 50)}..."`
               );
               // Don't process this line yet, keep it in buffer
               break;
@@ -394,8 +441,7 @@ export class ChatService {
             let inString = false;
             let escaped = false;
 
-            for (let j = 0; j < jsonData.length; j++) {
-              const char = jsonData[j];
+            for (const char of jsonData) {
               if (escaped) {
                 escaped = false;
                 continue;
@@ -417,7 +463,7 @@ export class ChatService {
 
             if (braceCount !== 0) {
               logger.warn(
-                `JSON braces don't balance (${braceCount}), treating as partial: "${jsonData.substring(0, 50)}..."`
+                `JSON braces don't balance (${braceCount}), treating as partial: "${jsonData.slice(0, 50)}..."`
               );
               // Don't process this line yet, keep it in buffer
               break;
@@ -427,7 +473,7 @@ export class ChatService {
               logger.debug(`Attempting to parse JSON of length: ${jsonData.length}`);
               const parsedData = JSON.parse(jsonData);
               logger.debug(`Successfully parsed JSON: ${JSON.stringify(parsedData, null, 2)}`);
-              processedLines = i + 1; // Mark this line as processed
+              processedLines = index + 1; // Mark this line as processed
 
               // Call the onChunk callback with the parsed data
               if (options.onChunk) {
@@ -440,32 +486,34 @@ export class ChatService {
               } else if (
                 parsedData.choices &&
                 parsedData.choices[0] &&
-                parsedData.choices[0].delta
+                parsedData.choices[0].delta && // Accumulate content for the full response
+                parsedData.choices[0].delta.content
               ) {
-                // Accumulate content for the full response
-                if (parsedData.choices[0].delta.content) {
-                  fullContent += parsedData.choices[0].delta.content;
-                }
+                fullContent += parsedData.choices[0].delta.content;
               }
-            } catch (e) {
-              logger.error(`Error parsing chunk: ${e}`);
+            } catch (error) {
+              logger.error(`Error parsing chunk: ${error}`);
               logger.error(
-                `JSON parse error at position ${(e as any).message?.match(/position (\d+)/)?.[1] || "unknown"}`
+                `JSON parse error at position ${(error as any).message?.match(/position (\d+)/)?.[1] || "unknown"}`
               );
               logger.error(`Problematic chunk length: ${jsonData.length}`);
               logger.error(`Problematic chunk content: "${jsonData}"`);
-              logger.error(`Chunk starts with: "${jsonData.substring(0, 50)}..."`);
-              logger.error(`Chunk ends with: "...${jsonData.substring(jsonData.length - 50)}"`);
+              logger.error(`Chunk starts with: "${jsonData.slice(0, 50)}..."`);
+              logger.error(
+                `Chunk ends with: "...${jsonData.slice(Math.max(0, jsonData.length - 50))}"`
+              );
 
               // Show character codes around the error position
-              const errorPos = parseInt((e as any).message?.match(/position (\d+)/)?.[1] || "0");
+              const errorPos = Number.parseInt(
+                (error as any).message?.match(/position (\d+)/)?.[1] || "0"
+              );
               if (errorPos > 0) {
                 const start = Math.max(0, errorPos - 20);
                 const end = Math.min(jsonData.length, errorPos + 20);
                 logger.error(`Context around error position ${errorPos}:`);
                 logger.error(`"${jsonData.substring(start, end)}"`);
                 logger.error(
-                  `Character codes: ${Array.from(jsonData.substring(start, end))
+                  `Character codes: ${[...jsonData.substring(start, end)]
                     .map(c => c.charCodeAt(0))
                     .join(" ")}`
                 );
@@ -488,68 +536,19 @@ export class ChatService {
       if (fullResponse) {
         if (fullContent) {
           fullResponse.choices[0].message = {
-            role: "assistant",
             content: fullContent,
+            role: "assistant",
           };
         }
         return fullResponse;
       }
 
       return {
-        choices: [{ message: { role: "assistant", content: fullContent } }],
+        choices: [{ message: { content: fullContent, role: "assistant" } }],
       };
     } catch (error) {
       logger.error(`Streaming error: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
-    }
-  }
-
-  /**
-   * List available models
-   * Command: berget chat list
-   */
-  public async listModels(apiKey?: string): Promise<any> {
-    try {
-      // Check for environment variable first, then fallback to provided API key
-      const envApiKey = process.env.BERGET_API_KEY;
-      const effectiveApiKey = envApiKey || apiKey;
-
-      if (effectiveApiKey) {
-        const headers = {
-          Authorization: effectiveApiKey,
-        };
-
-        const { data, error } = await this.client.GET("/v1/models", { headers });
-        if (error) throw new Error(JSON.stringify(error));
-        return data;
-      } else {
-        const { data, error } = await this.client.GET("/v1/models");
-        if (error) throw new Error(JSON.stringify(error));
-        return data;
-      }
-    } catch (error) {
-      // Improved error handling
-      let errorMessage = "Failed to list models";
-
-      if (error instanceof Error) {
-        try {
-          // Try to parse the error message as JSON
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error) {
-            errorMessage = `Models error: ${
-              typeof parsedError.error === "string"
-                ? parsedError.error
-                : parsedError.error.message || JSON.stringify(parsedError.error)
-            }`;
-          }
-        } catch {
-          // If parsing fails, use the original error message
-          errorMessage = `Models error: ${error.message}`;
-        }
-      }
-
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
     }
   }
 }

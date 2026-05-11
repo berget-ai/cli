@@ -1,31 +1,43 @@
-import type { Agent, AgentConfig } from "./types.js";
-import { agent as fullstack } from "./fullstack.js";
-import { agent as frontend } from "./frontend.js";
+import type { Agent } from "./types.js";
+
+import { agent as app } from "./app.js";
 import { agent as backend } from "./backend.js";
 import { agent as devops } from "./devops.js";
-import { agent as app } from "./app.js";
+import { agent as frontend } from "./frontend.js";
+import { agent as fullstack } from "./fullstack.js";
 import { agent as quality } from "./quality.js";
 import { agent as security } from "./security.js";
 
 const agents: Record<string, Agent> = {
-  fullstack,
-  frontend,
+  app,
   backend,
   devops,
-  app,
+  frontend,
+  fullstack,
   quality,
   security,
 };
 
 export { agents };
-export type { Agent, AgentConfig };
+
+export function getAgent(name: string): Agent | undefined {
+  return agents[name];
+}
 
 export function getAllAgents(): Agent[] {
   return Object.values(agents);
 }
 
-export function getAgent(name: string): Agent | undefined {
-  return agents[name];
+export function toAgentTemplate(agent: Agent): {
+  content: string;
+  description: string;
+  name: string;
+} {
+  return {
+    content: agent.systemPrompt,
+    description: agent.config.description,
+    name: agent.config.name,
+  };
 }
 
 export function toMarkdown(agent: Agent): string {
@@ -58,14 +70,4 @@ export function toPiPrompt(agent: Agent): string {
   return agent.systemPrompt;
 }
 
-export function toAgentTemplate(agent: Agent): {
-  name: string;
-  content: string;
-  description: string;
-} {
-  return {
-    name: agent.config.name,
-    description: agent.config.description,
-    content: agent.systemPrompt,
-  };
-}
+export { type Agent, type AgentConfig } from "./types.js";

@@ -1,17 +1,19 @@
-import type { Prompter } from "./ports/prompter";
-import type { FileStore } from "./ports/file-store";
+import { applyEdits, modify, parse } from "jsonc-parser";
+import * as os from "node:os";
+
+import type { ApiKeyServicePort, AuthServicePort } from "./ports/auth-services";
 import type { CommandRunner } from "./ports/command-runner";
-import type { AuthServicePort, ApiKeyServicePort } from "./ports/auth-services";
-import { CancelledError, CommandFailedError, PrerequisiteError } from "./errors";
-import { modify, parse, applyEdits } from "jsonc-parser";
-import { configureAuth } from "./auth-sync.js";
+import type { FileStore } from "./ports/file-store";
+import type { Prompter } from "./ports/prompter";
+
+import { getAllAgents, toMarkdown, toPiPrompt } from "../../agents/index.js";
+import { ApiKeyService } from "../../services/api-key-service.js";
+import { AuthService } from "../../services/auth-service.js";
 import { ClackPrompter } from "./adapters/clack-prompter.js";
 import { FsFileStore } from "./adapters/fs-file-store.js";
 import { SpawnCommandRunner } from "./adapters/spawn-command-runner.js";
-import { AuthService } from "../../services/auth-service.js";
-import { ApiKeyService } from "../../services/api-key-service.js";
-import { getAllAgents, toMarkdown, toPiPrompt } from "../../agents/index.js";
-import * as os from "os";
+import { configureAuth } from "./auth-sync.js";
+import { CancelledError, CommandFailedError, PrerequisiteError } from "./errors";
 
 const OPENCODE_PLUGIN = "@bergetai/opencode-auth@1.0.16";
 const PI_PROVIDER = "npm:@bergetai/pi-provider";
@@ -19,17 +21,17 @@ const OPENCODE_PLUGIN_NAME = "@bergetai/opencode-auth";
 const PI_PROVIDER_NAME = "@bergetai/pi-provider";
 
 export interface WizardDeps {
-  prompter: Prompter;
-  files: FileStore;
-  commands: CommandRunner;
-  authService: AuthServicePort;
   apiKeyService: ApiKeyServicePort;
-  homeDir: string;
+  authService: AuthServicePort;
+  commands: CommandRunner;
   cwd: string;
+  files: FileStore;
+  homeDir: string;
+  prompter: Prompter;
 }
 
 export async function runSetup(deps: WizardDeps): Promise<void> {
-  const { prompter, files, commands, authService, apiKeyService, homeDir, cwd } = deps;
+  const { apiKeyService, authService, commands, cwd, files, homeDir, prompter } = deps;
 
   prompter.intro("\uD83D\uDD27 Berget Code Setup");
 
@@ -40,24 +42,22 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
     message: "How do you want to use Berget AI?",
     options: [
       {
-        value: "opencode",
-        label: `OpenCode${getOpencodeLabel(ocState)}`,
         hint: "Open source AI coding agent",
+        label: `OpenCode${getOpencodeLabel(ocState)}`,
+        value: "opencode",
       },
       {
-        value: "pi",
-        label: `Pi${getPiLabel(piState)}`,
         hint: "Minimal terminal coding harness",
+        label: `Pi${getPiLabel(piState)}`,
+        value: "pi",
       },
     ],
   });
 
-  const scope = await prompter.select<"project" | "global">({
+  const scope = await prompter.select<"global" | "project">({
     message: "Where should the configuration apply?",
     options: [
       {
-        value: "project",
-        label: "This project only",
         hint:
           tool === "opencode"
             ? ocState.project
@@ -66,10 +66,10 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
             : piState.project
               ? "Already configured"
               : ".pi/settings.json in current directory",
+        label: "This project only",
+        value: "project",
       },
       {
-        value: "global",
-        label: "Globally for all projects",
         hint:
           tool === "opencode"
             ? ocState.global
@@ -78,18 +78,20 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
             : piState.global
               ? "Already configured"
               : "~/.pi/agent/settings.json",
+        label: "Globally for all projects",
+        value: "global",
       },
     ],
   });
 
   const authResult = await configureAuth(
-    { prompter, files, authService, apiKeyService, homeDir },
+    { apiKeyService, authService, files, homeDir, prompter },
     tool
   );
 
   if (tool === "opencode") {
-    await setupOpenCode({ prompter, files, commands, homeDir, cwd, scope });
-    await setupOpenCodeAgents({ prompter, files, homeDir, cwd, scope });
+    await setupOpenCode({ commands, cwd, files, homeDir, prompter, scope });
+    await setupOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
 
     if (authResult.authenticated) {
       prompter.note(
@@ -103,8 +105,8 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
       );
     }
   } else {
-    await setupPi({ prompter, files, commands, homeDir, cwd, scope });
-    await setupPiAgent({ prompter, files, homeDir, cwd, scope });
+    await setupPi({ commands, cwd, files, homeDir, prompter, scope });
+    await setupPiAgent({ cwd, files, homeDir, prompter, scope });
 
     if (authResult.authenticated) {
       prompter.note(
@@ -124,15 +126,246 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
 
 // ─── OpenCode ────────────────────────────────────────────────────────────────
 
+export async function runSetupCommand(): Promise<void> {
+  try {
+    await runSetup({
+      apiKeyService: ApiKeyService.getInstance(),
+      authService: AuthService.getInstance(),
+      commands: new SpawnCommandRunner(),
+      cwd: process.cwd(),
+      files: new FsFileStore(),
+      homeDir: os.homedir(),
+      prompter: new ClackPrompter(),
+    });
+    process.exit(0);
+  } catch (error) {
+    if (error instanceof CancelledError) {
+      process.exit(130);
+    }
+    if (error instanceof PrerequisiteError) {
+      console.error(`Missing required binary: ${error.binary}`);
+      process.exit(2);
+    }
+    if (error instanceof CommandFailedError) {
+      console.error(error.message);
+      process.exit(5);
+    }
+    throw error;
+  }
+}
+
+// ─── Pi ────────────────────────────────────────────────────────────────────────
+
+function generateDiff(oldText: string, newText: string, filePath: string): string {
+  const oldLines = oldText.split("\n");
+  const newLines = newText.split("\n");
+  let result = `--- ${filePath}\n+++ ${filePath}\n`;
+
+  const maxLength = Math.max(oldLines.length, newLines.length);
+  for (let index = 0; index < maxLength; index++) {
+    const oldLine = oldLines[index];
+    const newLine = newLines[index];
+    if (oldLine !== newLine) {
+      if (oldLine !== undefined) result += `- ${oldLine}\n`;
+      if (newLine !== undefined) result += `+ ${newLine}\n`;
+    }
+  }
+  return result.trimEnd();
+}
+
+function generateModifiedContent(existingContent: null | string, configPath: string): string {
+  if (configPath.endsWith(".jsonc")) {
+    const content = existingContent || "{}";
+    const parseErrors: any[] = [];
+    const parsed = parse(content, parseErrors, {
+      allowTrailingComma: true,
+      disallowComments: false,
+    });
+
+    let jsConfig: Record<string, any> = {};
+    const canModifyText =
+      parsed !== undefined &&
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed);
+
+    if (canModifyText) {
+      jsConfig = parsed as Record<string, any>;
+    }
+
+    const pluginsKey = jsConfig.plugins === undefined ? "plugin" : "plugins";
+    const existing: string[] = jsConfig[pluginsKey] || [];
+    const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME));
+    filtered.push(OPENCODE_PLUGIN);
+
+    if (canModifyText) {
+      let modifiedContent = content;
+      const pluginEdits = modify(modifiedContent, [pluginsKey], filtered, {
+        formattingOptions: { insertSpaces: true, tabSize: 2 },
+      });
+      modifiedContent = applyEdits(modifiedContent, pluginEdits);
+
+      if (!jsConfig.$schema) {
+        const schemaEdits = modify(
+          modifiedContent,
+          ["$schema"],
+          "https://opencode.ai/config.json",
+          {
+            formattingOptions: { insertSpaces: true, tabSize: 2 },
+          }
+        );
+        modifiedContent = applyEdits(modifiedContent, schemaEdits);
+      }
+
+      return modifiedContent;
+    }
+
+    // Malformed, empty, or non-object JSONC — write a clean config
+    const config: Record<string, any> = {
+      $schema: "https://opencode.ai/config.json",
+      [pluginsKey]: filtered,
+    };
+    return JSON.stringify(config, null, 2) + "\n";
+  }
+
+  // Plain JSON
+  let config: Record<string, any> = {};
+  if (existingContent) {
+    try {
+      config = JSON.parse(existingContent);
+    } catch {
+      // ignore malformed, overwrite
+    }
+  }
+
+  const pluginsKey = config.plugins === undefined ? "plugin" : "plugins";
+  const existing: string[] = config[pluginsKey] || [];
+  const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME));
+  filtered.push(OPENCODE_PLUGIN);
+  config[pluginsKey] = filtered;
+  config.$schema = config.$schema || "https://opencode.ai/config.json";
+
+  return JSON.stringify(config, null, 2) + "\n";
+}
+
+function getOpencodeLabel(state: { global: boolean; project: boolean }): string {
+  if (state.project || state.global) return " (already configured)";
+  return "";
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+async function getOpencodeState(
+  files: FileStore,
+  homeDir: string,
+  cwd: string
+): Promise<{ global: boolean; project: boolean }> {
+  const projectJsonc = await readJsonMaybe(files, pathJoin(cwd, "opencode.jsonc"));
+  const projectJson = await readJsonMaybe(files, pathJoin(cwd, "opencode.json"));
+  const globalJsonc = await readJsonMaybe(
+    files,
+    pathJoin(homeDir, ".config", "opencode", "opencode.jsonc")
+  );
+  const globalJson = await readJsonMaybe(
+    files,
+    pathJoin(homeDir, ".config", "opencode", "opencode.json")
+  );
+
+  return {
+    global: (await hasPluginInConfig(globalJsonc)) || (await hasPluginInConfig(globalJson)),
+    project: (await hasPluginInConfig(projectJsonc)) || (await hasPluginInConfig(projectJson)),
+  };
+}
+
+function getPiLabel(state: { global: boolean; project: boolean }): string {
+  if (state.project || state.global) return " (already configured)";
+  return "";
+}
+
+async function getPiState(
+  files: FileStore,
+  homeDir: string,
+  cwd: string
+): Promise<{ global: boolean; project: boolean }> {
+  const projectSettings = await readJsonMaybe(files, pathJoin(cwd, ".pi", "settings.json"));
+  const globalSettings = await readJsonMaybe(
+    files,
+    pathJoin(homeDir, ".pi", "agent", "settings.json")
+  );
+
+  return {
+    global: await hasPiProviderInSettings(globalSettings),
+    project: await hasPiProviderInSettings(projectSettings),
+  };
+}
+
+async function hasPiProviderInSettings(settings: any): Promise<boolean> {
+  if (!settings) return false;
+  const packages = settings.packages || [];
+  return packages.some((p: any) => {
+    if (typeof p === "string") return p.includes(PI_PROVIDER_NAME);
+    if (typeof p === "object" && p.source) return p.source.includes(PI_PROVIDER_NAME);
+    return false;
+  });
+}
+
+async function hasPluginInConfig(config: any): Promise<boolean> {
+  if (!config) return false;
+  const plugins = config.plugin || config.plugins || [];
+  return plugins.some((p: string) => p.includes(OPENCODE_PLUGIN_NAME));
+}
+
+function pathJoin(...parts: string[]): string {
+  // Simple path join that avoids importing 'path' module
+  // This is good enough for cross-platform testing since tests control the path format
+  return parts.join("/");
+}
+
+async function readJsonMaybe(files: FileStore, filePath: string): Promise<any | null> {
+  const content = await files.readFile(filePath);
+  if (!content) return null;
+  try {
+    return JSON.parse(content);
+  } catch {
+    try {
+      return JSON.parse(stripJsoncComments(content));
+    } catch {
+      return null;
+    }
+  }
+}
+
+async function resolveOpencodeConfigPath(
+  files: FileStore,
+  homeDir: string,
+  cwd: string,
+  scope: "global" | "project"
+): Promise<string> {
+  if (scope === "project") {
+    const jsoncPath = pathJoin(cwd, "opencode.jsonc");
+    const jsonPath = pathJoin(cwd, "opencode.json");
+    if (await files.exists(jsoncPath)) return jsoncPath;
+    if (await files.exists(jsonPath)) return jsonPath;
+    return jsonPath;
+  } else {
+    const globalDir = pathJoin(homeDir, ".config", "opencode");
+    const jsoncPath = pathJoin(globalDir, "opencode.jsonc");
+    const jsonPath = pathJoin(globalDir, "opencode.json");
+    if (await files.exists(jsoncPath)) return jsoncPath;
+    if (await files.exists(jsonPath)) return jsonPath;
+    return jsonPath;
+  }
+}
+
 async function setupOpenCode(deps: {
-  prompter: Prompter;
-  files: FileStore;
   commands: CommandRunner;
-  homeDir: string;
   cwd: string;
-  scope: "project" | "global";
+  files: FileStore;
+  homeDir: string;
+  prompter: Prompter;
+  scope: "global" | "project";
 }): Promise<void> {
-  const { prompter, files, commands, homeDir, cwd, scope } = deps;
+  const { commands, cwd, files, homeDir, prompter, scope } = deps;
 
   const installed = await commands.checkInstalled("opencode");
   if (!installed) {
@@ -154,8 +387,8 @@ async function setupOpenCode(deps: {
   }
 
   const shouldWrite = await prompter.confirm({
-    message: existingContent ? `Write these changes to ${configPath}?` : `Create ${configPath}?`,
     initialValue: true,
+    message: existingContent ? `Write these changes to ${configPath}?` : `Create ${configPath}?`,
   });
   if (!shouldWrite) throw new CancelledError();
 
@@ -165,75 +398,14 @@ async function setupOpenCode(deps: {
   s.stop(`Wrote configuration to ${configPath}.`);
 }
 
-// ─── Pi ────────────────────────────────────────────────────────────────────────
-
-async function setupPi(deps: {
-  prompter: Prompter;
-  files: FileStore;
-  commands: CommandRunner;
-  homeDir: string;
-  cwd: string;
-  scope: "project" | "global";
-}): Promise<void> {
-  const { prompter, files, commands, homeDir, cwd, scope } = deps;
-  const s = prompter.spinner();
-
-  const installed = await commands.checkInstalled("pi");
-  if (!installed) {
-    throw new PrerequisiteError("pi");
-  }
-
-  const installArgs =
-    scope === "project" ? ["install", "-l", PI_PROVIDER] : ["install", PI_PROVIDER];
-
-  s.start(`Installing Berget AI provider for Pi...`);
-  try {
-    await commands.run("pi", installArgs);
-    s.stop("Installed Pi provider.");
-  } catch {
-    s.stop("Pi provider installation failed. Please try again or install manually.");
-    throw new CommandFailedError(`pi ${installArgs.join(" ")}`, 1);
-  }
-
-  const settingsPath =
-    scope === "project"
-      ? pathJoin(cwd, ".pi", "settings.json")
-      : pathJoin(homeDir, ".pi", "agent", "settings.json");
-
-  let settings = (await readJsonMaybe(files, settingsPath)) || {};
-
-  if (settings.defaultProvider === "berget") {
-    prompter.note(
-      "Berget AI is already set as your default provider.",
-      "Default provider already set"
-    );
-  } else {
-    if (settings.defaultProvider) {
-      const makeDefault = await prompter.confirm({
-        message: `Your default provider is ${settings.defaultProvider}. Switch to Berget AI instead?`,
-        initialValue: false,
-      });
-      if (makeDefault) {
-        settings.defaultProvider = "berget";
-        await writeJsonFile(files, settingsPath, settings);
-        prompter.note("Berget AI is now your default provider.", "Updated default provider");
-      }
-    } else {
-      settings.defaultProvider = "berget";
-      await writeJsonFile(files, settingsPath, settings);
-      prompter.note("Berget AI is now your default provider.", "Updated default provider");
-    }
-  }
-}
-
 async function setupOpenCodeAgents(deps: {
-  prompter: Prompter;
+  cwd: string;
   files: FileStore;
   homeDir: string;
-  cwd: string;
-  scope: "project" | "global";
+  prompter: Prompter;
+  scope: "global" | "project";
 }): Promise<void> {
-  const { prompter, files, homeDir, cwd, scope } = deps;
+  const { cwd, files, homeDir, prompter, scope } = deps;
 
   const agents = getAllAgents().filter(a => a.config.mode === "primary");
 
@@ -244,9 +416,9 @@ async function setupOpenCodeAgents(deps: {
   const selectedAgents = await prompter.multiselect({
     message: "Select agents to set up (optional - press enter to skip):",
     options: agents.map(agent => ({
-      value: agent.config.name,
-      label: agent.config.name,
       hint: agent.config.description,
+      label: agent.config.name,
+      value: agent.config.name,
     })),
   });
 
@@ -291,8 +463,8 @@ async function setupOpenCodeAgents(deps: {
   }
 
   const shouldWrite = await prompter.confirm({
-    message: "Write agent configuration files?",
     initialValue: true,
+    message: "Write agent configuration files?",
   });
 
   if (!shouldWrite) {
@@ -314,14 +486,73 @@ async function setupOpenCodeAgents(deps: {
   s.stop(`Wrote ${selectedAgents.length} agent(s) to ${agentsDir}`);
 }
 
-async function setupPiAgent(deps: {
-  prompter: Prompter;
+async function setupPi(deps: {
+  commands: CommandRunner;
+  cwd: string;
   files: FileStore;
   homeDir: string;
-  cwd: string;
-  scope: "project" | "global";
+  prompter: Prompter;
+  scope: "global" | "project";
 }): Promise<void> {
-  const { prompter, files, homeDir, cwd, scope } = deps;
+  const { commands, cwd, files, homeDir, prompter, scope } = deps;
+  const s = prompter.spinner();
+
+  const installed = await commands.checkInstalled("pi");
+  if (!installed) {
+    throw new PrerequisiteError("pi");
+  }
+
+  const installArguments =
+    scope === "project" ? ["install", "-l", PI_PROVIDER] : ["install", PI_PROVIDER];
+
+  s.start(`Installing Berget AI provider for Pi...`);
+  try {
+    await commands.run("pi", installArguments);
+    s.stop("Installed Pi provider.");
+  } catch {
+    s.stop("Pi provider installation failed. Please try again or install manually.");
+    throw new CommandFailedError(`pi ${installArguments.join(" ")}`, 1);
+  }
+
+  const settingsPath =
+    scope === "project"
+      ? pathJoin(cwd, ".pi", "settings.json")
+      : pathJoin(homeDir, ".pi", "agent", "settings.json");
+
+  const settings = (await readJsonMaybe(files, settingsPath)) || {};
+
+  if (settings.defaultProvider === "berget") {
+    prompter.note(
+      "Berget AI is already set as your default provider.",
+      "Default provider already set"
+    );
+  } else {
+    if (settings.defaultProvider) {
+      const makeDefault = await prompter.confirm({
+        initialValue: false,
+        message: `Your default provider is ${settings.defaultProvider}. Switch to Berget AI instead?`,
+      });
+      if (makeDefault) {
+        settings.defaultProvider = "berget";
+        await writeJsonFile(files, settingsPath, settings);
+        prompter.note("Berget AI is now your default provider.", "Updated default provider");
+      }
+    } else {
+      settings.defaultProvider = "berget";
+      await writeJsonFile(files, settingsPath, settings);
+      prompter.note("Berget AI is now your default provider.", "Updated default provider");
+    }
+  }
+}
+
+async function setupPiAgent(deps: {
+  cwd: string;
+  files: FileStore;
+  homeDir: string;
+  prompter: Prompter;
+  scope: "global" | "project";
+}): Promise<void> {
+  const { cwd, files, homeDir, prompter, scope } = deps;
 
   const agents = getAllAgents().filter(a => a.config.mode === "primary");
 
@@ -332,11 +563,11 @@ async function setupPiAgent(deps: {
   const selectedAgentName = await prompter.select({
     message: "Select an agent (optional - press enter to skip):",
     options: [
-      { value: "__skip__", label: "Skip agent setup" },
+      { label: "Skip agent setup", value: "__skip__" },
       ...agents.map(agent => ({
-        value: agent.config.name,
-        label: agent.config.name,
         hint: agent.config.description,
+        label: agent.config.name,
+        value: agent.config.name,
       })),
     ],
   });
@@ -368,8 +599,8 @@ async function setupPiAgent(deps: {
   }
 
   const shouldWrite = await prompter.confirm({
-    message: existing ? "Overwrite existing agent configuration?" : "Create agent configuration?",
     initialValue: true,
+    message: existing ? "Overwrite existing agent configuration?" : "Create agent configuration?",
   });
 
   if (!shouldWrite) {
@@ -386,49 +617,10 @@ async function setupPiAgent(deps: {
   s.stop(`Wrote agent configuration to ${systemPath}`);
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function pathJoin(...parts: string[]): string {
-  // Simple path join that avoids importing 'path' module
-  // This is good enough for cross-platform testing since tests control the path format
-  return parts.join("/");
-}
-
 function stripJsoncComments(content: string): string {
-  content = content.replace(/\/\/.*$/gm, "");
-  content = content.replace(/\/\*[\s\S]*?\*\//g, "");
+  content = content.replaceAll(/\/\/.*$/gm, "");
+  content = content.replaceAll(/\/\*[\s\S]*?\*\//g, "");
   return content;
-}
-
-function generateDiff(oldText: string, newText: string, filePath: string): string {
-  const oldLines = oldText.split("\n");
-  const newLines = newText.split("\n");
-  let result = `--- ${filePath}\n+++ ${filePath}\n`;
-
-  const maxLen = Math.max(oldLines.length, newLines.length);
-  for (let i = 0; i < maxLen; i++) {
-    const oldLine = oldLines[i];
-    const newLine = newLines[i];
-    if (oldLine !== newLine) {
-      if (oldLine !== undefined) result += `- ${oldLine}\n`;
-      if (newLine !== undefined) result += `+ ${newLine}\n`;
-    }
-  }
-  return result.trimEnd();
-}
-
-async function readJsonMaybe(files: FileStore, filePath: string): Promise<any | null> {
-  const content = await files.readFile(filePath);
-  if (!content) return null;
-  try {
-    return JSON.parse(content);
-  } catch {
-    try {
-      return JSON.parse(stripJsoncComments(content));
-    } catch {
-      return null;
-    }
-  }
 }
 
 async function writeJsonFile(
@@ -437,194 +629,4 @@ async function writeJsonFile(
   data: Record<string, unknown>
 ): Promise<void> {
   await files.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
-}
-
-async function hasPluginInConfig(config: any): Promise<boolean> {
-  if (!config) return false;
-  const plugins = config.plugin || config.plugins || [];
-  return plugins.some((p: string) => p.includes(OPENCODE_PLUGIN_NAME));
-}
-
-async function hasPiProviderInSettings(settings: any): Promise<boolean> {
-  if (!settings) return false;
-  const packages = settings.packages || [];
-  return packages.some((p: any) => {
-    if (typeof p === "string") return p.includes(PI_PROVIDER_NAME);
-    if (typeof p === "object" && p.source) return p.source.includes(PI_PROVIDER_NAME);
-    return false;
-  });
-}
-
-async function getOpencodeState(
-  files: FileStore,
-  homeDir: string,
-  cwd: string
-): Promise<{ project: boolean; global: boolean }> {
-  const projectJsonc = await readJsonMaybe(files, pathJoin(cwd, "opencode.jsonc"));
-  const projectJson = await readJsonMaybe(files, pathJoin(cwd, "opencode.json"));
-  const globalJsonc = await readJsonMaybe(
-    files,
-    pathJoin(homeDir, ".config", "opencode", "opencode.jsonc")
-  );
-  const globalJson = await readJsonMaybe(
-    files,
-    pathJoin(homeDir, ".config", "opencode", "opencode.json")
-  );
-
-  return {
-    project: (await hasPluginInConfig(projectJsonc)) || (await hasPluginInConfig(projectJson)),
-    global: (await hasPluginInConfig(globalJsonc)) || (await hasPluginInConfig(globalJson)),
-  };
-}
-
-async function getPiState(
-  files: FileStore,
-  homeDir: string,
-  cwd: string
-): Promise<{ project: boolean; global: boolean }> {
-  const projectSettings = await readJsonMaybe(files, pathJoin(cwd, ".pi", "settings.json"));
-  const globalSettings = await readJsonMaybe(
-    files,
-    pathJoin(homeDir, ".pi", "agent", "settings.json")
-  );
-
-  return {
-    project: await hasPiProviderInSettings(projectSettings),
-    global: await hasPiProviderInSettings(globalSettings),
-  };
-}
-
-function getOpencodeLabel(state: { project: boolean; global: boolean }): string {
-  if (state.project || state.global) return " (already configured)";
-  return "";
-}
-
-function getPiLabel(state: { project: boolean; global: boolean }): string {
-  if (state.project || state.global) return " (already configured)";
-  return "";
-}
-
-async function resolveOpencodeConfigPath(
-  files: FileStore,
-  homeDir: string,
-  cwd: string,
-  scope: "project" | "global"
-): Promise<string> {
-  if (scope === "project") {
-    const jsoncPath = pathJoin(cwd, "opencode.jsonc");
-    const jsonPath = pathJoin(cwd, "opencode.json");
-    if (await files.exists(jsoncPath)) return jsoncPath;
-    if (await files.exists(jsonPath)) return jsonPath;
-    return jsonPath;
-  } else {
-    const globalDir = pathJoin(homeDir, ".config", "opencode");
-    const jsoncPath = pathJoin(globalDir, "opencode.jsonc");
-    const jsonPath = pathJoin(globalDir, "opencode.json");
-    if (await files.exists(jsoncPath)) return jsoncPath;
-    if (await files.exists(jsonPath)) return jsonPath;
-    return jsonPath;
-  }
-}
-
-function generateModifiedContent(existingContent: string | null, configPath: string): string {
-  if (configPath.endsWith(".jsonc")) {
-    const content = existingContent || "{}";
-    const parseErrors: any[] = [];
-    const parsed = parse(content, parseErrors, {
-      allowTrailingComma: true,
-      disallowComments: false,
-    });
-
-    let jsConfig: Record<string, any> = {};
-    const canModifyText =
-      parsed !== undefined &&
-      typeof parsed === "object" &&
-      parsed !== null &&
-      !Array.isArray(parsed);
-
-    if (canModifyText) {
-      jsConfig = parsed as Record<string, any>;
-    }
-
-    const pluginsKey = jsConfig.plugins !== undefined ? "plugins" : "plugin";
-    const existing: string[] = jsConfig[pluginsKey] || [];
-    const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME));
-    filtered.push(OPENCODE_PLUGIN);
-
-    if (canModifyText) {
-      let modifiedContent = content;
-      const pluginEdits = modify(modifiedContent, [pluginsKey], filtered, {
-        formattingOptions: { insertSpaces: true, tabSize: 2 },
-      });
-      modifiedContent = applyEdits(modifiedContent, pluginEdits);
-
-      if (!jsConfig.$schema) {
-        const schemaEdits = modify(
-          modifiedContent,
-          ["$schema"],
-          "https://opencode.ai/config.json",
-          {
-            formattingOptions: { insertSpaces: true, tabSize: 2 },
-          }
-        );
-        modifiedContent = applyEdits(modifiedContent, schemaEdits);
-      }
-
-      return modifiedContent;
-    }
-
-    // Malformed, empty, or non-object JSONC — write a clean config
-    const config: Record<string, any> = {
-      [pluginsKey]: filtered,
-      $schema: "https://opencode.ai/config.json",
-    };
-    return JSON.stringify(config, null, 2) + "\n";
-  }
-
-  // Plain JSON
-  let config: Record<string, any> = {};
-  if (existingContent) {
-    try {
-      config = JSON.parse(existingContent);
-    } catch {
-      // ignore malformed, overwrite
-    }
-  }
-
-  const pluginsKey = config.plugins !== undefined ? "plugins" : "plugin";
-  const existing: string[] = config[pluginsKey] || [];
-  const filtered = existing.filter((p: string) => !p.includes(OPENCODE_PLUGIN_NAME));
-  filtered.push(OPENCODE_PLUGIN);
-  config[pluginsKey] = filtered;
-  config.$schema = config.$schema || "https://opencode.ai/config.json";
-
-  return JSON.stringify(config, null, 2) + "\n";
-}
-
-export async function runSetupCommand(): Promise<void> {
-  try {
-    await runSetup({
-      prompter: new ClackPrompter(),
-      files: new FsFileStore(),
-      commands: new SpawnCommandRunner(),
-      authService: AuthService.getInstance(),
-      apiKeyService: ApiKeyService.getInstance(),
-      homeDir: os.homedir(),
-      cwd: process.cwd(),
-    });
-    process.exit(0);
-  } catch (err) {
-    if (err instanceof CancelledError) {
-      process.exit(130);
-    }
-    if (err instanceof PrerequisiteError) {
-      console.error(`Missing required binary: ${err.binary}`);
-      process.exit(2);
-    }
-    if (err instanceof CommandFailedError) {
-      console.error(err.message);
-      process.exit(5);
-    }
-    throw err;
-  }
 }

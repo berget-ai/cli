@@ -1,10 +1,3 @@
-export class PrerequisiteError extends Error {
-  constructor(public readonly binary: string) {
-    super(`Required binary not found: ${binary}`);
-    this.name = "PrerequisiteError";
-  }
-}
-
 export class CancelledError extends Error {
   constructor() {
     super("Wizard cancelled");
@@ -19,5 +12,12 @@ export class CommandFailedError extends Error {
   ) {
     super(`Command "${command}" failed with exit code ${exitCode}`);
     this.name = "CommandFailedError";
+  }
+}
+
+export class PrerequisiteError extends Error {
+  constructor(public readonly binary: string) {
+    super(`Required binary not found: ${binary}`);
+    this.name = "PrerequisiteError";
   }
 }

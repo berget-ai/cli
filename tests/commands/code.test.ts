@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
+import * as fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { registerCodeCommands } from "../../src/commands/code";
 import { ApiKeyService } from "../../src/services/api-key-service";
-import * as fs from "fs";
-import { readFile, writeFile } from "fs/promises";
-import { updateEnvFile } from "../../src/utils/env-manager";
+import { updateEnvFile as updateEnvironmentFile } from "../../src/utils/env-manager";
 
 // Mock dependencies
 vi.mock("../../src/services/api-key-service");
@@ -24,8 +25,8 @@ vi.mock("child_process", () => ({
 }));
 vi.mock("readline", () => ({
   createInterface: vi.fn(() => ({
-    question: vi.fn(),
     close: vi.fn(),
+    question: vi.fn(),
   })),
 }));
 
@@ -107,8 +108,8 @@ describe("Code Commands", () => {
 
     it("should list existing API keys and allow selection", async () => {
       // Mock successful opencode installation check
-      mockSpawn.mockImplementation((command: string, args: string[]) => {
-        if (command === "opencode" && args[0] === "--version") {
+      mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
+        if (command === "opencode" && arguments_[0] === "--version") {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
               if (event === "close") callback(0);
@@ -121,25 +122,25 @@ describe("Code Commands", () => {
       // Mock existing API keys
       const mockExistingKeys = [
         {
+          created: "2023-01-01T00:00:00.000Z",
           id: 1,
+          lastUsed: null,
           name: "existing-key-1",
           prefix: "sk_ber",
-          created: "2023-01-01T00:00:00.000Z",
-          lastUsed: null,
         },
         {
+          created: "2023-01-02T00:00:00.000Z",
           id: 2,
+          lastUsed: "2023-01-03T00:00:00.000Z",
           name: "existing-key-2",
           prefix: "sk_ber",
-          created: "2023-01-02T00:00:00.000Z",
-          lastUsed: "2023-01-03T00:00:00.000Z",
         },
       ];
       mockApiKeyService.list.mockResolvedValue(mockExistingKeys);
 
       // Mock file operations
       mockFs.existsSync.mockReturnValue(false);
-      mockFsPromises.writeFile.mockResolvedValue(undefined);
+      mockFsPromises.writeFile.mockResolvedValue();
 
       // Verify that the list method is called
       expect(mockApiKeyService.list).toBeDefined();
@@ -147,8 +148,8 @@ describe("Code Commands", () => {
 
     it("should create new API key with project-based naming", async () => {
       // Mock successful opencode installation check
-      mockSpawn.mockImplementation((command: string, args: string[]) => {
-        if (command === "opencode" && args[0] === "--version") {
+      mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
+        if (command === "opencode" && arguments_[0] === "--version") {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
               if (event === "close") callback(0);
@@ -164,14 +165,14 @@ describe("Code Commands", () => {
       // Mock successful API key creation
       const mockApiKeyData = {
         id: 123,
-        name: "opencode-testproject-1234567890",
         key: "test-api-key-12345",
+        name: "opencode-testproject-1234567890",
       };
       mockApiKeyService.create.mockResolvedValue(mockApiKeyData);
 
       // Mock file operations
       mockFs.existsSync.mockReturnValue(false);
-      mockFsPromises.writeFile.mockResolvedValue(undefined);
+      mockFsPromises.writeFile.mockResolvedValue();
 
       // Verify that the create method is available
       expect(mockApiKeyService.create).toBeDefined();
@@ -180,11 +181,11 @@ describe("Code Commands", () => {
     it("should create opencode.json with correct structure", async () => {
       // This tests the expected config structure
       const expectedConfig = {
-        model: "berget/glm-4-6",
         apiKey: "test-api-key",
+        created: expect.any(String),
+        model: "berget/glm-4-6",
         projectName: "testproject",
         provider: "berget",
-        created: expect.any(String),
         version: "1.0.0",
       };
 
@@ -233,11 +234,11 @@ describe("Code Commands", () => {
 
     it("should load configuration from opencode.json", async () => {
       const mockConfig = {
-        model: "berget/glm-4-6",
         apiKey: "test-api-key",
+        created: "2023-01-01T00:00:00.000Z",
+        model: "berget/glm-4-6",
         projectName: "testproject",
         provider: "berget",
-        created: "2023-01-01T00:00:00.000Z",
         version: "1.0.0",
       };
 
@@ -246,8 +247,8 @@ describe("Code Commands", () => {
       mockFsPromises.readFile.mockResolvedValue(JSON.stringify(mockConfig));
 
       // Mock successful opencode check
-      mockSpawn.mockImplementation((command: string, args: string[]) => {
-        if (command === "opencode" && args[0] === "--version") {
+      mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
+        if (command === "opencode" && arguments_[0] === "--version") {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
               if (event === "close") callback(0);
@@ -292,8 +293,8 @@ describe("Code Commands", () => {
 
     it("should offer to install opencode if not found", () => {
       // Mock opencode not installed
-      mockSpawn.mockImplementation((command: string, args: string[]) => {
-        if (command === "opencode" && args[0] === "--version") {
+      mockSpawn.mockImplementation((command: string, arguments_: string[]) => {
+        if (command === "opencode" && arguments_[0] === "--version") {
           return {
             on: vi.fn().mockImplementation((event, callback) => {
               if (event === "close") callback(1); // Non-zero exit code
@@ -348,20 +349,20 @@ describe("Code Commands", () => {
   });
 
   describe(".env file handling", () => {
-    let mockUpdateEnvFile: any;
+    let mockUpdateEnvironmentFile: any;
 
     beforeEach(() => {
-      mockUpdateEnvFile = vi.mocked(updateEnvFile);
+      mockUpdateEnvironmentFile = vi.mocked(updateEnvironmentFile);
     });
 
     it("should call updateEnvFile when creating new project", async () => {
-      mockUpdateEnvFile.mockResolvedValue(true);
+      mockUpdateEnvironmentFile.mockResolvedValue(true);
       mockFs.existsSync.mockReturnValue(false); // .env doesn't exist
-      mockFsPromises.writeFile.mockResolvedValue(undefined);
+      mockFsPromises.writeFile.mockResolvedValue();
 
       // This would be tested by actually calling the init command
       // For now we verify the mock is properly set up
-      expect(mockUpdateEnvFile).toBeDefined();
+      expect(mockUpdateEnvironmentFile).toBeDefined();
     });
 
     it("should not overwrite existing BERGET_API_KEY in .env", async () => {
@@ -372,7 +373,7 @@ describe("Code Commands", () => {
       mockFs.readFileSync.mockReturnValue("BERGET_API_KEY=existing_key\nOTHER_KEY=value\n");
 
       // Mock updateEnvFile to simulate the check
-      mockUpdateEnvFile.mockImplementation(async (options: any) => {
+      mockUpdateEnvironmentFile.mockImplementation(async (options: any) => {
         if (options.key === "BERGET_API_KEY" && !options.force) {
           console.log(`⚠ ${options.key} already exists in .env - leaving unchanged`);
           return false;
@@ -380,7 +381,7 @@ describe("Code Commands", () => {
         return true;
       });
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
         key: "BERGET_API_KEY",
         value: "new_key",
       });
@@ -395,31 +396,31 @@ describe("Code Commands", () => {
     it("should add new key to existing .env file", async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue("EXISTING_KEY=value\n");
-      mockUpdateEnvFile.mockResolvedValue(true);
+      mockUpdateEnvironmentFile.mockResolvedValue(true);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
+        comment: "Berget AI Configuration",
         key: "BERGET_API_KEY",
         value: "new_api_key",
-        comment: "Berget AI Configuration",
       });
 
-      expect(mockUpdateEnvFile).toHaveBeenCalledWith({
+      expect(mockUpdateEnvironmentFile).toHaveBeenCalledWith({
+        comment: "Berget AI Configuration",
         key: "BERGET_API_KEY",
         value: "new_api_key",
-        comment: "Berget AI Configuration",
       });
     });
 
     it("should create new .env file when none exists", async () => {
       mockFs.existsSync.mockReturnValue(false);
-      mockUpdateEnvFile.mockResolvedValue(true);
+      mockUpdateEnvironmentFile.mockResolvedValue(true);
 
-      await updateEnvFile({
+      await updateEnvironmentFile({
         key: "BERGET_API_KEY",
         value: "new_api_key",
       });
 
-      expect(mockUpdateEnvFile).toHaveBeenCalledWith({
+      expect(mockUpdateEnvironmentFile).toHaveBeenCalledWith({
         key: "BERGET_API_KEY",
         value: "new_api_key",
       });
@@ -451,11 +452,11 @@ describe("Code Commands", () => {
     });
 
     it("should handle .env update failures", async () => {
-      const mockUpdateEnvFile = vi.mocked(updateEnvFile);
-      mockUpdateEnvFile.mockRejectedValue(new Error("Env update failed"));
+      const mockUpdateEnvironmentFile = vi.mocked(updateEnvironmentFile);
+      mockUpdateEnvironmentFile.mockRejectedValue(new Error("Env update failed"));
 
       await expect(
-        updateEnvFile({
+        updateEnvironmentFile({
           key: "TEST_KEY",
           value: "test_value",
         })
@@ -464,17 +465,17 @@ describe("Code Commands", () => {
   });
 
   describe("experimental features", () => {
-    let originalEnv: string | undefined;
+    let originalEnvironment: string | undefined;
 
     beforeEach(() => {
-      originalEnv = process.env.BERGET_EXPERIMENTAL;
+      originalEnvironment = process.env.BERGET_EXPERIMENTAL;
     });
 
     afterEach(() => {
-      if (originalEnv === undefined) {
+      if (originalEnvironment === undefined) {
         delete process.env.BERGET_EXPERIMENTAL;
       } else {
-        process.env.BERGET_EXPERIMENTAL = originalEnv;
+        process.env.BERGET_EXPERIMENTAL = originalEnvironment;
       }
     });
 

@@ -2,16 +2,16 @@ import { Agent } from "./types.js";
 
 export const agent: Agent = {
   config: {
-    name: "quality",
     description: "Quality assurance specialist for testing, building, and complete PR management.",
     mode: "subagent",
-    temperature: 0.1,
-    top_p: 0.9,
+    name: "quality",
     permission: {
-      edit: "allow",
       bash: "allow",
+      edit: "allow",
       webfetch: "allow",
     },
+    temperature: 0.1,
+    top_p: 0.9,
   },
   systemPrompt: `Voice: Scandinavian calm—precise, concise, confident. You are Berget Code Quality agent. Specialist in code quality assurance, testing, building, and pull request lifecycle management.
 

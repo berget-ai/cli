@@ -37,28 +37,61 @@ export class Logger {
   }
 
   /**
-   * Set the log level from a string
+   * Log a debug message (only shown at DEBUG level)
    */
-  private setLogLevelFromString(level: string): void {
-    switch (level.toLowerCase()) {
-      case "none":
-        this.logLevel = LogLevel.NONE;
-        break;
-      case "error":
-        this.logLevel = LogLevel.ERROR;
-        break;
-      case "warn":
-        this.logLevel = LogLevel.WARN;
-        break;
-      case "info":
-        this.logLevel = LogLevel.INFO;
-        break;
-      case "debug":
-        this.logLevel = LogLevel.DEBUG;
-        break;
-      default:
-        // Invalid log level, keep default
-        console.warn(`Invalid log level: ${level}. Using default (INFO).`);
+  public debug(message: string, ...arguments_: any[]): void {
+    if (this.logLevel >= LogLevel.DEBUG) {
+      if (arguments_.length > 0) {
+        console.log(chalk.yellow(`DEBUG: ${message}`), ...arguments_);
+      } else {
+        console.log(chalk.yellow(`DEBUG: ${message}`));
+      }
+    }
+  }
+
+  /**
+   * Log an error message (shown at ERROR level and above)
+   */
+  public error(message: string, ...arguments_: any[]): void {
+    if (this.logLevel >= LogLevel.ERROR) {
+      if (arguments_.length > 0) {
+        console.error(chalk.red(message), ...arguments_);
+      } else {
+        console.error(chalk.red(message));
+      }
+    }
+  }
+
+  /**
+   * Get the current log level
+   */
+  public getLogLevel(): LogLevel {
+    return this.logLevel;
+  }
+
+  /**
+   * Log an info message (shown at INFO level and above)
+   */
+  public info(message: string, ...arguments_: any[]): void {
+    if (this.logLevel >= LogLevel.INFO) {
+      if (arguments_.length > 0) {
+        console.log(chalk.blue(message), ...arguments_);
+      } else {
+        console.log(chalk.blue(message));
+      }
+    }
+  }
+
+  /**
+   * Log a plain message without color (shown at INFO level and above)
+   */
+  public log(message: string, ...arguments_: any[]): void {
+    if (this.logLevel >= LogLevel.INFO) {
+      if (arguments_.length > 0) {
+        console.log(message, ...arguments_);
+      } else {
+        console.log(message);
+      }
     }
   }
 
@@ -70,71 +103,12 @@ export class Logger {
   }
 
   /**
-   * Get the current log level
-   */
-  public getLogLevel(): LogLevel {
-    return this.logLevel;
-  }
-
-  /**
-   * Log a debug message (only shown at DEBUG level)
-   */
-  public debug(message: string, ...args: any[]): void {
-    if (this.logLevel >= LogLevel.DEBUG) {
-      if (args.length > 0) {
-        console.log(chalk.yellow(`DEBUG: ${message}`), ...args);
-      } else {
-        console.log(chalk.yellow(`DEBUG: ${message}`));
-      }
-    }
-  }
-
-  /**
-   * Log an info message (shown at INFO level and above)
-   */
-  public info(message: string, ...args: any[]): void {
-    if (this.logLevel >= LogLevel.INFO) {
-      if (args.length > 0) {
-        console.log(chalk.blue(message), ...args);
-      } else {
-        console.log(chalk.blue(message));
-      }
-    }
-  }
-
-  /**
-   * Log a warning message (shown at WARN level and above)
-   */
-  public warn(message: string, ...args: any[]): void {
-    if (this.logLevel >= LogLevel.WARN) {
-      if (args.length > 0) {
-        console.log(chalk.yellow(message), ...args);
-      } else {
-        console.log(chalk.yellow(message));
-      }
-    }
-  }
-
-  /**
-   * Log an error message (shown at ERROR level and above)
-   */
-  public error(message: string, ...args: any[]): void {
-    if (this.logLevel >= LogLevel.ERROR) {
-      if (args.length > 0) {
-        console.error(chalk.red(message), ...args);
-      } else {
-        console.error(chalk.red(message));
-      }
-    }
-  }
-
-  /**
    * Log a success message (shown at INFO level and above)
    */
-  public success(message: string, ...args: any[]): void {
+  public success(message: string, ...arguments_: any[]): void {
     if (this.logLevel >= LogLevel.INFO) {
-      if (args.length > 0) {
-        console.log(chalk.green(message), ...args);
+      if (arguments_.length > 0) {
+        console.log(chalk.green(message), ...arguments_);
       } else {
         console.log(chalk.green(message));
       }
@@ -142,14 +116,46 @@ export class Logger {
   }
 
   /**
-   * Log a plain message without color (shown at INFO level and above)
+   * Log a warning message (shown at WARN level and above)
    */
-  public log(message: string, ...args: any[]): void {
-    if (this.logLevel >= LogLevel.INFO) {
-      if (args.length > 0) {
-        console.log(message, ...args);
+  public warn(message: string, ...arguments_: any[]): void {
+    if (this.logLevel >= LogLevel.WARN) {
+      if (arguments_.length > 0) {
+        console.log(chalk.yellow(message), ...arguments_);
       } else {
-        console.log(message);
+        console.log(chalk.yellow(message));
+      }
+    }
+  }
+
+  /**
+   * Set the log level from a string
+   */
+  private setLogLevelFromString(level: string): void {
+    switch (level.toLowerCase()) {
+      case "debug": {
+        this.logLevel = LogLevel.DEBUG;
+        break;
+      }
+      case "error": {
+        this.logLevel = LogLevel.ERROR;
+        break;
+      }
+      case "info": {
+        this.logLevel = LogLevel.INFO;
+        break;
+      }
+      case "none": {
+        this.logLevel = LogLevel.NONE;
+        break;
+      }
+      case "warn": {
+        this.logLevel = LogLevel.WARN;
+        break;
+      }
+      default: {
+        // Invalid log level, keep default
+        console.warn(`Invalid log level: ${level}. Using default (INFO).`);
       }
     }
   }

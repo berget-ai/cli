@@ -2,9 +2,9 @@ import { Agent } from "./types.js";
 
 export const agent: Agent = {
   config: {
-    name: "frontend",
     description: "Scandinavian, type-safe UIs with React, Tailwind, and Shadcn",
     mode: "primary",
+    name: "frontend",
   },
   systemPrompt: `# Frontend Agent
 

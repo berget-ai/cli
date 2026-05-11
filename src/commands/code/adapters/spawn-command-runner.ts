@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+
 import type { CommandRunner } from "../ports/command-runner";
 
 export class SpawnCommandRunner implements CommandRunner {
@@ -10,11 +11,15 @@ export class SpawnCommandRunner implements CommandRunner {
     });
   }
 
-  async run(command: string, args: readonly string[], options?: { cwd?: string }): Promise<string> {
+  async run(
+    command: string,
+    arguments_: readonly string[],
+    options?: { cwd?: string }
+  ): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-      const child = spawn(command, args as string[], {
-        stdio: "pipe",
+      const child = spawn(command, arguments_ as string[], {
         cwd: options?.cwd || process.cwd(),
+        stdio: "pipe",
       });
 
       let stdout = "";
@@ -34,7 +39,7 @@ export class SpawnCommandRunner implements CommandRunner {
           reject(new Error(stderr.trim() || `Command failed with exit code ${code}`));
         }
       });
-      child.on("error", err => reject(err));
+      child.on("error", error => reject(error));
     });
   }
 }

@@ -1,158 +1,14 @@
-import { Command } from "commander";
 import chalk from "chalk";
-import readline from "readline";
+import { Command } from "commander";
+import { spawn } from "node:child_process";
+import * as fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import readline from "node:readline";
+
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 import { handleError } from "../utils/error-handler";
 import { runSetupCommand } from "./code/setup";
-import * as fs from "fs";
-import { readFile, writeFile } from "fs/promises";
-import path from "path";
-import { spawn } from "child_process";
-
-/**
- * Check if current directory has git
- */
-function hasGit(): boolean {
-  try {
-    return fs.existsSync(path.join(process.cwd(), ".git"));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Helper function to get user confirmation
- */
-async function confirm(question: string, autoYes = false): Promise<boolean> {
-  if (autoYes) {
-    return true;
-  }
-
-  return new Promise(resolve => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    rl.question(question, answer => {
-      rl.close();
-      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes" || answer === "");
-    });
-  });
-}
-
-/**
- * Get project name from current directory or package.json
- */
-function getProjectName(): string {
-  try {
-    const packageJsonPath = path.join(process.cwd(), "package.json");
-    if (fs.existsSync(packageJsonPath)) {
-      const packageJsonContent = fs.readFileSync(packageJsonPath, "utf8");
-      const packageJson = JSON.parse(packageJsonContent);
-      return packageJson.name || path.basename(process.cwd());
-    }
-  } catch {
-    // Ignore error and fallback to directory name
-  }
-  return path.basename(process.cwd());
-}
-
-/**
- * Get the path to the bundled agent templates directory
- */
-function getAgentTemplatesDir(): string {
-  return path.resolve(__dirname, "../../templates/agents");
-}
-
-/**
- * Check if opencode is installed
- */
-function checkOpencodeInstalled(): Promise<boolean> {
-  return new Promise(resolve => {
-    const child = spawn("which", ["opencode"], {
-      stdio: "pipe",
-    });
-
-    child.on("close", code => {
-      resolve(code === 0);
-    });
-
-    child.on("error", () => {
-      resolve(false);
-    });
-  });
-}
-
-/**
- * Install opencode via npm
- */
-async function installOpencode(): Promise<boolean> {
-  console.log(chalk.cyan("Installing OpenCode via npm..."));
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const install = spawn("npm", ["install", "-g", "opencode-ai@1.3"], {
-        stdio: "inherit",
-      });
-
-      install.on("close", code => {
-        if (code === 0) {
-          console.log(chalk.green("✓ OpenCode installed successfully!"));
-          resolve();
-        } else {
-          reject(new Error(`Installation failed with code ${code}`));
-        }
-      });
-
-      install.on("error", reject);
-    });
-
-    // Verify installation
-    const opencodeInstalled = await checkOpencodeInstalled();
-    if (!opencodeInstalled) {
-      console.log(chalk.yellow("Installation completed but opencode command not found."));
-      console.log(chalk.yellow("You may need to restart your terminal or check your PATH."));
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error(chalk.red("Failed to install OpenCode:"));
-    console.error(error instanceof Error ? error.message : String(error));
-    console.log(chalk.blue("\nAlternative installation methods:"));
-    console.log(chalk.blue("  curl -fsSL https://opencode.ai/install | sh"));
-    console.log(chalk.blue("  Or visit: https://opencode.ai/docs"));
-    return false;
-  }
-}
-
-/**
- * Ensure opencode is installed, offering to install if not
- */
-async function ensureOpencodeInstalled(autoYes = false): Promise<boolean> {
-  let opencodeInstalled = await checkOpencodeInstalled();
-  if (!opencodeInstalled) {
-    if (!autoYes) {
-      console.log(chalk.red("OpenCode is not installed."));
-      console.log(chalk.blue("OpenCode is required for the AI coding assistant."));
-    }
-
-    if (await confirm("Would you like to install OpenCode automatically? (Y/n): ", autoYes)) {
-      opencodeInstalled = await installOpencode();
-    } else {
-      if (!autoYes) {
-        console.log(chalk.blue("\nInstallation cancelled."));
-        console.log(
-          chalk.blue("To install manually: curl -fsSL https://opencode.ai/install | bash")
-        );
-        console.log(chalk.blue("Or visit: https://opencode.ai/docs"));
-      }
-    }
-  }
-
-  return opencodeInstalled;
-}
 
 /**
  * Register code commands
@@ -231,9 +87,9 @@ export function registerCodeCommands(program: Command): void {
             fs.mkdirSync(agentsDir, { recursive: true });
             const templateFiles = fs.readdirSync(templatesDir).filter(f => f.endsWith(".md"));
             for (const file of templateFiles) {
-              const src = path.join(templatesDir, file);
-              const dest = path.join(agentsDir, file);
-              fs.copyFileSync(src, dest);
+              const source = path.join(templatesDir, file);
+              const destination = path.join(agentsDir, file);
+              fs.copyFileSync(source, destination);
             }
             console.log(
               chalk.green(
@@ -304,8 +160,8 @@ export function registerCodeCommands(program: Command): void {
         }
 
         // Prepare opencode command
-        const env = { ...process.env };
-        const opencodeArgs: string[] = [];
+        const environment = { ...process.env };
+        const opencodeArguments: string[] = [];
 
         // Read --stage and --local from root program options
         // (these flags are registered at program level, not subcommand level)
@@ -314,16 +170,16 @@ export function registerCodeCommands(program: Command): void {
 
         if (isStage) {
           console.log(chalk.cyan("Using Berget stage environment"));
-          env.BERGET_API_URL = "https://api.stage.berget.ai";
-          env.BERGET_INFERENCE_URL = "https://api.stage.berget.ai/v1";
+          environment.BERGET_API_URL = "https://api.stage.berget.ai";
+          environment.BERGET_INFERENCE_URL = "https://api.stage.berget.ai/v1";
         } else if (isLocal) {
           console.log(chalk.cyan("Using local development environment"));
-          env.BERGET_API_URL = "http://localhost:3000";
-          env.BERGET_INFERENCE_URL = "http://localhost:3000/v1";
+          environment.BERGET_API_URL = "http://localhost:3000";
+          environment.BERGET_INFERENCE_URL = "http://localhost:3000/v1";
         }
 
         if (prompt) {
-          opencodeArgs.push("run", prompt);
+          opencodeArguments.push("run", prompt);
         }
 
         // Choose model based on analysis flag or override
@@ -333,15 +189,15 @@ export function registerCodeCommands(program: Command): void {
         }
 
         if (selectedModel) {
-          opencodeArgs.push("--model", selectedModel);
+          opencodeArguments.push("--model", selectedModel);
         }
 
         console.log(chalk.cyan("Starting OpenCode..."));
 
         // Spawn opencode process
-        const opencode = spawn("opencode", opencodeArgs, {
+        const opencode = spawn("opencode", opencodeArguments, {
+          env: environment,
           stdio: "inherit",
-          env: env,
         });
 
         opencode.on("close", code => {
@@ -375,18 +231,18 @@ export function registerCodeCommands(program: Command): void {
         console.log(chalk.cyan("🚀 Starting OpenCode web server..."));
 
         // Prepare opencode serve command
-        const serveArgs: string[] = ["serve"];
+        const serveArguments: string[] = ["serve"];
 
         if (options.port) {
-          serveArgs.push("--port", options.port);
+          serveArguments.push("--port", options.port);
         }
 
         if (options.host) {
-          serveArgs.push("--host", options.host);
+          serveArguments.push("--host", options.host);
         }
 
         // Spawn opencode serve process
-        const opencode = spawn("opencode", serveArgs, {
+        const opencode = spawn("opencode", serveArguments, {
           stdio: "inherit",
         });
 
@@ -456,15 +312,15 @@ export function registerCodeCommands(program: Command): void {
         let agentsNeedUpdate = false;
 
         for (const file of templateFiles) {
-          const src = path.join(templatesDir, file);
-          const dest = path.join(agentsDir, file);
-          if (!fs.existsSync(dest)) {
+          const source = path.join(templatesDir, file);
+          const destination = path.join(agentsDir, file);
+          if (!fs.existsSync(destination)) {
             agentsNeedUpdate = true;
             break;
           }
-          const srcContent = fs.readFileSync(src, "utf8");
-          const destContent = fs.readFileSync(dest, "utf8");
-          if (srcContent !== destContent) {
+          const sourceContent = fs.readFileSync(source, "utf8");
+          const destinationContent = fs.readFileSync(destination, "utf8");
+          if (sourceContent !== destinationContent) {
             agentsNeedUpdate = true;
             break;
           }
@@ -500,16 +356,16 @@ export function registerCodeCommands(program: Command): void {
           );
 
           const hasGitRepo = hasGit();
-          if (!hasGitRepo) {
-            console.log(chalk.yellow("⚠️  No .git repository detected - backup will be created"));
-          } else {
+          if (hasGitRepo) {
             console.log(chalk.green("✓ Git repository detected - changes are tracked"));
+          } else {
+            console.log(chalk.yellow("⚠️  No .git repository detected - backup will be created"));
           }
         }
 
         if (await confirm("\nProceed with update? (Y/n): ", options.yes)) {
           try {
-            let backupPath: string | null = null;
+            let backupPath: null | string = null;
 
             if (!hasGit()) {
               backupPath = `${configPath}.backup.${Date.now()}`;
@@ -530,15 +386,15 @@ export function registerCodeCommands(program: Command): void {
             fs.mkdirSync(agentsDir, { recursive: true });
             let updatedCount = 0;
             for (const file of templateFiles) {
-              const src = path.join(templatesDir, file);
-              const dest = path.join(agentsDir, file);
+              const source = path.join(templatesDir, file);
+              const destination = path.join(agentsDir, file);
               const agentName = path.basename(file, ".md");
 
               if (
-                !fs.existsSync(dest) ||
-                fs.readFileSync(src, "utf8") !== fs.readFileSync(dest, "utf8")
+                !fs.existsSync(destination) ||
+                fs.readFileSync(source, "utf8") !== fs.readFileSync(destination, "utf8")
               ) {
-                fs.copyFileSync(src, dest);
+                fs.copyFileSync(source, destination);
                 updatedCount++;
                 console.log(chalk.cyan(`  • Updated agent: ${agentName}`));
               }
@@ -624,4 +480,149 @@ See https://opencode.ai/docs/agents/ for available options.
         console.error(chalk.red("Failed to update OpenCode configuration"));
       }
     });
+}
+
+/**
+ * Check if opencode is installed
+ */
+function checkOpencodeInstalled(): Promise<boolean> {
+  return new Promise(resolve => {
+    const child = spawn("which", ["opencode"], {
+      stdio: "pipe",
+    });
+
+    child.on("close", code => {
+      resolve(code === 0);
+    });
+
+    child.on("error", () => {
+      resolve(false);
+    });
+  });
+}
+
+/**
+ * Helper function to get user confirmation
+ */
+async function confirm(question: string, autoYes = false): Promise<boolean> {
+  if (autoYes) {
+    return true;
+  }
+
+  return new Promise(resolve => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.question(question, answer => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes" || answer === "");
+    });
+  });
+}
+
+/**
+ * Ensure opencode is installed, offering to install if not
+ */
+async function ensureOpencodeInstalled(autoYes = false): Promise<boolean> {
+  let opencodeInstalled = await checkOpencodeInstalled();
+  if (!opencodeInstalled) {
+    if (!autoYes) {
+      console.log(chalk.red("OpenCode is not installed."));
+      console.log(chalk.blue("OpenCode is required for the AI coding assistant."));
+    }
+
+    if (await confirm("Would you like to install OpenCode automatically? (Y/n): ", autoYes)) {
+      opencodeInstalled = await installOpencode();
+    } else {
+      if (!autoYes) {
+        console.log(chalk.blue("\nInstallation cancelled."));
+        console.log(
+          chalk.blue("To install manually: curl -fsSL https://opencode.ai/install | bash")
+        );
+        console.log(chalk.blue("Or visit: https://opencode.ai/docs"));
+      }
+    }
+  }
+
+  return opencodeInstalled;
+}
+
+/**
+ * Get the path to the bundled agent templates directory
+ */
+function getAgentTemplatesDir(): string {
+  return path.resolve(__dirname, "../../templates/agents");
+}
+
+/**
+ * Get project name from current directory or package.json
+ */
+function getProjectName(): string {
+  try {
+    const packageJsonPath = path.join(process.cwd(), "package.json");
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJsonContent = fs.readFileSync(packageJsonPath, "utf8");
+      const packageJson = JSON.parse(packageJsonContent);
+      return packageJson.name || path.basename(process.cwd());
+    }
+  } catch {
+    // Ignore error and fallback to directory name
+  }
+  return path.basename(process.cwd());
+}
+
+/**
+ * Check if current directory has git
+ */
+function hasGit(): boolean {
+  try {
+    return fs.existsSync(path.join(process.cwd(), ".git"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Install opencode via npm
+ */
+async function installOpencode(): Promise<boolean> {
+  console.log(chalk.cyan("Installing OpenCode via npm..."));
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const install = spawn("npm", ["install", "-g", "opencode-ai@1.3"], {
+        stdio: "inherit",
+      });
+
+      install.on("close", code => {
+        if (code === 0) {
+          console.log(chalk.green("✓ OpenCode installed successfully!"));
+          resolve();
+        } else {
+          reject(new Error(`Installation failed with code ${code}`));
+        }
+      });
+
+      install.on("error", reject);
+    });
+
+    // Verify installation
+    const opencodeInstalled = await checkOpencodeInstalled();
+    if (!opencodeInstalled) {
+      console.log(chalk.yellow("Installation completed but opencode command not found."));
+      console.log(chalk.yellow("You may need to restart your terminal or check your PATH."));
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error(chalk.red("Failed to install OpenCode:"));
+    console.error(error instanceof Error ? error.message : String(error));
+    console.log(chalk.blue("\nAlternative installation methods:"));
+    console.log(chalk.blue("  curl -fsSL https://opencode.ai/install | sh"));
+    console.log(chalk.blue("  Or visit: https://opencode.ai/docs"));
+    return false;
+  }
 }

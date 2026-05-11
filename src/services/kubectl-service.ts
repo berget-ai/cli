@@ -5,13 +5,13 @@ import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
  * Command group: kubectl
  */
 export class KubectlService {
-  private static instance: KubectlService;
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.KUBECTL;
 
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.KUBECTL;
+
+  private static instance: KubectlService;
 
   private constructor() {}
 
@@ -23,20 +23,20 @@ export class KubectlService {
   }
 
   /**
-   * Create a Kubernetes namespace
-   * Command: berget kubectl create-namespace
-   * This endpoint is not available in the API
-   */
-  public async createNamespace(_name: string): Promise<boolean> {
-    throw new Error("This functionality is not available in the API");
-  }
-
-  /**
    * Apply a Kubernetes configuration
    * Command: berget kubectl apply
    * This endpoint is not available in the API
    */
   public async apply(_filename: string): Promise<boolean> {
+    throw new Error("This functionality is not available in the API");
+  }
+
+  /**
+   * Create a Kubernetes namespace
+   * Command: berget kubectl create-namespace
+   * This endpoint is not available in the API
+   */
+  public async createNamespace(_name: string): Promise<boolean> {
     throw new Error("This functionality is not available in the API");
   }
 

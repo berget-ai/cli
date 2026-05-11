@@ -1,32 +1,13 @@
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+
 import { logger } from "./logger";
 
 interface TokenData {
   access_token: string;
-  refresh_token: string;
   expires_at: number; // timestamp in milliseconds
-}
-
-/**
- * Extract the expiration time from a JWT token
- * @param accessToken The JWT access token
- * @returns The expiration timestamp in milliseconds, or 0 if invalid
- */
-function extractJwtExpiresAt(accessToken: string): number {
-  try {
-    const parts = accessToken.split(".");
-    if (parts.length !== 3) return 0;
-    const payload = Buffer.from(parts[1], "base64url").toString("utf8");
-    const decoded = JSON.parse(payload);
-    if (typeof decoded.exp === "number") {
-      return decoded.exp * 1000; // JWT exp is in seconds, convert to milliseconds
-    }
-  } catch {
-    // If decoding fails, return 0 (treated as expired)
-  }
-  return 0;
+  refresh_token: string;
 }
 
 /**
@@ -34,8 +15,8 @@ function extractJwtExpiresAt(accessToken: string): number {
  */
 export class TokenManager {
   private static instance: TokenManager;
+  private tokenData: null | TokenData = null;
   private tokenFilePath: string;
-  private tokenData: TokenData | null = null;
 
   private constructor() {
     // Set up token file path in user's home directory
@@ -55,45 +36,18 @@ export class TokenManager {
   }
 
   /**
-   * Load token data from file
+   * Clear all token data
    */
-  private loadToken(): void {
-    try {
-      if (fs.existsSync(this.tokenFilePath)) {
-        const data = fs.readFileSync(this.tokenFilePath, "utf8");
-        this.tokenData = JSON.parse(data);
-      }
-    } catch {
-      logger.error("Failed to load authentication token");
-      this.tokenData = null;
-    }
-  }
-
-  /**
-   * Save token data to file
-   */
-  private saveToken(): void {
-    try {
-      if (this.tokenData) {
-        fs.writeFileSync(this.tokenFilePath, JSON.stringify(this.tokenData, null, 2));
-        // Set file permissions to be readable only by the owner
-        fs.chmodSync(this.tokenFilePath, 0o600);
-      } else {
-        // If token data is null, remove the file
-        if (fs.existsSync(this.tokenFilePath)) {
-          fs.unlinkSync(this.tokenFilePath);
-        }
-      }
-    } catch {
-      logger.error("Failed to save authentication token");
-    }
+  public clearTokens(): void {
+    this.tokenData = null;
+    this.saveToken();
   }
 
   /**
    * Get the current access token
    * @returns The access token or null if not available
    */
-  public getAccessToken(): string | null {
+  public getAccessToken(): null | string {
     if (!this.tokenData) return null;
     return this.tokenData.access_token;
   }
@@ -102,7 +56,7 @@ export class TokenManager {
    * Get the refresh token
    * @returns The refresh token or null if not available
    */
-  public getRefreshToken(): string | null {
+  public getRefreshToken(): null | string {
     if (!this.tokenData) return null;
     return this.tokenData.refresh_token;
   }
@@ -156,8 +110,8 @@ export class TokenManager {
 
     this.tokenData = {
       access_token: accessToken,
-      refresh_token: refreshToken,
       expires_at: expiresAt,
+      refresh_token: refreshToken,
     };
     this.saveToken();
   }
@@ -180,10 +134,57 @@ export class TokenManager {
   }
 
   /**
-   * Clear all token data
+   * Load token data from file
    */
-  public clearTokens(): void {
-    this.tokenData = null;
-    this.saveToken();
+  private loadToken(): void {
+    try {
+      if (fs.existsSync(this.tokenFilePath)) {
+        const data = fs.readFileSync(this.tokenFilePath, "utf8");
+        this.tokenData = JSON.parse(data);
+      }
+    } catch {
+      logger.error("Failed to load authentication token");
+      this.tokenData = null;
+    }
   }
+
+  /**
+   * Save token data to file
+   */
+  private saveToken(): void {
+    try {
+      if (this.tokenData) {
+        fs.writeFileSync(this.tokenFilePath, JSON.stringify(this.tokenData, null, 2));
+        // Set file permissions to be readable only by the owner
+        fs.chmodSync(this.tokenFilePath, 0o600);
+      } else {
+        // If token data is null, remove the file
+        if (fs.existsSync(this.tokenFilePath)) {
+          fs.unlinkSync(this.tokenFilePath);
+        }
+      }
+    } catch {
+      logger.error("Failed to save authentication token");
+    }
+  }
+}
+
+/**
+ * Extract the expiration time from a JWT token
+ * @param accessToken The JWT access token
+ * @returns The expiration timestamp in milliseconds, or 0 if invalid
+ */
+function extractJwtExpiresAt(accessToken: string): number {
+  try {
+    const parts = accessToken.split(".");
+    if (parts.length !== 3) return 0;
+    const payload = Buffer.from(parts[1], "base64url").toString("utf8");
+    const decoded = JSON.parse(payload);
+    if (typeof decoded.exp === "number") {
+      return decoded.exp * 1000; // JWT exp is in seconds, convert to milliseconds
+    }
+  } catch {
+    // If decoding fails, return 0 (treated as expired)
+  }
+  return 0;
 }

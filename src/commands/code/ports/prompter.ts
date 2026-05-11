@@ -1,26 +1,26 @@
 export interface Prompter {
+  confirm(options: { initialValue?: boolean; message: string }): Promise<boolean>;
   intro(message: string): void;
-  outro(message: string): void;
-  note(message: string, title?: string): void;
-  spinner(): Spinner;
-  select<T>(opts: {
+  multiselect<T>(options: {
     message: string;
     options: ReadonlyArray<{
-      value: T;
-      label: string;
       hint?: string;
-    }>;
-  }): Promise<T>;
-  multiselect<T>(opts: {
-    message: string;
-    options: ReadonlyArray<{
-      value: T;
       label: string;
-      hint?: string;
+      value: T;
     }>;
   }): Promise<T[]>;
-  confirm(opts: { message: string; initialValue?: boolean }): Promise<boolean>;
-  text(opts: { message: string; placeholder?: string }): Promise<string>;
+  note(message: string, title?: string): void;
+  outro(message: string): void;
+  select<T>(options: {
+    message: string;
+    options: ReadonlyArray<{
+      hint?: string;
+      label: string;
+      value: T;
+    }>;
+  }): Promise<T>;
+  spinner(): Spinner;
+  text(options: { message: string; placeholder?: string }): Promise<string>;
 }
 
 export interface Spinner {

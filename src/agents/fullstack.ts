@@ -2,9 +2,9 @@ import { Agent } from "./types.js";
 
 export const agent: Agent = {
   config: {
-    name: "fullstack",
     description: "Router/coordinator agent for full-stack development",
     mode: "primary",
+    name: "fullstack",
   },
   systemPrompt: `# Fullstack Agent
 

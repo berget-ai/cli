@@ -1,7 +1,8 @@
-import { createAuthenticatedClient, saveAuthToken, clearAuthToken } from "../client";
 import chalk from "chalk";
-import { handleError } from "../utils/error-handler";
+
+import { clearAuthToken, createAuthenticatedClient, saveAuthToken } from "../client";
 import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
+import { handleError } from "../utils/error-handler";
 import { BrowserAuth } from "./browser-auth";
 
 // Keycloak configuration based on environment
@@ -13,28 +14,18 @@ const KEYCLOAK_REALM = "berget";
 const KEYCLOAK_CLIENT_ID = "berget-code";
 const CALLBACK_PORT = 8787;
 
-function makeBrowserAuth(debug?: boolean): BrowserAuth {
-  return new BrowserAuth({
-    keycloakUrl: KEYCLOAK_URL,
-    realm: KEYCLOAK_REALM,
-    clientId: KEYCLOAK_CLIENT_ID,
-    callbackPort: CALLBACK_PORT,
-    debug,
-  });
-}
-
 /**
  * Service for authentication operations
  * Command group: auth
  */
 export class AuthService {
-  private static instance: AuthService;
-
   // Command group name for this service
   public static readonly COMMAND_GROUP = COMMAND_GROUPS.AUTH;
 
   // Subcommands for this service
   public static readonly COMMANDS = SUBCOMMANDS.AUTH;
+
+  private static instance: AuthService;
 
   private constructor() {}
 
@@ -43,20 +34,6 @@ export class AuthService {
       AuthService.instance = new AuthService();
     }
     return AuthService.instance;
-  }
-
-  public async whoami(): Promise<any> {
-    try {
-      // Create fresh client to ensure we have the latest token
-      const client = createAuthenticatedClient();
-      const { data: profile, error } = await client.GET("/v1/users/me");
-      if (error) {
-        return null;
-      }
-      return profile;
-    } catch {
-      return null;
-    }
   }
 
   /**
@@ -123,11 +100,11 @@ export class AuthService {
    * their own UI (e.g. via clack/prompts).
    */
   public async loginInteractive(): Promise<{
-    success: boolean;
     accessToken?: string;
-    refreshToken?: string;
-    expiresIn?: number;
     error?: string;
+    expiresIn?: number;
+    refreshToken?: string;
+    success: boolean;
   }> {
     try {
       clearAuthToken();
@@ -142,9 +119,33 @@ export class AuthService {
       return result;
     } catch (error) {
       return {
-        success: false,
         error: error instanceof Error ? error.message : String(error),
+        success: false,
       };
     }
   }
+
+  public async whoami(): Promise<any> {
+    try {
+      // Create fresh client to ensure we have the latest token
+      const client = createAuthenticatedClient();
+      const { data: profile, error } = await client.GET("/v1/users/me");
+      if (error) {
+        return null;
+      }
+      return profile;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function makeBrowserAuth(debug?: boolean): BrowserAuth {
+  return new BrowserAuth({
+    callbackPort: CALLBACK_PORT,
+    clientId: KEYCLOAK_CLIENT_ID,
+    debug,
+    keycloakUrl: KEYCLOAK_URL,
+    realm: KEYCLOAK_REALM,
+  });
 }

@@ -1,8 +1,13 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
+
 import type { FileStore } from "../ports/file-store";
 
 export class FsFileStore implements FileStore {
+  async chmod(filePath: string, mode: number): Promise<void> {
+    await fs.chmod(filePath, mode);
+  }
+
   async exists(filePath: string): Promise<boolean> {
     try {
       await fs.access(filePath);
@@ -12,12 +17,16 @@ export class FsFileStore implements FileStore {
     }
   }
 
-  async readFile(filePath: string): Promise<string | null> {
+  async mkdir(dir: string): Promise<void> {
+    await fs.mkdir(dir, { recursive: true });
+  }
+
+  async readFile(filePath: string): Promise<null | string> {
     try {
       return await fs.readFile(filePath, "utf8");
-    } catch (err: any) {
-      if (err.code === "ENOENT") return null;
-      throw err;
+    } catch (error: any) {
+      if (error.code === "ENOENT") return null;
+      throw error;
     }
   }
 
@@ -25,13 +34,5 @@ export class FsFileStore implements FileStore {
     const dir = path.dirname(filePath);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(filePath, content, "utf8");
-  }
-
-  async mkdir(dir: string): Promise<void> {
-    await fs.mkdir(dir, { recursive: true });
-  }
-
-  async chmod(filePath: string, mode: number): Promise<void> {
-    await fs.chmod(filePath, mode);
   }
 }

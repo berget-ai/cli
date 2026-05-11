@@ -1,44 +1,26 @@
+import chalk from "chalk";
 import { marked } from "marked";
 import TerminalRenderer from "marked-terminal";
-import chalk from "chalk";
 
 // Configure marked to use the terminal renderer
 marked.setOptions({
   renderer: new TerminalRenderer({
+    blockquote: chalk.gray.italic,
     // Customize the rendering options
     code: chalk.cyan,
-    blockquote: chalk.gray.italic,
-    table: chalk.white,
-    listitem: chalk.yellow,
-    strong: chalk.bold,
+    // Customize code block rendering
+    codespan: chalk.cyan,
     em: chalk.italic,
     heading: chalk.bold.blueBright,
     hr: chalk.gray,
     link: chalk.blue.underline,
+    listitem: chalk.yellow,
+    strong: chalk.bold,
+    table: chalk.white,
     // Adjust the width to fit the terminal
     width: process.stdout.columns || 80,
-    // Customize code block rendering
-    codespan: chalk.cyan,
   }),
 });
-
-/**
- * Render markdown text to terminal-friendly formatted text
- * @param markdown The markdown text to render
- * @returns Formatted text for terminal display
- */
-export function renderMarkdown(markdown: string): string {
-  if (!markdown) return "";
-
-  try {
-    // Convert markdown to terminal-friendly text
-    return marked(markdown);
-  } catch (error) {
-    // If rendering fails, return the original text
-    console.error(`Error rendering markdown: ${error}`);
-    return markdown;
-  }
-}
 
 /**
  * Check if a string contains markdown formatting
@@ -65,4 +47,22 @@ export function containsMarkdown(text: string): boolean {
   ];
 
   return markdownPatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * Render markdown text to terminal-friendly formatted text
+ * @param markdown The markdown text to render
+ * @returns Formatted text for terminal display
+ */
+export function renderMarkdown(markdown: string): string {
+  if (!markdown) return "";
+
+  try {
+    // Convert markdown to terminal-friendly text
+    return marked(markdown);
+  } catch (error) {
+    // If rendering fails, return the original text
+    console.error(`Error rendering markdown: ${error}`);
+    return markdown;
+  }
 }

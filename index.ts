@@ -1,10 +1,9 @@
-#!/usr/bin/env node
+import chalk from "chalk";
+import { Option, program } from "commander";
 
-import { program, Option } from "commander";
+import { version } from "./package.json";
 import { registerCommands } from "./src/commands";
 import { checkBergetConfig } from "./src/utils/config-checker";
-import chalk from "chalk";
-import { version } from "./package.json";
 process.env.DOTENV_CONFIG_OVERRIDE = "true";
 import "dotenv/config";
 
@@ -41,15 +40,15 @@ if (process.argv.length <= 2) {
 
 // Add helpful suggestions for common command mistakes
 const commonMistakes: Record<string, string> = {
+  "create-key": "api-keys create",
+  init: "code init",
+  "list-clusters": "clusters list",
+  "list-keys": "api-keys list",
+  "list-models": "models list",
   login: "auth login",
   logout: "auth logout",
-  whoami: "auth whoami",
-  "list-models": "models list",
-  "list-keys": "api-keys list",
-  "create-key": "api-keys create",
-  "list-clusters": "clusters list",
   usage: "billing usage",
-  init: "code init",
+  whoami: "auth whoami",
 };
 
 // Add error handler for unknown commands
@@ -71,9 +70,9 @@ program.on("command:*", operands => {
 
     if (similarCommands.length > 0) {
       console.log(chalk.yellow("Similar commands:"));
-      similarCommands.forEach(cmd => {
+      for (const cmd of similarCommands) {
         console.log(chalk.yellow(`  ${chalk.bold(`berget ${cmd}`)}`));
-      });
+      }
     }
 
     console.log(chalk.blue("\nRun `berget --help` for a list of available commands."));

@@ -1,15 +1,35 @@
-import fs from "fs";
-import path from "path";
-import { writeFile } from "fs/promises";
 import chalk from "chalk";
 import dotenv from "dotenv";
+import fs from "node:fs";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 
 export interface EnvUpdateOptions {
+  comment?: string;
   envPath?: string;
+  force?: boolean;
   key: string;
   value: string;
-  comment?: string;
-  force?: boolean;
+}
+
+/**
+ * Checks if a .env file exists and contains a specific key
+ */
+export function hasEnvKey(
+  environmentPath: string = path.join(process.cwd(), ".env"),
+  key: string
+): boolean {
+  if (!fs.existsSync(environmentPath)) {
+    return false;
+  }
+
+  try {
+    const content = fs.readFileSync(environmentPath, "utf8");
+    const parsed = dotenv.parse(content);
+    return key in parsed;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -18,11 +38,11 @@ export interface EnvUpdateOptions {
  */
 export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean> {
   const {
-    envPath = path.join(process.cwd(), ".env"),
+    comment,
+    envPath: environmentPath = path.join(process.cwd(), ".env"),
+    force = false,
     key,
     value,
-    comment,
-    force = false,
   } = options;
 
   try {
@@ -30,8 +50,8 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
     let parsed: Record<string, string> = {};
 
     // Read existing .env file if it exists
-    if (fs.existsSync(envPath)) {
-      existingContent = fs.readFileSync(envPath, "utf8");
+    if (fs.existsSync(environmentPath)) {
+      existingContent = fs.readFileSync(environmentPath, "utf8");
       parsed = dotenv.parse(existingContent);
     }
 
@@ -53,12 +73,12 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
     }
 
     // Convert parsed object back to .env format
-    for (const [envKey, envValue] of Object.entries(parsed)) {
-      newContent += `${envKey}=${envValue}\n`;
+    for (const [environmentKey, environmentValue] of Object.entries(parsed)) {
+      newContent += `${environmentKey}=${environmentValue}\n`;
     }
 
     // Write the updated content
-    await writeFile(envPath, newContent.trim() + "\n");
+    await writeFile(environmentPath, newContent.trim() + "\n");
 
     if (existingContent) {
       console.log(chalk.green(`✓ Updated .env with ${key}`));
@@ -70,25 +90,5 @@ export async function updateEnvFile(options: EnvUpdateOptions): Promise<boolean>
   } catch (error) {
     console.error(chalk.red(`Failed to update .env file:`));
     throw error;
-  }
-}
-
-/**
- * Checks if a .env file exists and contains a specific key
- */
-export function hasEnvKey(
-  envPath: string = path.join(process.cwd(), ".env"),
-  key: string
-): boolean {
-  if (!fs.existsSync(envPath)) {
-    return false;
-  }
-
-  try {
-    const content = fs.readFileSync(envPath, "utf8");
-    const parsed = dotenv.parse(content);
-    return key in parsed;
-  } catch {
-    return false;
   }
 }

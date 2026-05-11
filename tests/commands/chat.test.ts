@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { registerChatCommands } from "../../src/commands/chat";
 import { ChatService } from "../../src/services/chat-service";
 import { DefaultApiKeyManager } from "../../src/utils/default-api-key";
@@ -9,8 +10,8 @@ vi.mock("../../src/services/chat-service");
 vi.mock("../../src/utils/default-api-key");
 vi.mock("readline", () => ({
   createInterface: vi.fn(() => ({
-    question: vi.fn(),
     close: vi.fn(),
+    question: vi.fn(),
   })),
 }));
 
@@ -95,14 +96,14 @@ describe("Chat Commands", () => {
       const mockModels = {
         data: [
           {
-            id: "gpt-oss",
-            owned_by: "openai",
             active: true,
             capabilities: {
-              vision: false,
               function_calling: true,
               json_mode: true,
+              vision: false,
             },
+            id: "gpt-oss",
+            owned_by: "openai",
           },
         ],
       };

@@ -1,18 +1,27 @@
 import type { CommandRunner } from "../ports/command-runner";
 
 type Handler = {
-  match: (command: string, args: readonly string[]) => boolean;
-  response: string | Error | ((command: string, args: readonly string[]) => string | Error);
+  match: (command: string, arguments_: readonly string[]) => boolean;
+  response: ((command: string, arguments_: readonly string[]) => Error | string) | Error | string;
 };
 
 export class FakeCommandRunner implements CommandRunner {
-  private handlers: Handler[] = [];
-  private _calls: Array<{ command: string; args: string[]; options?: { cwd?: string } }> = [];
+  get calls() {
+    return this._calls;
+  }
+  private _calls: Array<{ args: string[]; command: string; options?: { cwd?: string } }> = [];
 
-  handle(match: string | RegExp, response: string | Error): this {
+  private handlers: Handler[] = [];
+
+  checkInstalled(binary: string): Promise<boolean> {
+    this._calls.push({ args: [], command: `check:${binary}` });
+    return Promise.resolve(this.handlers.some(h => h.match(binary, ["--version"])) || false);
+  }
+
+  handle(match: RegExp | string, response: Error | string): this {
     this.handlers.push({
-      match: (cmd, args) => {
-        const full = `${cmd} ${args.join(" ")}`;
+      match: (cmd, arguments_) => {
+        const full = `${cmd} ${arguments_.join(" ")}`;
         if (typeof match === "string") return full.startsWith(match);
         return match.test(full);
       },
@@ -21,24 +30,21 @@ export class FakeCommandRunner implements CommandRunner {
     return this;
   }
 
-  checkInstalled(binary: string): Promise<boolean> {
-    this._calls.push({ command: `check:${binary}`, args: [] });
-    return Promise.resolve(this.handlers.some(h => h.match(binary, ["--version"])) || false);
-  }
-
-  async run(command: string, args: readonly string[], options?: { cwd?: string }): Promise<string> {
-    this._calls.push({ command, args: [...args], options });
-    const handler = this.handlers.find(h => h.match(command, args));
-    if (!handler) throw new Error(`Unexpected command: ${command} ${args.join(" ")}`);
+  async run(
+    command: string,
+    arguments_: readonly string[],
+    options?: { cwd?: string }
+  ): Promise<string> {
+    this._calls.push({ args: [...arguments_], command, options });
+    const handler = this.handlers.find(h => h.match(command, arguments_));
+    if (!handler) throw new Error(`Unexpected command: ${command} ${arguments_.join(" ")}`);
 
     const result =
-      typeof handler.response === "function" ? handler.response(command, args) : handler.response;
+      typeof handler.response === "function"
+        ? handler.response(command, arguments_)
+        : handler.response;
 
     if (result instanceof Error) throw result;
     return result;
-  }
-
-  get calls() {
-    return this._calls;
   }
 }
