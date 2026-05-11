@@ -15,7 +15,7 @@ import { SpawnCommandRunner } from "./adapters/spawn-command-runner.js";
 import { configureAuth } from "./auth-sync.js";
 import { CancelledError, CommandFailedError, PrerequisiteError } from "./errors";
 
-const OPENCODE_PLUGIN = "@bergetai/opencode-auth@1.0.16";
+const OPENCODE_PLUGIN = "@bergetai/opencode-auth";
 const PI_PROVIDER = "npm:@bergetai/pi-provider";
 const OPENCODE_PLUGIN_NAME = "@bergetai/opencode-auth";
 const PI_PROVIDER_NAME = "@bergetai/pi-provider";
