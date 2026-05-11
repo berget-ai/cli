@@ -8,6 +8,7 @@ export interface FileEntry {
 export class FakeFileStore implements FileStore {
 	private files: Map<string, string> = new Map()
 	private dirs: Set<string> = new Set()
+	private _chmodCalls: Array<{ path: string; mode: number }> = []
 
 	seed(path: string, content: string): void {
 		this.files.set(path, content)
@@ -29,7 +30,15 @@ export class FakeFileStore implements FileStore {
 		this.dirs.add(path)
 	}
 
+	async chmod(path: string, mode: number): Promise<void> {
+		this._chmodCalls.push({ path, mode })
+	}
+
 	getWrittenFiles(): Map<string, string> {
 		return new Map(this.files)
+	}
+
+	getChmodCalls(): Array<{ path: string; mode: number }> {
+		return this._chmodCalls
 	}
 }

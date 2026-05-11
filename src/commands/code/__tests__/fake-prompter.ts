@@ -6,6 +6,7 @@ export const CANCEL = Symbol('cancel')
 type PromptEntry =
 	| { kind: 'select'; match?: RegExp; response: string | symbol }
 	| { kind: 'confirm'; match?: RegExp; response: boolean | symbol }
+	| { kind: 'text'; match?: RegExp; response: string | symbol }
 
 export const select = <T>(
 	value: T | symbol,
@@ -14,6 +15,15 @@ export const select = <T>(
 	kind: 'select',
 	match: typeof match === 'string' ? new RegExp(match) : match,
 	response: typeof value === 'symbol' ? value : String(value),
+})
+
+export const text = (
+	value: string | symbol,
+	match?: string | RegExp,
+): PromptEntry => ({
+	kind: 'text',
+	match: typeof match === 'string' ? new RegExp(match) : match,
+	response: value,
 })
 
 export const confirm = (
@@ -55,7 +65,7 @@ export class FakePrompter implements Prompter {
 		this._calls.push({ method: 'select', args: opts })
 		const entry = this._script[this._cursor++]
 		if (!entry) throw new Error(`No script entry for select #${this._cursor} (${opts.message})`)
-		if (entry.kind !== 'select') throw new Error(`Expected confirm, got select for ${opts.message}`)
+		if (entry.kind !== 'select') throw new Error(`Expected select, got ${entry.kind} for ${opts.message}`)
 		if (entry.match && !entry.match.test(opts.message)) throw new Error(`Message mismatch: got "${opts.message}"`)
 		if (entry.response === CANCEL) throw new CancelledError()
 		return entry.response as T
@@ -65,10 +75,20 @@ export class FakePrompter implements Prompter {
 		this._calls.push({ method: 'confirm', args: opts })
 		const entry = this._script[this._cursor++]
 		if (!entry) throw new Error(`No script entry for confirm #${this._cursor} (${opts.message})`)
-		if (entry.kind !== 'confirm') throw new Error(`Expected select, got confirm for ${opts.message}`)
+		if (entry.kind !== 'confirm') throw new Error(`Expected confirm, got ${entry.kind} for ${opts.message}`)
 		if (entry.match && !entry.match.test(opts.message)) throw new Error(`Message mismatch: got "${opts.message}"`)
 		if (entry.response === CANCEL) throw new CancelledError()
 		return entry.response as boolean
+	}
+
+	async text(opts: { message: string }): Promise<string> {
+		this._calls.push({ method: 'text', args: opts })
+		const entry = this._script[this._cursor++]
+		if (!entry) throw new Error(`No script entry for text #${this._cursor} (${opts.message})`)
+		if (entry.kind !== 'text') throw new Error(`Expected text, got ${entry.kind} for ${opts.message}`)
+		if (entry.match && !entry.match.test(opts.message)) throw new Error(`Message mismatch: got "${opts.message}"`)
+		if (entry.response === CANCEL) throw new CancelledError()
+		return entry.response as string
 	}
 
 	get calls() {

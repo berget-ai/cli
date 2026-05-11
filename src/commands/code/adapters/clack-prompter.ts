@@ -40,4 +40,11 @@ export class ClackPrompter implements Prompter {
 	}): Promise<boolean> {
 		return unwrap(await p.confirm(opts))
 	}
+
+	async text(opts: {
+		message: string
+		placeholder?: string
+	}): Promise<string> {
+		return unwrap(await p.text(opts))
+	}
 }

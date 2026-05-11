@@ -15,6 +15,10 @@ export interface Prompter {
 		message: string
 		initialValue?: boolean
 	}): Promise<boolean>
+	text(opts: {
+		message: string
+		placeholder?: string
+	}): Promise<string>
 }
 
 export interface Spinner {

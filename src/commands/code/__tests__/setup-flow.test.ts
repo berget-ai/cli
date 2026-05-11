@@ -4,17 +4,36 @@ import { CancelledError, CommandFailedError, PrerequisiteError } from '../errors
 import { FakePrompter, CANCEL, select, confirm } from './fake-prompter'
 import { FakeFileStore } from './fake-file-store'
 import { FakeCommandRunner } from './fake-command-runner'
+import { FakeAuthService } from './fake-auth-service'
+import { FakeApiKeyService } from './fake-api-key-service'
+import type { AuthServicePort, ApiKeyServicePort } from '../ports/auth-services'
 
-const makeDeps = (overrides: Partial<Parameters<typeof runSetup>[0]> = {}) => ({
-	prompter: new FakePrompter([]),
-	files: new FakeFileStore(),
-	commands: new FakeCommandRunner()
-		.handle('opencode --version', 'mocked')
-		.handle('pi --version', 'mocked'),
-	homeDir: '/home/user',
-	cwd: '/home/user/project',
-	...overrides,
-})
+const makeDeps = (overrides: Partial<Parameters<typeof runSetup>[0]> = {}): Parameters<typeof runSetup>[0] => {
+	return {
+		prompter: overrides.prompter ?? new FakePrompter([]),
+		files: overrides.files ?? new FakeFileStore(),
+		commands: overrides.commands ?? new FakeCommandRunner()
+			.handle('opencode --version', 'mocked')
+			.handle('pi --version', 'mocked'),
+		authService: overrides.authService as AuthServicePort ?? new FakeAuthService(false),
+		apiKeyService: overrides.apiKeyService as ApiKeyServicePort ?? new FakeApiKeyService('sk_ber_test'),
+		homeDir: '/home/user',
+		cwd: '/home/user/project',
+		...Object.fromEntries(
+			Object.entries(overrides).filter(([k]) => k !== 'prompter' && k !== 'files' && k !== 'commands' && k !== 'authService' && k !== 'apiKeyService')
+		),
+	}
+}
+
+function base64urlEncode(data: string): string {
+	return Buffer.from(data).toString('base64url')
+}
+
+function makeJwt(payload: Record<string, unknown>): string {
+	const header = base64urlEncode(JSON.stringify({ alg: 'none', typ: 'JWT' }))
+	const body = base64urlEncode(JSON.stringify(payload))
+	return `${header}.${body}.signature`
+}
 
 describe('runSetup', () => {
 	describe('happy path', () => {
@@ -269,6 +288,105 @@ describe('runSetup', () => {
 			})
 
 			await expect(runSetup(deps)).rejects.toBeInstanceOf(CommandFailedError)
+		})
+	})
+
+	describe('auth integration', () => {
+		it('already authenticated shows simplified message', async () => {
+			const files = new FakeFileStore()
+			files.seed(
+				'/home/user/.local/share/opencode/auth.json',
+				JSON.stringify({ berget: { type: 'oauth' } }),
+			)
+
+			const deps = makeDeps({
+				prompter: new FakePrompter([
+					select('opencode'),
+					select('project'),
+					select('keep'),          // New: keep existing auth
+					confirm(true, 'Create'),  // Config write
+				]),
+				files,
+			})
+
+			await runSetup(deps)
+
+			const prompter = deps.prompter as FakePrompter
+			const notes = prompter.calls.filter(c => c.method === 'note')
+			const lastNote = notes[notes.length - 1]
+			expect(JSON.stringify(lastNote)).toContain("Run: opencode")
+			expect(JSON.stringify(lastNote)).not.toContain("/connect")
+		})
+
+		it('login failure shows manual auth instructions', async () => {
+			const deps = makeDeps({
+				prompter: new FakePrompter([
+					select('pi'),
+					select('project'),
+					confirm(true, 'Proceed'),
+				]),
+				commands: new FakeCommandRunner()
+					.handle('pi --version', 'mocked')
+					.handle('pi install', ''),
+				authService: new FakeAuthService(false),
+				files: new FakeFileStore(), // No pre-seeded auth → auth flow runs
+			})
+
+			await runSetup(deps)
+
+			const prompter = deps.prompter as FakePrompter
+			const notes = prompter.calls.filter(c => c.method === 'note')
+			const lastNote = notes[notes.length - 1]
+			expect(JSON.stringify(lastNote)).toContain("/login")
+		})
+
+		it('creates api key for pi when no seat', async () => {
+			const files = new FakeFileStore()
+
+			const deps = makeDeps({
+				prompter: new FakePrompter([
+					select('pi'),
+					select('project'),
+					confirm(true), // API key creation prompt
+				]),
+				commands: new FakeCommandRunner()
+					.handle('pi --version', 'mocked')
+					.handle('pi install', ''),
+				authService: new FakeAuthService(true, false), // succeed, no seat
+				files,
+			})
+
+			await runSetup(deps)
+
+			const written = files.getWrittenFiles()
+			expect(written.has('/home/user/.pi/agent/auth.json')).toBe(true)
+			const parsed = JSON.parse(written.get('/home/user/.pi/agent/auth.json')!)
+			expect(parsed.berget.type).toBe('api_key')
+		})
+
+		it('uses subscription when berget_code_seat present', async () => {
+			const files = new FakeFileStore()
+			files.seed('/home/user/.berget/auth.json', JSON.stringify({
+				access_token: makeJwt({ realm_access: { roles: ['berget_code_seat'] } }),
+				refresh_token: 'ref',
+				expires_at: 9999999999999,
+			}))
+
+			const deps = makeDeps({
+				prompter: new FakePrompter([
+					select('opencode'),
+					select('project'),
+					select('subscription'),
+					confirm(true, 'Create'),
+				]),
+				files,
+			})
+
+			await runSetup(deps)
+
+			const written = files.getWrittenFiles()
+			const parsed = JSON.parse(written.get('/home/user/.local/share/opencode/auth.json')!)
+			expect(parsed.berget.type).toBe('oauth')
 		})
 	})
 })

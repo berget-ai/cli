@@ -6,3 +6,4 @@ env
 opencode.json
 tui.json
 opencode.json.tui-migration.bak
+.pi/

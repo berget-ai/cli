@@ -30,4 +30,8 @@ export class FsFileStore implements FileStore {
 	async mkdir(dir: string): Promise<void> {
 		await fs.mkdir(dir, { recursive: true })
 	}
+
+	async chmod(filePath: string, mode: number): Promise<void> {
+		await fs.chmod(filePath, mode)
+	}
 }

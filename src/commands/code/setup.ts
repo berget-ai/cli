@@ -1,8 +1,10 @@
 import type { Prompter } from './ports/prompter'
 import type { FileStore } from './ports/file-store'
 import type { CommandRunner } from './ports/command-runner'
+import type { AuthServicePort, ApiKeyServicePort } from './ports/auth-services'
 import { CancelledError, CommandFailedError, PrerequisiteError } from './errors'
 import { modify, parse, applyEdits } from 'jsonc-parser'
+import { configureAuth } from './auth-sync.js'
 
 const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.16'
 const PI_PROVIDER = 'npm:@bergetai/pi-provider'
@@ -13,12 +15,14 @@ export interface WizardDeps {
     prompter: Prompter
     files: FileStore
     commands: CommandRunner
+    authService: AuthServicePort
+    apiKeyService: ApiKeyServicePort
     homeDir: string
     cwd: string
 }
 
 export async function runSetup(deps: WizardDeps): Promise<void> {
-    const { prompter, files, commands, homeDir, cwd } = deps
+    const { prompter, files, commands, authService, apiKeyService, homeDir, cwd } = deps
 
     prompter.intro('\uD83D\uDD27 Berget Code Setup')
 
@@ -61,12 +65,22 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
         ],
     })
 
+    const authResult = await configureAuth({ prompter, files, authService, apiKeyService, homeDir }, tool)
+
     if (tool === 'opencode') {
         await setupOpenCode({ prompter, files, commands, homeDir, cwd, scope })
-        prompter.note(`Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   \u2022 "Login with Berget" \u2014 Berget Code plan\n   \u2022 "Enter Berget API Key manually"\n   \u2022 (or set BERGET_API_KEY env var)\n4. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`, 'Successfully configured Berget AI for OpenCode')
+        if (authResult.authenticated) {
+            prompter.note(`You're all set!\n\n1. Run: opencode\n2. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`, 'Successfully configured Berget AI for OpenCode')
+        } else {
+            prompter.note(`Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   \u2022 "Login with Berget" \u2014 Berget Code plan\n   \u2022 "Enter Berget API Key manually"\n   \u2022 (or set BERGET_API_KEY env var)\n4. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`, 'Successfully configured Berget AI for OpenCode')
+        }
     } else {
         await setupPi({ prompter, files, commands, homeDir, cwd, scope })
-        prompter.note(`Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   \u2022 "Use a subscription" \u2192 Berget AI\n   \u2022 (or set BERGET_API_KEY env var)\n4. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`, 'Successfully configured Berget AI for Pi')
+        if (authResult.authenticated) {
+            prompter.note(`You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`, 'Successfully configured Berget AI for Pi')
+        } else {
+            prompter.note(`Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   \u2022 "Use a subscription" \u2192 Berget AI\n   \u2022 (or set BERGET_API_KEY env var)\n4. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`, 'Successfully configured Berget AI for Pi')
+        }
     }
 
     prompter.outro('Setup complete!')
@@ -374,6 +388,8 @@ function generateModifiedContent(existingContent: string | null, configPath: str
 import { ClackPrompter } from './adapters/clack-prompter.js'
 import { FsFileStore } from './adapters/fs-file-store.js'
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js'
+import { AuthService } from '../../services/auth-service.js'
+import { ApiKeyService } from '../../services/api-key-service.js'
 import * as os from 'os'
 
 export async function runSetupCommand(): Promise<void> {
@@ -382,9 +398,12 @@ export async function runSetupCommand(): Promise<void> {
             prompter: new ClackPrompter(),
             files: new FsFileStore(),
             commands: new SpawnCommandRunner(),
+            authService: AuthService.getInstance(),
+            apiKeyService: ApiKeyService.getInstance(),
             homeDir: os.homedir(),
             cwd: process.cwd(),
         })
+        process.exit(0)
     } catch (err) {
         if (err instanceof CancelledError) {
             process.exit(130)
