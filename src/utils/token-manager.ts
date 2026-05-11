@@ -63,7 +63,7 @@ export class TokenManager {
         const data = fs.readFileSync(this.tokenFilePath, "utf8");
         this.tokenData = JSON.parse(data);
       }
-    } catch (error) {
+    } catch {
       logger.error("Failed to load authentication token");
       this.tokenData = null;
     }
@@ -84,7 +84,7 @@ export class TokenManager {
           fs.unlinkSync(this.tokenFilePath);
         }
       }
-    } catch (error) {
+    } catch {
       logger.error("Failed to save authentication token");
     }
   }

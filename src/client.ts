@@ -146,7 +146,7 @@ export const createAuthenticatedClient = () => {
               ) {
                 isAuthError = true;
               }
-            } catch (parseError) {
+            } catch {
               // If we can't parse the error structure, do a simple string check
               const errorStr = String(result.error);
               if (

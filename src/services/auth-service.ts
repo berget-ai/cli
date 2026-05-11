@@ -54,7 +54,7 @@ export class AuthService {
         return null;
       }
       return profile;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

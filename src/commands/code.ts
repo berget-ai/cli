@@ -52,7 +52,7 @@ function getProjectName(): string {
       const packageJson = JSON.parse(packageJsonContent);
       return packageJson.name || path.basename(process.cwd());
     }
-  } catch (error) {
+  } catch {
     // Ignore error and fallback to directory name
   }
   return path.basename(process.cwd());
@@ -288,7 +288,7 @@ export function registerCodeCommands(program: Command): void {
             console.log(
               chalk.dim(`Models: Analysis=${config.analysisModel}, Build=${config.buildModel}`)
             );
-          } catch (error) {
+          } catch {
             console.log(chalk.yellow("Warning: Failed to load opencode.json"));
           }
         }
@@ -613,15 +613,15 @@ See https://opencode.ai/docs/agents/ for available options.
             try {
               await writeFile(configPath, JSON.stringify(currentConfig, null, 2));
               console.log(chalk.yellow("📁 Restored original configuration from backup"));
-            } catch (restoreError) {
+            } catch {
               console.error(chalk.red("Failed to restore backup:"));
             }
           }
         } else {
           console.log(chalk.yellow("Update cancelled."));
         }
-      } catch (error) {
-        handleError("Failed to update OpenCode configuration", error);
+      } catch {
+        console.error(chalk.red("Failed to update OpenCode configuration"));
       }
     });
 }

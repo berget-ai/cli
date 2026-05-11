@@ -96,7 +96,7 @@ export class ChatService {
       if (hasValidAuth && !hasExplicitApiKey) {
         logger.debug("Using authenticated client with refresh token support");
         // Create a copy without apiKey to let the authenticated client handle auth automatically
-        const { apiKey, ...optionsWithoutKey } = optionsCopy;
+        const { apiKey: _apiKey, ...optionsWithoutKey } = optionsCopy;
         return this.executeCompletion(optionsWithoutKey, {});
       }
 
@@ -201,7 +201,7 @@ export class ChatService {
           if (parsedError.error && parsedError.error.message) {
             errorMessage = `Chat error: ${parsedError.error.message}`;
           }
-        } catch (e) {
+        } catch {
           // If parsing fails, use the original error message
           errorMessage = `Chat error: ${error.message}`;
         }
@@ -230,7 +230,7 @@ export class ChatService {
       }
 
       // Remove apiKey and onChunk from options before sending to API
-      const { apiKey, onChunk, ...requestOptions } = options;
+      const { apiKey: _apiKey, onChunk: _onChunk, ...requestOptions } = options;
 
       logger.debug("Request options:");
       logger.debug(
@@ -542,7 +542,7 @@ export class ChatService {
                 : parsedError.error.message || JSON.stringify(parsedError.error)
             }`;
           }
-        } catch (e) {
+        } catch {
           // If parsing fails, use the original error message
           errorMessage = `Models error: ${error.message}`;
         }

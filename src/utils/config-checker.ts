@@ -16,7 +16,7 @@ export function checkBergetConfig(): void {
         console.log("✓ kubectl config updated");
         console.log("");
       }
-    } catch (error) {
+    } catch {
       // Silently ignore errors reading config
     }
   }

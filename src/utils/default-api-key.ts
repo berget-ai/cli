@@ -46,7 +46,7 @@ export class DefaultApiKeyManager {
         const data = fs.readFileSync(this.configFilePath, "utf8");
         this.defaultApiKey = JSON.parse(data);
       }
-    } catch (error) {
+    } catch {
       logger.debug("Failed to load default API key configuration");
       this.defaultApiKey = null;
     }
@@ -67,7 +67,7 @@ export class DefaultApiKeyManager {
           fs.unlinkSync(this.configFilePath);
         }
       }
-    } catch (error) {
+    } catch {
       logger.debug("Failed to save default API key configuration");
     }
   }

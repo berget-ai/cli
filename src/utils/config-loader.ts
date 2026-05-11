@@ -110,7 +110,7 @@ export class ConfigLoader {
     try {
       const config = this.loadConfig();
       return config.agent?.[agentName] || null;
-    } catch (error) {
+    } catch {
       // Config file doesn't exist, return null
       return null;
     }
@@ -123,7 +123,7 @@ export class ConfigLoader {
     try {
       const config = this.loadConfig();
       return config.agent || {};
-    } catch (error) {
+    } catch {
       // Config file doesn't exist, return empty object
       return {};
     }
@@ -141,7 +141,7 @@ export class ConfigLoader {
       const small = config.small_model || "berget/gpt-oss";
 
       return { primary, small };
-    } catch (error) {
+    } catch {
       // Fallback to defaults when no config exists (init scenario)
       return {
         primary: "berget/glm-4.7",
@@ -161,7 +161,7 @@ export class ConfigLoader {
       if (config.provider?.berget?.models) {
         return config.provider.berget.models as Record<string, ProviderModelConfig>;
       }
-    } catch (error) {
+    } catch {
       // Config file doesn't exist, use fallback defaults
     }
 
@@ -193,7 +193,7 @@ export class ConfigLoader {
     try {
       const config = this.loadConfig();
       return config.command || {};
-    } catch (error) {
+    } catch {
       // Config file doesn't exist, return empty object
       return {};
     }
@@ -210,7 +210,7 @@ export class ConfigLoader {
           ignore: ["node_modules", "dist", ".git", "coverage"],
         }
       );
-    } catch (error) {
+    } catch {
       // Config file doesn't exist, return default watcher config
       return { ignore: ["node_modules", "dist", ".git", "coverage"] };
     }
@@ -223,7 +223,7 @@ export class ConfigLoader {
     try {
       const config = this.loadConfig();
       return config.provider || {};
-    } catch (error) {
+    } catch {
       // Config file doesn't exist, return empty object
       return {};
     }

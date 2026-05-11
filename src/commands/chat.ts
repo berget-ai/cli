@@ -176,7 +176,7 @@ export function registerChatCommands(program: Command): void {
         if (!apiKey) {
           try {
             AuthService.getInstance();
-          } catch (error) {
+          } catch {
             console.log(chalk.red("Error: Authentication required for chat"));
             console.log(chalk.yellow("Please either:"));
             console.log(chalk.yellow("1. Log in with `berget auth login`"));

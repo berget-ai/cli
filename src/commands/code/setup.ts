@@ -190,7 +190,7 @@ async function setupPi(deps: {
   try {
     await commands.run("pi", installArgs);
     s.stop("Installed Pi provider.");
-  } catch (err: any) {
+  } catch {
     s.stop("Pi provider installation failed. Please try again or install manually.");
     throw new CommandFailedError(`pi ${installArgs.join(" ")}`, 1);
   }
