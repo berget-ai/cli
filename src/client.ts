@@ -1,67 +1,64 @@
-import createClient from 'openapi-fetch'
-import type { paths } from './types/api'
-import * as fs from 'fs'
-import * as path from 'path'
-import * as os from 'os'
-import chalk from 'chalk'
-import { TokenManager } from './utils/token-manager'
-import { logger } from './utils/logger'
+import createClient from "openapi-fetch";
+import type { paths } from "./types/api";
+import chalk from "chalk";
+import { TokenManager } from "./utils/token-manager";
+import { logger } from "./utils/logger";
 
 // API Base URL
 // Use --local flag to test against local API
 // Use --stage flag to test against stage API
-const isLocalMode = process.argv.includes('--local')
-const isStageMode = process.argv.includes('--stage')
+const isLocalMode = process.argv.includes("--local");
+const isStageMode = process.argv.includes("--stage");
 
 export const API_BASE_URL =
   process.env.BERGET_API_URL ||
-  (isLocalMode ? 'http://localhost:3000' :
-   isStageMode ? 'https://api.stage.berget.ai' :
-   'https://api.berget.ai') // production default
+  (isLocalMode
+    ? "http://localhost:3000"
+    : isStageMode
+      ? "https://api.stage.berget.ai"
+      : "https://api.berget.ai"); // production default
 
 if (isLocalMode && !process.env.BERGET_API_URL) {
-  logger.debug('Using local API endpoint: http://localhost:3000')
+  logger.debug("Using local API endpoint: http://localhost:3000");
 } else if (isStageMode && !process.env.BERGET_API_URL) {
-  logger.debug('Using stage API endpoint: https://api.stage.berget.ai')
+  logger.debug("Using stage API endpoint: https://api.stage.berget.ai");
 }
 
 // Create a typed client for the Berget API
 export const apiClient = createClient<paths>({
   baseUrl: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
-})
+});
 
 // Authentication functions
 export const getAuthToken = (): string | null => {
-  const tokenManager = TokenManager.getInstance()
-  return tokenManager.getAccessToken()
-}
+  const tokenManager = TokenManager.getInstance();
+  return tokenManager.getAccessToken();
+};
 
 export const saveAuthToken = (
   accessToken: string,
   refreshToken: string,
-  expiresIn: number = 3600,
+  expiresIn: number = 3600
 ): void => {
-  const tokenManager = TokenManager.getInstance()
-  tokenManager.setTokens(accessToken, refreshToken, expiresIn)
-}
+  const tokenManager = TokenManager.getInstance();
+  tokenManager.setTokens(accessToken, refreshToken, expiresIn);
+};
 
 export const clearAuthToken = (): void => {
-  const tokenManager = TokenManager.getInstance()
-  tokenManager.clearTokens()
-}
+  const tokenManager = TokenManager.getInstance();
+  tokenManager.clearTokens();
+};
 
 // Create an authenticated client with refresh token support
 export const createAuthenticatedClient = () => {
-  const tokenManager = TokenManager.getInstance()
+  const tokenManager = TokenManager.getInstance();
 
   if (!tokenManager.getAccessToken()) {
-    logger.debug(
-      'No authentication token found. Please run `berget auth login` first.',
-    )
+    logger.debug("No authentication token found. Please run `berget auth login` first.");
   }
 
   // Create the base client
@@ -70,268 +67,229 @@ export const createAuthenticatedClient = () => {
     headers: tokenManager.getAccessToken()
       ? {
           Authorization: `Bearer ${tokenManager.getAccessToken()}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+          "Content-Type": "application/json",
+          Accept: "application/json",
         }
       : {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-  })
+  });
 
   // Wrap the client to handle token refresh
   return new Proxy(client, {
     get(target, prop: string | symbol) {
       // For HTTP methods (GET, POST, etc.), add token refresh logic
       if (
-        typeof target[prop as keyof typeof target] === 'function' &&
-        ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(String(prop))
+        typeof target[prop as keyof typeof target] === "function" &&
+        ["GET", "POST", "PUT", "DELETE", "PATCH"].includes(String(prop))
       ) {
         return async (...args: any[]) => {
           // Check if token is expired before making the request
           if (tokenManager.isTokenExpired() && tokenManager.getRefreshToken()) {
-            await refreshAccessToken(tokenManager)
+            await refreshAccessToken(tokenManager);
           }
 
           // Update the Authorization header with the current token
-          if (
-            !args[1]?.headers?.Authorization &&
-            tokenManager.getAccessToken()
-          ) {
-            if (!args[1]) args[1] = {}
-            if (!args[1].headers) args[1].headers = {}
-            args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
+          if (!args[1]?.headers?.Authorization && tokenManager.getAccessToken()) {
+            if (!args[1]) args[1] = {};
+            if (!args[1].headers) args[1].headers = {};
+            args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
           }
 
           // Make the original request
-          let result
+          let result;
           try {
-            result = await (target[prop as keyof typeof target] as Function)(
-              ...args,
-            )
+            result = await (target[prop as keyof typeof target] as Function)(...args);
           } catch (requestError) {
             logger.debug(
               `Request error: ${
-                requestError instanceof Error
-                  ? requestError.message
-                  : String(requestError)
-              }`,
-            )
+                requestError instanceof Error ? requestError.message : String(requestError)
+              }`
+            );
             return {
               error: {
                 message: `Request failed: ${
-                  requestError instanceof Error
-                    ? requestError.message
-                    : String(requestError)
+                  requestError instanceof Error ? requestError.message : String(requestError)
                 }`,
               },
-            }
+            };
           }
 
           // If we get an auth error, try to refresh the token and retry
           if (result.error) {
             // Detect various forms of authentication errors
-            let isAuthError = false
+            let isAuthError = false;
 
             try {
               // Standard 401 Unauthorized
-              if (
-                typeof result.error === 'object' &&
-                result.error.status === 401
-              ) {
-                isAuthError = true
+              if (typeof result.error === "object" && result.error.status === 401) {
+                isAuthError = true;
               }
               // OAuth specific errors
               else if (
                 result.error.error &&
-                (result.error.error.code === 'invalid_token' ||
-                  result.error.error.code === 'token_expired' ||
-                  result.error.error.message === 'Invalid API key' ||
-                  result.error.error.message?.toLowerCase().includes('token') ||
-                  result.error.error.message
-                    ?.toLowerCase()
-                    .includes('unauthorized'))
+                (result.error.error.code === "invalid_token" ||
+                  result.error.error.code === "token_expired" ||
+                  result.error.error.message === "Invalid API key" ||
+                  result.error.error.message?.toLowerCase().includes("token") ||
+                  result.error.error.message?.toLowerCase().includes("unauthorized"))
               ) {
-                isAuthError = true
+                isAuthError = true;
               }
               // Message-based detection as fallback
               else if (
-                typeof result.error === 'string' &&
-                (result.error.toLowerCase().includes('unauthorized') ||
-                  result.error.toLowerCase().includes('token') ||
-                  result.error.toLowerCase().includes('auth'))
+                typeof result.error === "string" &&
+                (result.error.toLowerCase().includes("unauthorized") ||
+                  result.error.toLowerCase().includes("token") ||
+                  result.error.toLowerCase().includes("auth"))
               ) {
-                isAuthError = true
+                isAuthError = true;
               }
             } catch (parseError) {
               // If we can't parse the error structure, do a simple string check
-              const errorStr = String(result.error)
+              const errorStr = String(result.error);
               if (
-                errorStr.toLowerCase().includes('unauthorized') ||
-                errorStr.toLowerCase().includes('token') ||
-                errorStr.toLowerCase().includes('auth')
+                errorStr.toLowerCase().includes("unauthorized") ||
+                errorStr.toLowerCase().includes("token") ||
+                errorStr.toLowerCase().includes("auth")
               ) {
-                isAuthError = true
+                isAuthError = true;
               }
             }
 
             if (isAuthError && tokenManager.getRefreshToken()) {
-              logger.debug('Auth error detected, attempting token refresh')
-              logger.debug(
-                `Error details: ${JSON.stringify(result.error, null, 2)}`,
-              )
+              logger.debug("Auth error detected, attempting token refresh");
+              logger.debug(`Error details: ${JSON.stringify(result.error, null, 2)}`);
 
-              const refreshed = await refreshAccessToken(tokenManager)
+              const refreshed = await refreshAccessToken(tokenManager);
               if (refreshed) {
-                logger.debug('Token refreshed successfully, retrying request')
+                logger.debug("Token refreshed successfully, retrying request");
 
                 // Update the Authorization header with the new token
-                if (!args[1]) args[1] = {}
-                if (!args[1].headers) args[1].headers = {}
-                args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`
+                if (!args[1]) args[1] = {};
+                if (!args[1].headers) args[1].headers = {};
+                args[1].headers.Authorization = `Bearer ${tokenManager.getAccessToken()}`;
 
                 // Retry the request
-                return await (target[prop as keyof typeof target] as Function)(
-                  ...args,
-                )
+                return await (target[prop as keyof typeof target] as Function)(...args);
               } else {
-                logger.debug('Token refresh failed')
+                logger.debug("Token refresh failed");
 
                 // Add a more helpful error message for users
-                if (typeof result.error === 'object') {
+                if (typeof result.error === "object") {
                   result.error.userMessage =
-                    'Your session has expired. Please run `berget auth login` to log in again.'
+                    "Your session has expired. Please run `berget auth login` to log in again.";
                 }
               }
             }
           }
 
-          return result
-        }
+          return result;
+        };
       }
 
       // For other properties, just return the original
-      return target[prop as keyof typeof target]
+      return target[prop as keyof typeof target];
     },
-  })
-}
+  });
+};
 
 // Keycloak configuration for token refresh (must match auth-service.ts)
-const KEYCLOAK_URL = (isStageMode || isLocalMode)
-  ? 'https://keycloak.stage.berget.ai'
-  : 'https://keycloak.berget.ai'
-const KEYCLOAK_REALM = 'berget'
-const KEYCLOAK_CLIENT_ID = 'berget-code'
+const KEYCLOAK_URL =
+  isStageMode || isLocalMode ? "https://keycloak.stage.berget.ai" : "https://keycloak.berget.ai";
+const KEYCLOAK_REALM = "berget";
+const KEYCLOAK_CLIENT_ID = "berget-code";
 
 // Helper function to refresh the access token
-async function refreshAccessToken(
-  tokenManager: TokenManager,
-): Promise<boolean> {
+async function refreshAccessToken(tokenManager: TokenManager): Promise<boolean> {
   try {
-    const refreshToken = tokenManager.getRefreshToken()
-    if (!refreshToken) return false
+    const refreshToken = tokenManager.getRefreshToken();
+    if (!refreshToken) return false;
 
-    logger.debug('Attempting to refresh access token')
+    logger.debug("Attempting to refresh access token");
 
     // Refresh directly against Keycloak (berget-code is a public PKCE client)
     try {
       const response = await fetch(
         `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            "Content-Type": "application/x-www-form-urlencoded",
           },
           body: new URLSearchParams({
-            grant_type: 'refresh_token',
+            grant_type: "refresh_token",
             client_id: KEYCLOAK_CLIENT_ID,
             refresh_token: refreshToken,
           }),
-        },
-      )
+        }
+      );
 
       // Handle HTTP errors
       if (!response.ok) {
-        logger.debug(
-          `Token refresh error: HTTP ${response.status} ${response.statusText}`,
-        )
+        logger.debug(`Token refresh error: HTTP ${response.status} ${response.statusText}`);
 
         // Check if the refresh token itself is expired or invalid
         if (response.status === 401 || response.status === 403) {
           console.warn(
-            chalk.yellow(
-              'Your refresh token has expired. Please run `berget auth login` again.',
-            ),
-          )
+            chalk.yellow("Your refresh token has expired. Please run `berget auth login` again.")
+          );
           // Clear tokens if unauthorized - they're invalid
-          tokenManager.clearTokens()
+          tokenManager.clearTokens();
         } else {
           console.warn(
-            chalk.yellow(
-              `Failed to refresh token: ${response.status} ${response.statusText}`,
-            ),
-          )
+            chalk.yellow(`Failed to refresh token: ${response.status} ${response.statusText}`)
+          );
         }
-        return false
+        return false;
       }
 
       // Parse the response
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        console.warn(
-          chalk.yellow(`Unexpected content type in response: ${contentType}`),
-        )
-        return false
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.warn(chalk.yellow(`Unexpected content type in response: ${contentType}`));
+        return false;
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       // Validate the response data
       if (!data || !data.token) {
-        console.warn(
-          chalk.yellow(
-            'Invalid token response. Please run `berget auth login` again.',
-          ),
-        )
-        return false
+        console.warn(chalk.yellow("Invalid token response. Please run `berget auth login` again."));
+        return false;
       }
 
-      logger.debug('Token refreshed successfully')
+      logger.debug("Token refreshed successfully");
 
       // Update the token
-      tokenManager.updateAccessToken(data.token, data.expires_in || 3600)
+      tokenManager.updateAccessToken(data.token, data.expires_in || 3600);
 
       // If a new refresh token was provided, update that too
       if (data.refresh_token) {
-        tokenManager.setTokens(
-          data.token,
-          data.refresh_token,
-          data.expires_in || 3600,
-        )
-        logger.debug('Refresh token also updated')
+        tokenManager.setTokens(data.token, data.refresh_token, data.expires_in || 3600);
+        logger.debug("Refresh token also updated");
       }
     } catch (fetchError) {
       console.warn(
         chalk.yellow(
           `Failed to refresh token: ${
-            fetchError instanceof Error
-              ? fetchError.message
-              : String(fetchError)
-          }`,
-        ),
-      )
-      return false
+            fetchError instanceof Error ? fetchError.message : String(fetchError)
+          }`
+        )
+      );
+      return false;
     }
 
-    return true
+    return true;
   } catch (error) {
     console.warn(
       chalk.yellow(
         `Failed to refresh authentication token: ${
           error instanceof Error ? error.message : String(error)
-        }`,
-      ),
-    )
-    return false
+        }`
+      )
+    );
+    return false;
   }
 }

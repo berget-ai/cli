@@ -1,10 +1,10 @@
-import { Agent } from './types.js'
+import { Agent } from "./types.js";
 
 export const agent: Agent = {
   config: {
-    name: 'frontend',
-    description: 'Scandinavian, type-safe UIs with React, Tailwind, and Shadcn',
-    mode: 'primary',
+    name: "frontend",
+    description: "Scandinavian, type-safe UIs with React, Tailwind, and Shadcn",
+    mode: "primary",
   },
   systemPrompt: `# Frontend Agent
 
@@ -21,4 +21,4 @@ Builds Scandinavian, type-safe UIs with React, Tailwind, and Shadcn.
 - Design system integration
 - Semantic tokens and accessibility
 - Props-first component architecture`,
-}
+};

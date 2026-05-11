@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from "chalk";
 
 /**
  * Log levels in order of increasing verbosity
@@ -15,25 +15,25 @@ export enum LogLevel {
  * Logger class for centralized logging with configurable log levels
  */
 export class Logger {
-  private static instance: Logger
-  private logLevel: LogLevel = LogLevel.INFO // Default log level
+  private static instance: Logger;
+  private logLevel: LogLevel = LogLevel.INFO; // Default log level
 
   private constructor() {
     // Set log level from environment variable or command line argument
     if (process.env.LOG_LEVEL) {
-      this.setLogLevelFromString(process.env.LOG_LEVEL)
-    } else if (process.argv.includes('--debug')) {
-      this.logLevel = LogLevel.DEBUG
-    } else if (process.argv.includes('--quiet')) {
-      this.logLevel = LogLevel.ERROR
+      this.setLogLevelFromString(process.env.LOG_LEVEL);
+    } else if (process.argv.includes("--debug")) {
+      this.logLevel = LogLevel.DEBUG;
+    } else if (process.argv.includes("--quiet")) {
+      this.logLevel = LogLevel.ERROR;
     }
   }
 
   public static getInstance(): Logger {
     if (!Logger.instance) {
-      Logger.instance = new Logger()
+      Logger.instance = new Logger();
     }
-    return Logger.instance
+    return Logger.instance;
   }
 
   /**
@@ -41,24 +41,24 @@ export class Logger {
    */
   private setLogLevelFromString(level: string): void {
     switch (level.toLowerCase()) {
-      case 'none':
-        this.logLevel = LogLevel.NONE
-        break
-      case 'error':
-        this.logLevel = LogLevel.ERROR
-        break
-      case 'warn':
-        this.logLevel = LogLevel.WARN
-        break
-      case 'info':
-        this.logLevel = LogLevel.INFO
-        break
-      case 'debug':
-        this.logLevel = LogLevel.DEBUG
-        break
+      case "none":
+        this.logLevel = LogLevel.NONE;
+        break;
+      case "error":
+        this.logLevel = LogLevel.ERROR;
+        break;
+      case "warn":
+        this.logLevel = LogLevel.WARN;
+        break;
+      case "info":
+        this.logLevel = LogLevel.INFO;
+        break;
+      case "debug":
+        this.logLevel = LogLevel.DEBUG;
+        break;
       default:
         // Invalid log level, keep default
-        console.warn(`Invalid log level: ${level}. Using default (INFO).`)
+        console.warn(`Invalid log level: ${level}. Using default (INFO).`);
     }
   }
 
@@ -66,14 +66,14 @@ export class Logger {
    * Set the log level
    */
   public setLogLevel(level: LogLevel): void {
-    this.logLevel = level
+    this.logLevel = level;
   }
 
   /**
    * Get the current log level
    */
   public getLogLevel(): LogLevel {
-    return this.logLevel
+    return this.logLevel;
   }
 
   /**
@@ -82,9 +82,9 @@ export class Logger {
   public debug(message: string, ...args: any[]): void {
     if (this.logLevel >= LogLevel.DEBUG) {
       if (args.length > 0) {
-        console.log(chalk.yellow(`DEBUG: ${message}`), ...args)
+        console.log(chalk.yellow(`DEBUG: ${message}`), ...args);
       } else {
-        console.log(chalk.yellow(`DEBUG: ${message}`))
+        console.log(chalk.yellow(`DEBUG: ${message}`));
       }
     }
   }
@@ -95,9 +95,9 @@ export class Logger {
   public info(message: string, ...args: any[]): void {
     if (this.logLevel >= LogLevel.INFO) {
       if (args.length > 0) {
-        console.log(chalk.blue(message), ...args)
+        console.log(chalk.blue(message), ...args);
       } else {
-        console.log(chalk.blue(message))
+        console.log(chalk.blue(message));
       }
     }
   }
@@ -108,9 +108,9 @@ export class Logger {
   public warn(message: string, ...args: any[]): void {
     if (this.logLevel >= LogLevel.WARN) {
       if (args.length > 0) {
-        console.log(chalk.yellow(message), ...args)
+        console.log(chalk.yellow(message), ...args);
       } else {
-        console.log(chalk.yellow(message))
+        console.log(chalk.yellow(message));
       }
     }
   }
@@ -121,9 +121,9 @@ export class Logger {
   public error(message: string, ...args: any[]): void {
     if (this.logLevel >= LogLevel.ERROR) {
       if (args.length > 0) {
-        console.error(chalk.red(message), ...args)
+        console.error(chalk.red(message), ...args);
       } else {
-        console.error(chalk.red(message))
+        console.error(chalk.red(message));
       }
     }
   }
@@ -134,9 +134,9 @@ export class Logger {
   public success(message: string, ...args: any[]): void {
     if (this.logLevel >= LogLevel.INFO) {
       if (args.length > 0) {
-        console.log(chalk.green(message), ...args)
+        console.log(chalk.green(message), ...args);
       } else {
-        console.log(chalk.green(message))
+        console.log(chalk.green(message));
       }
     }
   }
@@ -147,13 +147,13 @@ export class Logger {
   public log(message: string, ...args: any[]): void {
     if (this.logLevel >= LogLevel.INFO) {
       if (args.length > 0) {
-        console.log(message, ...args)
+        console.log(message, ...args);
       } else {
-        console.log(message)
+        console.log(message);
       }
     }
   }
 }
 
 // Export a singleton instance for easy import
-export const logger = Logger.getInstance()
+export const logger = Logger.getInstance();

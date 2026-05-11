@@ -109,17 +109,20 @@ metadata:
 ## 🔥 CONSEQUENCES OF USING kubectl apply
 
 **Immediate Impact:**
+
 - FluxCD loses track of the resource
 - Future Git commits may not apply correctly
 - Resource becomes "orphaned" from GitOps control
 
 **Long-term Damage:**
+
 - Cluster drift becomes undetectable
 - Rollback capabilities are compromised
 - Audit trail is broken
 - Team loses trust in GitOps process
 
 **Recovery Required:**
+
 - Manual intervention to restore FluxCD metadata
 - Potential resource recreation
 - Downtime during recovery
@@ -191,7 +194,7 @@ flux resume kustomization app-name
 ### 💡 MINNESREGEL
 
 > **"Git first, kubectl never"**
-> 
+>
 > Om du måste använda `kubectl apply` - gör det inte. Gör en ändring i Git istället.
 
 ### 📋 CHECKLIST FÖR ÄNDRINGAR
@@ -207,7 +210,7 @@ flux resume kustomization app-name
 ### 💡 MINNESREGEL
 
 > **"Git first, kubectl never"**
-> 
+>
 > Om du måste använda `kubectl apply` - gör det inte. Gör en ändring i Git istället.
 
 ### 📋 CHECKLIST FÖR ÄNDRINGAR

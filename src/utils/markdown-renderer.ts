@@ -1,6 +1,6 @@
-import { marked } from 'marked'
-import TerminalRenderer from 'marked-terminal'
-import chalk from 'chalk'
+import { marked } from "marked";
+import TerminalRenderer from "marked-terminal";
+import chalk from "chalk";
 
 // Configure marked to use the terminal renderer
 marked.setOptions({
@@ -20,7 +20,7 @@ marked.setOptions({
     // Customize code block rendering
     codespan: chalk.cyan,
   }),
-})
+});
 
 /**
  * Render markdown text to terminal-friendly formatted text
@@ -28,15 +28,15 @@ marked.setOptions({
  * @returns Formatted text for terminal display
  */
 export function renderMarkdown(markdown: string): string {
-  if (!markdown) return ''
+  if (!markdown) return "";
 
   try {
     // Convert markdown to terminal-friendly text
-    return marked(markdown)
+    return marked(markdown);
   } catch (error) {
     // If rendering fails, return the original text
-    console.error(`Error rendering markdown: ${error}`)
-    return markdown
+    console.error(`Error rendering markdown: ${error}`);
+    return markdown;
   }
 }
 
@@ -46,7 +46,7 @@ export function renderMarkdown(markdown: string): string {
  * @returns True if the text contains markdown formatting
  */
 export function containsMarkdown(text: string): boolean {
-  if (!text) return false
+  if (!text) return false;
 
   // Check for common markdown patterns
   const markdownPatterns = [
@@ -62,7 +62,7 @@ export function containsMarkdown(text: string): boolean {
     /\|.*\|.*\|/, // Tables
     /^---+$/m, // Horizontal rules
     /^===+$/m, // Alternative headers
-  ]
+  ];
 
-  return markdownPatterns.some((pattern) => pattern.test(text))
+  return markdownPatterns.some(pattern => pattern.test(text));
 }

@@ -1,10 +1,10 @@
-import { Agent } from './types.js'
+import { Agent } from "./types.js";
 
 export const agent: Agent = {
   config: {
-    name: 'fullstack',
-    description: 'Router/coordinator agent for full-stack development',
-    mode: 'primary',
+    name: "fullstack",
+    description: "Router/coordinator agent for full-stack development",
+    mode: "primary",
   },
   systemPrompt: `# Fullstack Agent
 
@@ -21,4 +21,4 @@ Router/coordinator agent for full-stack development with schema-driven architect
 - Schema-driven development (database → OpenAPI → types)
 - Automatic routing to appropriate persona
 - Tech stack discovery and recommendations`,
-}
+};

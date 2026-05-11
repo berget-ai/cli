@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-import { program, Option } from 'commander'
-import { registerCommands } from './src/commands'
-import { checkBergetConfig } from './src/utils/config-checker'
-import chalk from 'chalk'
-import { version } from './package.json'
-process.env.DOTENV_CONFIG_OVERRIDE = 'true'
-import 'dotenv/config'
+import { program, Option } from "commander";
+import { registerCommands } from "./src/commands";
+import { checkBergetConfig } from "./src/utils/config-checker";
+import chalk from "chalk";
+import { version } from "./package.json";
+process.env.DOTENV_CONFIG_OVERRIDE = "true";
+import "dotenv/config";
 
 // Set version and description
 program
-  .name('berget')
+  .name("berget")
   .description(
     `______                     _      ___  _____ 
 | ___ \\                   | |    / _ \\|_   _|
@@ -22,70 +22,64 @@ program
                 |___/   AI on European terms
 Version: ${version}`
   )
-  .version(version, '-v, --version')
-  .addOption(new Option('--local').default(false).hideHelp())
-  .addOption(new Option('--stage').default(false).hideHelp())
-  .option('--debug', 'Enable debug output', false)
+  .version(version, "-v, --version")
+  .addOption(new Option("--local").default(false).hideHelp())
+  .addOption(new Option("--stage").default(false).hideHelp())
+  .option("--debug", "Enable debug output", false);
 
 // Register all commands
-registerCommands(program)
+registerCommands(program);
 
 // Check for .bergetconfig if not running a command
 if (process.argv.length <= 2) {
-  checkBergetConfig()
+  checkBergetConfig();
 
   // Show the full help (including logo and commands)
-  program.outputHelp()
-  process.exit(0)
+  program.outputHelp();
+  process.exit(0);
 }
 
 // Add helpful suggestions for common command mistakes
 const commonMistakes: Record<string, string> = {
-  login: 'auth login',
-  logout: 'auth logout',
-  whoami: 'auth whoami',
-  'list-models': 'models list',
-  'list-keys': 'api-keys list',
-  'create-key': 'api-keys create',
-  'list-clusters': 'clusters list',
-  usage: 'billing usage',
-  init: 'code init',
-}
+  login: "auth login",
+  logout: "auth logout",
+  whoami: "auth whoami",
+  "list-models": "models list",
+  "list-keys": "api-keys list",
+  "create-key": "api-keys create",
+  "list-clusters": "clusters list",
+  usage: "billing usage",
+  init: "code init",
+};
 
 // Add error handler for unknown commands
-program.on('command:*', (operands) => {
-  const unknownCommand = operands[0] as string
-  console.error(chalk.red(`Error: unknown command '${unknownCommand}'`))
+program.on("command:*", operands => {
+  const unknownCommand = operands[0] as string;
+  console.error(chalk.red(`Error: unknown command '${unknownCommand}'`));
 
   // Check if this is a known mistake and suggest the correct command
   if (unknownCommand in commonMistakes) {
     console.log(
-      chalk.yellow(
-        `Did you mean? ${chalk.bold(
-          `berget ${commonMistakes[unknownCommand]}`
-        )}`
-      )
-    )
+      chalk.yellow(`Did you mean? ${chalk.bold(`berget ${commonMistakes[unknownCommand]}`)}`)
+    );
   } else {
     // Try to find similar commands
-    const availableCommands = program.commands.map((cmd) => cmd.name())
+    const availableCommands = program.commands.map(cmd => cmd.name());
     const similarCommands = availableCommands.filter(
-      (cmd) => cmd.includes(unknownCommand) || unknownCommand.includes(cmd)
-    )
+      cmd => cmd.includes(unknownCommand) || unknownCommand.includes(cmd)
+    );
 
     if (similarCommands.length > 0) {
-      console.log(chalk.yellow('Similar commands:'))
-      similarCommands.forEach((cmd) => {
-        console.log(chalk.yellow(`  ${chalk.bold(`berget ${cmd}`)}`))
-      })
+      console.log(chalk.yellow("Similar commands:"));
+      similarCommands.forEach(cmd => {
+        console.log(chalk.yellow(`  ${chalk.bold(`berget ${cmd}`)}`));
+      });
     }
 
-    console.log(
-      chalk.blue('\nRun `berget --help` for a list of available commands.')
-    )
+    console.log(chalk.blue("\nRun `berget --help` for a list of available commands."));
   }
 
-  process.exit(1)
-})
+  process.exit(1);
+});
 
-program.parse(process.argv)
+program.parse(process.argv);

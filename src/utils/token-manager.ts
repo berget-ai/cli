@@ -1,13 +1,13 @@
-import * as fs from 'fs'
-import * as path from 'path'
-import * as os from 'os'
-import chalk from 'chalk'
-import { logger } from './logger'
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import chalk from "chalk";
+import { logger } from "./logger";
 
 interface TokenData {
-  access_token: string
-  refresh_token: string
-  expires_at: number // timestamp in milliseconds
+  access_token: string;
+  refresh_token: string;
+  expires_at: number; // timestamp in milliseconds
 }
 
 /**
@@ -17,42 +17,42 @@ interface TokenData {
  */
 function extractJwtExpiresAt(accessToken: string): number {
   try {
-    const parts = accessToken.split('.')
-    if (parts.length !== 3) return 0
-    const payload = Buffer.from(parts[1], 'base64url').toString('utf8')
-    const decoded = JSON.parse(payload)
-    if (typeof decoded.exp === 'number') {
-      return decoded.exp * 1000 // JWT exp is in seconds, convert to milliseconds
+    const parts = accessToken.split(".");
+    if (parts.length !== 3) return 0;
+    const payload = Buffer.from(parts[1], "base64url").toString("utf8");
+    const decoded = JSON.parse(payload);
+    if (typeof decoded.exp === "number") {
+      return decoded.exp * 1000; // JWT exp is in seconds, convert to milliseconds
     }
   } catch {
     // If decoding fails, return 0 (treated as expired)
   }
-  return 0
+  return 0;
 }
 
 /**
  * Manages authentication tokens including refresh functionality
  */
 export class TokenManager {
-  private static instance: TokenManager
-  private tokenFilePath: string
-  private tokenData: TokenData | null = null
+  private static instance: TokenManager;
+  private tokenFilePath: string;
+  private tokenData: TokenData | null = null;
 
   private constructor() {
     // Set up token file path in user's home directory
-    const bergetDir = path.join(os.homedir(), '.berget')
+    const bergetDir = path.join(os.homedir(), ".berget");
     if (!fs.existsSync(bergetDir)) {
-      fs.mkdirSync(bergetDir, { recursive: true })
+      fs.mkdirSync(bergetDir, { recursive: true });
     }
-    this.tokenFilePath = path.join(bergetDir, 'auth.json')
-    this.loadToken()
+    this.tokenFilePath = path.join(bergetDir, "auth.json");
+    this.loadToken();
   }
 
   public static getInstance(): TokenManager {
     if (!TokenManager.instance) {
-      TokenManager.instance = new TokenManager()
+      TokenManager.instance = new TokenManager();
     }
-    return TokenManager.instance
+    return TokenManager.instance;
   }
 
   /**
@@ -61,12 +61,12 @@ export class TokenManager {
   private loadToken(): void {
     try {
       if (fs.existsSync(this.tokenFilePath)) {
-        const data = fs.readFileSync(this.tokenFilePath, 'utf8')
-        this.tokenData = JSON.parse(data)
+        const data = fs.readFileSync(this.tokenFilePath, "utf8");
+        this.tokenData = JSON.parse(data);
       }
     } catch (error) {
-      logger.error('Failed to load authentication token')
-      this.tokenData = null
+      logger.error("Failed to load authentication token");
+      this.tokenData = null;
     }
   }
 
@@ -76,20 +76,17 @@ export class TokenManager {
   private saveToken(): void {
     try {
       if (this.tokenData) {
-        fs.writeFileSync(
-          this.tokenFilePath,
-          JSON.stringify(this.tokenData, null, 2),
-        )
+        fs.writeFileSync(this.tokenFilePath, JSON.stringify(this.tokenData, null, 2));
         // Set file permissions to be readable only by the owner
-        fs.chmodSync(this.tokenFilePath, 0o600)
+        fs.chmodSync(this.tokenFilePath, 0o600);
       } else {
         // If token data is null, remove the file
         if (fs.existsSync(this.tokenFilePath)) {
-          fs.unlinkSync(this.tokenFilePath)
+          fs.unlinkSync(this.tokenFilePath);
         }
       }
     } catch (error) {
-      logger.error('Failed to save authentication token')
+      logger.error("Failed to save authentication token");
     }
   }
 
@@ -98,8 +95,8 @@ export class TokenManager {
    * @returns The access token or null if not available
    */
   public getAccessToken(): string | null {
-    if (!this.tokenData) return null
-    return this.tokenData.access_token
+    if (!this.tokenData) return null;
+    return this.tokenData.access_token;
   }
 
   /**
@@ -107,8 +104,8 @@ export class TokenManager {
    * @returns The refresh token or null if not available
    */
   public getRefreshToken(): string | null {
-    if (!this.tokenData) return null
-    return this.tokenData.refresh_token
+    if (!this.tokenData) return null;
+    return this.tokenData.refresh_token;
   }
 
   /**
@@ -116,34 +113,34 @@ export class TokenManager {
    * @returns true if expired or about to expire (within 10% of lifetime or 30 seconds), false otherwise
    */
   public isTokenExpired(): boolean {
-    if (!this.tokenData || !this.tokenData.expires_at) return true
+    if (!this.tokenData || !this.tokenData.expires_at) return true;
 
     try {
-      const now = Date.now()
-      const expiresAt = this.tokenData.expires_at
-      const timeUntilExpiry = expiresAt - now
+      const now = Date.now();
+      const expiresAt = this.tokenData.expires_at;
+      const timeUntilExpiry = expiresAt - now;
 
       // Use 10% of remaining lifetime or 30 seconds, whichever is smaller
       // This ensures we don't refresh tokens that were just issued
-      const minBuffer = 30 * 1000 // 30 seconds minimum
-      const percentBuffer = timeUntilExpiry * 0.1 // 10% of lifetime
-      const expirationBuffer = Math.min(minBuffer, percentBuffer)
+      const minBuffer = 30 * 1000; // 30 seconds minimum
+      const percentBuffer = timeUntilExpiry * 0.1; // 10% of lifetime
+      const expirationBuffer = Math.min(minBuffer, percentBuffer);
 
-      const isExpired = now + expirationBuffer >= expiresAt
+      const isExpired = now + expirationBuffer >= expiresAt;
 
       if (isExpired) {
         logger.debug(
-          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(expiresAt).toISOString()}`,
-        )
+          `Token expired or expiring soon. Current time: ${new Date().toISOString()}, Expiry: ${new Date(expiresAt).toISOString()}`
+        );
       }
 
-      return isExpired
+      return isExpired;
     } catch (error) {
       // If there's any error checking expiration, assume token is expired
       logger.error(
-        `Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`,
-      )
-      return true
+        `Error checking token expiration: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return true;
     }
   }
 
@@ -153,21 +150,17 @@ export class TokenManager {
    * @param refreshToken The new refresh token
    * @param expiresIn Expiration time in seconds (fallback if JWT parsing fails)
    */
-  public setTokens(
-    accessToken: string,
-    refreshToken: string,
-    expiresIn: number,
-  ): void {
+  public setTokens(accessToken: string, refreshToken: string, expiresIn: number): void {
     // Extract the actual expiry time from the JWT token
-    const jwtExpiresAt = extractJwtExpiresAt(accessToken)
-    const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000
-    
+    const jwtExpiresAt = extractJwtExpiresAt(accessToken);
+    const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000;
+
     this.tokenData = {
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_at: expiresAt,
-    }
-    this.saveToken()
+    };
+    this.saveToken();
   }
 
   /**
@@ -176,22 +169,22 @@ export class TokenManager {
    * @param expiresIn Expiration time in seconds (fallback if JWT parsing fails)
    */
   public updateAccessToken(accessToken: string, expiresIn: number): void {
-    if (!this.tokenData) return
+    if (!this.tokenData) return;
 
     // Extract the actual expiry time from the JWT token
-    const jwtExpiresAt = extractJwtExpiresAt(accessToken)
-    const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000
+    const jwtExpiresAt = extractJwtExpiresAt(accessToken);
+    const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000;
 
-    this.tokenData.access_token = accessToken
-    this.tokenData.expires_at = expiresAt
-    this.saveToken()
+    this.tokenData.access_token = accessToken;
+    this.tokenData.expires_at = expiresAt;
+    this.saveToken();
   }
 
   /**
    * Clear all token data
    */
   public clearTokens(): void {
-    this.tokenData = null
-    this.saveToken()
+    this.tokenData = null;
+    this.saveToken();
   }
 }

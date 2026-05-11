@@ -37,6 +37,7 @@ The `access_token` is a JWT. Decoding the payload reveals the user's roles, incl
 Managed by OpenCode internally. We write DIRECTLY to this file during setup.
 
 **OAuth format:**
+
 ```json
 {
   "berget": {
@@ -49,6 +50,7 @@ Managed by OpenCode internally. We write DIRECTLY to this file during setup.
 ```
 
 **API key format:**
+
 ```json
 {
   "berget": {
@@ -63,6 +65,7 @@ Managed by OpenCode internally. We write DIRECTLY to this file during setup.
 Managed by the Pi framework's `AuthStorage`. We write DIRECTLY to this file during setup.
 
 **OAuth format:**
+
 ```json
 {
   "berget": {
@@ -75,6 +78,7 @@ Managed by the Pi framework's `AuthStorage`. We write DIRECTLY to this file duri
 ```
 
 **API key format:**
+
 ```json
 {
   "berget": {
@@ -86,15 +90,16 @@ Managed by the Pi framework's `AuthStorage`. We write DIRECTLY to this file duri
 
 ### Mapping from CLI to Tools
 
-| CLI Field | OpenCode Field | Pi Field |
-|-----------|---------------|----------|
-| `access_token` | `access` | `access` |
-| `refresh_token` | `refresh` | `refresh` |
-| `expires_at` | `expires` | `expires` |
+| CLI Field       | OpenCode Field | Pi Field  |
+| --------------- | -------------- | --------- |
+| `access_token`  | `access`       | `access`  |
+| `refresh_token` | `refresh`      | `refresh` |
+| `expires_at`    | `expires`      | `expires` |
 
 The OpenCode and Pi auth files are **provider-indexed objects** (keyed by `"berget"`). They may contain OTHER providers (OpenAI, Anthropic, etc.), so we must **merge** — not overwrite.
 
 **Type mapping per tool:**
+
 - OpenCode API key: `"type": "api"`
 - Pi API key: `"type": "api_key"`
 
@@ -120,7 +125,7 @@ If `"berget_code_seat"` is present → user has a Berget Code subscription.
 
 ```typescript
 export interface AuthServicePort {
-  login(): Promise<boolean>
+  login(): Promise<boolean>;
 }
 ```
 
@@ -130,7 +135,7 @@ Implemented by `AuthService` (existing) via duck typing. The setup flow calls th
 
 ```typescript
 export interface ApiKeyServicePort {
-  create(options: { name: string; description?: string }): Promise<{ key: string }>
+  create(options: { name: string; description?: string }): Promise<{ key: string }>;
 }
 ```
 
@@ -162,25 +167,35 @@ Pure functions + async file I/O. No side effects except file writes.
 
 ```typescript
 // Reads ~/.berget/auth.json
-function readCliAuth(files: FileStore, homeDir: string): CliAuth | null
+function readCliAuth(files: FileStore, homeDir: string): CliAuth | null;
 
 // Checks if tool already has "berget" entry in its auth.json
-function isToolAuthenticated(files: FileStore, homeDir: string, tool: 'opencode' | 'pi'): boolean
+function isToolAuthenticated(files: FileStore, homeDir: string, tool: "opencode" | "pi"): boolean;
 
 // Decodes JWT payload (no signature verification)
-function decodeJwtPayload(token: string): any | null
+function decodeJwtPayload(token: string): any | null;
 
 // Checks for "berget_code_seat" role in JWT
-function hasBergetCodeSeat(accessToken: string): boolean
+function hasBergetCodeSeat(accessToken: string): boolean;
 
 // Maps CLI tokens to tool format and merges into auth file
-async function syncOAuthToTool(files: FileStore, homeDir: string, tool: 'opencode' | 'pi', cliAuth: CliAuth): Promise<void>
+async function syncOAuthToTool(
+  files: FileStore,
+  homeDir: string,
+  tool: "opencode" | "pi",
+  cliAuth: CliAuth
+): Promise<void>;
 
 // Writes API key to tool auth file (merges with existing)
-async function syncApiKeyToTool(files: FileStore, homeDir: string, tool: 'opencode' | 'pi', apiKey: string): Promise<void>
+async function syncApiKeyToTool(
+  files: FileStore,
+  homeDir: string,
+  tool: "opencode" | "pi",
+  apiKey: string
+): Promise<void>;
 
 // Main orchestration — called from setup.ts
-async function configureAuth(deps: WizardDeps, tool: 'opencode' | 'pi'): Promise<AuthResult>
+async function configureAuth(deps: WizardDeps, tool: "opencode" | "pi"): Promise<AuthResult>;
 ```
 
 ### Updated: `setup.ts`
@@ -189,13 +204,13 @@ async function configureAuth(deps: WizardDeps, tool: 'opencode' | 'pi'): Promise
 
 ```typescript
 export interface WizardDeps {
-  prompter: Prompter
-  files: FileStore
-  commands: CommandRunner
-  authService: AuthServicePort
-  apiKeyService: ApiKeyServicePort
-  homeDir: string
-  cwd: string
+  prompter: Prompter;
+  files: FileStore;
+  commands: CommandRunner;
+  authService: AuthServicePort;
+  apiKeyService: ApiKeyServicePort;
+  homeDir: string;
+  cwd: string;
 }
 ```
 
@@ -211,8 +226,8 @@ After `tool` and `scope` are selected, call `configureAuth(deps, tool)`. Receive
 **Production entry point:** Wire real services:
 
 ```typescript
-import { AuthService } from '../../services/auth-service'
-import { ApiKeyService } from '../../services/api-key-service'
+import { AuthService } from "../../services/auth-service";
+import { ApiKeyService } from "../../services/api-key-service";
 
 await runSetup({
   prompter: new ClackPrompter(),
@@ -222,7 +237,7 @@ await runSetup({
   apiKeyService: ApiKeyService.getInstance(),
   homeDir: os.homedir(),
   cwd: process.cwd(),
-})
+});
 ```
 
 ## User Flow
@@ -345,20 +360,20 @@ Continue with setup but show original post-setup instructions.
 
 ## Test Coverage
 
-| # | Scenario | Test File | Mocks |
-|---|----------|-----------|-------|
-| 1 | Already authenticated in tool | setup-flow.test.ts | Seed tool auth.json with `"berget"` entry |
-| 2 | Login success + `berget_code_seat` → chooses subscription | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter selects "subscription" |
-| 3 | Login success + `berget_code_seat` → chooses API key | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter selects "api_key", text() returns key |
-| 4 | Login success + no seat → creates API key | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter confirms true, FakeApiKeyService.create returns key |
-| 5 | Login success + no seat → declines API key | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter confirms false |
-| 6 | Login fails | setup-flow.test.ts | FakeAuthService.login → false |
-| 7 | Existing config preserved | auth-sync.test.ts | Seed auth.json with `"openai"` entry, verify it remains after writing `"berget"` |
-| 8 | `0o600` permissions | auth-sync.test.ts | Verify `chmod()` called with `0o600` on auth file writes |
-| 9 | `readCliAuth` returns correct shape | auth-sync.test.ts | Seed `~/.berget/auth.json` |
-| 10 | `decodeJwtPayload` decodes correctly | auth-sync.test.ts | Pass known JWT, assert payload |
-| 11 | `hasBergetCodeSeat` detects role | auth-sync.test.ts | Pass token with/without `berget_code_seat` |
-| 12 | JWT decode failure fallback | auth-sync.test.ts | Pass invalid token, verify OAuth still synced |
+| #   | Scenario                                                  | Test File          | Mocks                                                                                          |
+| --- | --------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| 1   | Already authenticated in tool                             | setup-flow.test.ts | Seed tool auth.json with `"berget"` entry                                                      |
+| 2   | Login success + `berget_code_seat` → chooses subscription | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter selects "subscription"                              |
+| 3   | Login success + `berget_code_seat` → chooses API key      | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter selects "api_key", text() returns key               |
+| 4   | Login success + no seat → creates API key                 | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter confirms true, FakeApiKeyService.create returns key |
+| 5   | Login success + no seat → declines API key                | setup-flow.test.ts | FakeAuthService.login → true, FakePrompter confirms false                                      |
+| 6   | Login fails                                               | setup-flow.test.ts | FakeAuthService.login → false                                                                  |
+| 7   | Existing config preserved                                 | auth-sync.test.ts  | Seed auth.json with `"openai"` entry, verify it remains after writing `"berget"`               |
+| 8   | `0o600` permissions                                       | auth-sync.test.ts  | Verify `chmod()` called with `0o600` on auth file writes                                       |
+| 9   | `readCliAuth` returns correct shape                       | auth-sync.test.ts  | Seed `~/.berget/auth.json`                                                                     |
+| 10  | `decodeJwtPayload` decodes correctly                      | auth-sync.test.ts  | Pass known JWT, assert payload                                                                 |
+| 11  | `hasBergetCodeSeat` detects role                          | auth-sync.test.ts  | Pass token with/without `berget_code_seat`                                                     |
+| 12  | JWT decode failure fallback                               | auth-sync.test.ts  | Pass invalid token, verify OAuth still synced                                                  |
 
 ## API Key Naming Convention
 
@@ -372,6 +387,7 @@ When auto-creating an API key:
 ```
 
 Examples:
+
 - OpenCode: `"OpenCode (created by berget CLI)"`
 - Pi: `"Pi (created by berget CLI)"`
 

@@ -1,16 +1,16 @@
-import { createAuthenticatedClient } from '../client'
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
+import { createAuthenticatedClient } from "../client";
+import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
 export interface HelmRepoAddOptions {
-  name: string
-  url: string
+  name: string;
+  url: string;
 }
 
 export interface HelmInstallOptions {
-  name: string
-  chart: string
-  namespace?: string
-  values?: Record<string, string>
+  name: string;
+  chart: string;
+  namespace?: string;
+  values?: Record<string, string>;
 }
 
 /**
@@ -18,22 +18,22 @@ export interface HelmInstallOptions {
  * Command group: helm
  */
 export class HelmService {
-  private static instance: HelmService
-  private client = createAuthenticatedClient()
+  private static instance: HelmService;
+  private client = createAuthenticatedClient();
 
   // Command group name for this service
-  public static readonly COMMAND_GROUP = COMMAND_GROUPS.HELM
+  public static readonly COMMAND_GROUP = COMMAND_GROUPS.HELM;
 
   // Subcommands for this service
-  public static readonly COMMANDS = SUBCOMMANDS.HELM
+  public static readonly COMMANDS = SUBCOMMANDS.HELM;
 
   private constructor() {}
 
   public static getInstance(): HelmService {
     if (!HelmService.instance) {
-      HelmService.instance = new HelmService()
+      HelmService.instance = new HelmService();
     }
-    return HelmService.instance
+    return HelmService.instance;
   }
 
   /**
@@ -42,7 +42,7 @@ export class HelmService {
    * This endpoint is not available in the API
    */
   public async addRepo(options: HelmRepoAddOptions): Promise<boolean> {
-    throw new Error('This functionality is not available in the API')
+    throw new Error("This functionality is not available in the API");
   }
 
   /**
@@ -51,6 +51,6 @@ export class HelmService {
    * This endpoint is not available in the API
    */
   public async install(options: HelmInstallOptions): Promise<any> {
-    throw new Error('This functionality is not available in the API')
+    throw new Error("This functionality is not available in the API");
   }
 }

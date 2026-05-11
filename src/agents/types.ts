@@ -1,17 +1,17 @@
 export interface AgentConfig {
-  name: string
-  description: string
-  mode?: 'primary' | 'subagent'
-  temperature?: number
-  top_p?: number
+  name: string;
+  description: string;
+  mode?: "primary" | "subagent";
+  temperature?: number;
+  top_p?: number;
   permission?: {
-    edit?: string
-    bash?: string
-    webfetch?: string
-  }
+    edit?: string;
+    bash?: string;
+    webfetch?: string;
+  };
 }
 
 export interface Agent {
-  config: AgentConfig
-  systemPrompt: string
+  config: AgentConfig;
+  systemPrompt: string;
 }

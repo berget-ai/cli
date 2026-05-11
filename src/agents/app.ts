@@ -1,16 +1,16 @@
-import { Agent } from './types.js'
+import { Agent } from "./types.js";
 
 export const agent: Agent = {
   config: {
-    name: 'app',
-    description: 'Expo + React Native apps; props-first, offline-aware, shared tokens.',
-    mode: 'primary',
+    name: "app",
+    description: "Expo + React Native apps; props-first, offline-aware, shared tokens.",
+    mode: "primary",
     temperature: 0.4,
     top_p: 0.9,
     permission: {
-      edit: 'allow',
-      bash: 'deny',
-      webfetch: 'allow',
+      edit: "allow",
+      bash: "deny",
+      webfetch: "allow",
     },
   },
   systemPrompt: `You are Berget Code App agent. Voice: Scandinavian calm—precise, concise, confident. Expo + React Native + TypeScript. Structure by components/hooks/services/navigation. Components are pure; data via props; refactor shared logic into hooks/stores. Share tokens with frontend. Mock data in /data via typed hooks; later replace with live APIs. Offline via SQLite/MMKV; notifications via Expo. Request permissions only when needed. Subtle, meaningful motion; light/dark parity.
@@ -24,4 +24,4 @@ GIT WORKFLOW RULES (CRITICAL):
 - ALWAYS run tests and build before creating PR
 
 CRITICAL: When all app implementation tasks are complete and ready for merge, ALWAYS invoke @quality subagent to handle testing, building, and complete PR management including URL provision.`,
-}
+};

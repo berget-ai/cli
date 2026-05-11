@@ -1,16 +1,16 @@
-import { createAuthenticatedClient } from '../client'
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
+import { createAuthenticatedClient } from "../client";
+import { COMMAND_GROUPS, SUBCOMMANDS } from "../constants/command-structure";
 
 export interface FluxInstallOptions {
-  cluster: string
+  cluster: string;
 }
 
 export interface FluxBootstrapOptions {
-  provider: string
-  owner?: string
-  repository?: string
-  path?: string
-  personal?: boolean
+  provider: string;
+  owner?: string;
+  repository?: string;
+  path?: string;
+  personal?: boolean;
 }
 
 /**
@@ -18,22 +18,22 @@ export interface FluxBootstrapOptions {
  * Command group: flux
  */
 export class FluxService {
-  private static instance: FluxService
-  private client = createAuthenticatedClient()
+  private static instance: FluxService;
+  private client = createAuthenticatedClient();
 
   // Command group name for this service
-  public static readonly COMMAND_GROUP = COMMAND_GROUPS.FLUX
+  public static readonly COMMAND_GROUP = COMMAND_GROUPS.FLUX;
 
   // Subcommands for this service
-  public static readonly COMMANDS = SUBCOMMANDS.FLUX
+  public static readonly COMMANDS = SUBCOMMANDS.FLUX;
 
   private constructor() {}
 
   public static getInstance(): FluxService {
     if (!FluxService.instance) {
-      FluxService.instance = new FluxService()
+      FluxService.instance = new FluxService();
     }
-    return FluxService.instance
+    return FluxService.instance;
   }
 
   /**
@@ -42,7 +42,7 @@ export class FluxService {
    * This endpoint is not available in the API
    */
   public async install(options: FluxInstallOptions): Promise<boolean> {
-    throw new Error('This functionality is not available in the API')
+    throw new Error("This functionality is not available in the API");
   }
 
   /**
@@ -51,6 +51,6 @@ export class FluxService {
    * This endpoint is not available in the API
    */
   public async bootstrap(options: FluxBootstrapOptions): Promise<boolean> {
-    throw new Error('This functionality is not available in the API')
+    throw new Error("This functionality is not available in the API");
   }
 }
