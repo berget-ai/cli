@@ -42,7 +42,7 @@ export const multiselect = <T>(
 ): PromptEntry => ({
 	kind: 'multiselect',
 	match: typeof match === 'string' ? new RegExp(match) : match,
-	response: (values === CANCEL ? [CANCEL] : values.map(v => String(v))) as (string | symbol)[],
+	response: values === CANCEL ? [CANCEL] : (values as T[]).map(v => String(v)) as (string | symbol)[],
 })
 
 export class FakePrompter implements Prompter {

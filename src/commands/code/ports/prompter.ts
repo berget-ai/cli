@@ -29,8 +29,7 @@ export interface Prompter {
 	}): Promise<string>
 }
 
-export interface MultiSelectOption<T> {
-	value: T
-	label: string
-	hint?: string
+export interface Spinner {
+	start(message: string): void
+	stop(message: string): void
 }
