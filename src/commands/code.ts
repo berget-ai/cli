@@ -3,6 +3,7 @@ import chalk from 'chalk'
 import readline from 'readline'
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure'
 import { handleError } from '../utils/error-handler'
+import { runSetupCommand } from './code/setup'
 import * as fs from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
@@ -290,6 +291,19 @@ export function registerCodeCommands(program: Command): void {
   const code = program
     .command(COMMAND_GROUPS.CODE)
     .description('AI-powered coding assistant with OpenCode')
+
+  if (process.env.BERGET_EXPERIMENTAL) {
+    code
+      .command('setup')
+      .description('Interactive setup for Berget AI coding tools')
+      .action(async () => {
+        try {
+          await runSetupCommand()
+        } catch (error) {
+          handleError('Setup failed', error)
+        }
+      })
+  }
 
   code
     .command(SUBCOMMANDS.CODE.INIT)

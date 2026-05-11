@@ -1,0 +1,23 @@
+export interface Prompter {
+	intro(message: string): void
+	outro(message: string): void
+	note(message: string, title?: string): void
+	spinner(): Spinner
+	select<T>(opts: {
+		message: string
+		options: ReadonlyArray<{
+			value: T
+			label: string
+			hint?: string
+		}>
+	}): Promise<T>
+	confirm(opts: {
+		message: string
+		initialValue?: boolean
+	}): Promise<boolean>
+}
+
+export interface Spinner {
+	start(message: string): void
+	stop(message: string): void
+}
