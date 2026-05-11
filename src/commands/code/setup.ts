@@ -5,6 +5,13 @@ import type { AuthServicePort, ApiKeyServicePort } from './ports/auth-services'
 import { CancelledError, CommandFailedError, PrerequisiteError } from './errors'
 import { modify, parse, applyEdits } from 'jsonc-parser'
 import { configureAuth } from './auth-sync.js'
+import { ClackPrompter } from './adapters/clack-prompter.js'
+import { FsFileStore } from './adapters/fs-file-store.js'
+import { SpawnCommandRunner } from './adapters/spawn-command-runner.js'
+import { AuthService } from '../../services/auth-service.js'
+import { ApiKeyService } from '../../services/api-key-service.js'
+import { getAllAgents, toMarkdown, toPiPrompt, type Agent } from '../../agents/index.js'
+import * as os from 'os'
 
 const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.16'
 const PI_PROVIDER = 'npm:@bergetai/pi-provider'
@@ -69,17 +76,21 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
 
     if (tool === 'opencode') {
         await setupOpenCode({ prompter, files, commands, homeDir, cwd, scope })
+        await setupOpenCodeAgents({ prompter, files, homeDir, cwd, scope })
+
         if (authResult.authenticated) {
             prompter.note(`You're all set!\n\n1. Run: opencode\n2. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`, 'Successfully configured Berget AI for OpenCode')
         } else {
-            prompter.note(`Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   \u2022 "Login with Berget" \u2014 Berget Code plan\n   \u2022 "Enter Berget API Key manually"\n   \u2022 (or set BERGET_API_KEY env var)\n4. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`, 'Successfully configured Berget AI for OpenCode')
+            prompter.note(`Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`, 'Successfully configured Berget AI for OpenCode')
         }
     } else {
         await setupPi({ prompter, files, commands, homeDir, cwd, scope })
+        await setupPiAgent({ prompter, files, homeDir, cwd, scope })
+
         if (authResult.authenticated) {
             prompter.note(`You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`, 'Successfully configured Berget AI for Pi')
         } else {
-            prompter.note(`Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   \u2022 "Use a subscription" \u2192 Berget AI\n   \u2022 (or set BERGET_API_KEY env var)\n4. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`, 'Successfully configured Berget AI for Pi')
+            prompter.note(`Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`, 'Successfully configured Berget AI for Pi')
         }
     }
 
@@ -187,6 +198,162 @@ async function setupPi(deps: {
             prompter.note('Berget AI is now your default provider.', 'Updated default provider')
         }
     }
+}
+
+async function setupOpenCodeAgents(deps: {
+    prompter: Prompter
+    files: FileStore
+    homeDir: string
+    cwd: string
+    scope: 'project' | 'global'
+}): Promise<void> {
+    const { prompter, files, homeDir, cwd, scope } = deps
+
+    const agents = getAllAgents().filter(a => a.config.mode === 'primary')
+
+    if (agents.length === 0) {
+        return
+    }
+
+    const selectedAgents = await prompter.multiselect({
+        message: 'Select agents to set up (optional - press enter to skip):',
+        options: agents.map(agent => ({
+            value: agent.config.name,
+            label: agent.config.name,
+            hint: agent.config.description,
+        })),
+    })
+
+    if (selectedAgents.length === 0) {
+        return
+    }
+
+    const agentsDir = scope === 'project'
+        ? pathJoin(cwd, '.opencode', 'agents')
+        : pathJoin(homeDir, '.config', 'opencode', 'agents')
+
+    await files.mkdir(agentsDir)
+
+    const hasChanges = await Promise.all(
+        selectedAgents.map(async agentName => {
+            const agent = agents.find(a => a.config.name === agentName)
+            if (!agent) return false
+
+            const agentPath = pathJoin(agentsDir, `${agentName}.md`)
+            const existing = await files.readFile(agentPath)
+            const newContent = toMarkdown(agent)
+
+            if (existing === newContent) {
+                return false
+            }
+
+            if (existing) {
+                prompter.note(generateDiff(existing, newContent, agentPath), `Changes to ${agentName} agent`)
+            }
+
+            return true
+        })
+    )
+
+    if (!hasChanges.some(Boolean)) {
+        prompter.note('Agent files are already up to date.', 'No changes needed')
+        return
+    }
+
+    const shouldWrite = await prompter.confirm({
+        message: 'Write agent configuration files?',
+        initialValue: true,
+    })
+
+
+    if (!shouldWrite) {
+        throw new CancelledError()
+    }
+
+    const s = prompter.spinner()
+    s.start('Writing agent configurations...')
+
+    for (const agentName of selectedAgents) {
+        const agent = agents.find(a => a.config.name === agentName)
+        if (!agent) continue
+
+        const agentPath = pathJoin(agentsDir, `${agentName}.md`)
+        const content = toMarkdown(agent)
+        await files.writeFile(agentPath, content)
+    }
+
+    s.stop(`Wrote ${selectedAgents.length} agent(s) to ${agentsDir}`)
+}
+
+async function setupPiAgent(deps: {
+    prompter: Prompter
+    files: FileStore
+    homeDir: string
+    cwd: string
+    scope: 'project' | 'global'
+}): Promise<void> {
+    const { prompter, files, homeDir, cwd, scope } = deps
+
+    const agents = getAllAgents().filter(a => a.config.mode === 'primary')
+
+    if (agents.length === 0) {
+        return
+    }
+
+    const selectedAgentName = await prompter.select({
+        message: 'Select an agent (optional - press enter to skip):',
+        options: [
+            { value: '__skip__', label: 'Skip agent setup' },
+            ...agents.map(agent => ({
+                value: agent.config.name,
+                label: agent.config.name,
+                hint: agent.config.description,
+            })),
+        ],
+    })
+
+    if (selectedAgentName === '__skip__') {
+        return
+    }
+
+    const agent = agents.find(a => a.config.name === selectedAgentName)
+    if (!agent) return
+
+    const systemPath = scope === 'project'
+        ? pathJoin(cwd, '.pi', 'SYSTEM.md')
+        : pathJoin(homeDir, '.pi', 'agent', 'SYSTEM.md')
+
+    const existing = await files.readFile(systemPath)
+    const newContent = toPiPrompt(agent)
+
+    if (existing === newContent) {
+        prompter.note('Agent configuration is already up to date.', 'No changes needed')
+        return
+    }
+
+    if (existing) {
+        prompter.note(generateDiff(existing, newContent, systemPath), 'Changes to agent configuration')
+    } else {
+        prompter.note(newContent, 'New agent configuration')
+    }
+
+    const shouldWrite = await prompter.confirm({
+        message: existing ? 'Overwrite existing agent configuration?' : 'Create agent configuration?',
+        initialValue: true,
+    })
+
+    if (!shouldWrite) {
+        throw new CancelledError()
+    }
+
+    const s = prompter.spinner()
+    s.start('Writing agent configuration...')
+
+    const systemDir = scope === 'project' ? pathJoin(cwd, '.pi') : pathJoin(homeDir, '.pi', 'agent')
+    await files.mkdir(systemDir)
+    await files.writeFile(systemPath, newContent)
+
+    s.stop(`Wrote agent configuration to ${systemPath}`)
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -382,15 +549,6 @@ function generateModifiedContent(existingContent: string | null, configPath: str
 
     return JSON.stringify(config, null, 2) + '\n'
 }
-
-// ─── Production CLI entry point ──────────────────────────────────────────────
-
-import { ClackPrompter } from './adapters/clack-prompter.js'
-import { FsFileStore } from './adapters/fs-file-store.js'
-import { SpawnCommandRunner } from './adapters/spawn-command-runner.js'
-import { AuthService } from '../../services/auth-service.js'
-import { ApiKeyService } from '../../services/api-key-service.js'
-import * as os from 'os'
 
 export async function runSetupCommand(): Promise<void> {
     try {

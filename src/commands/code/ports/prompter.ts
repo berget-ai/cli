@@ -11,6 +11,14 @@ export interface Prompter {
 			hint?: string
 		}>
 	}): Promise<T>
+	multiselect<T>(opts: {
+		message: string
+		options: ReadonlyArray<{
+			value: T
+			label: string
+			hint?: string
+		}>
+	}): Promise<T[]>
 	confirm(opts: {
 		message: string
 		initialValue?: boolean
@@ -21,7 +29,8 @@ export interface Prompter {
 	}): Promise<string>
 }
 
-export interface Spinner {
-	start(message: string): void
-	stop(message: string): void
+export interface MultiSelectOption<T> {
+	value: T
+	label: string
+	hint?: string
 }

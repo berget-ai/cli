@@ -47,4 +47,15 @@ export class ClackPrompter implements Prompter {
 	}): Promise<string> {
 		return unwrap(await p.text(opts))
 	}
+
+	async multiselect<T>(opts: {
+		message: string
+		options: ReadonlyArray<{
+			value: T
+			label: string
+			hint?: string
+		}>
+	}): Promise<T[]> {
+		return unwrap(await p.multiselect(opts as any))
+	}
 }

@@ -7,6 +7,7 @@ type PromptEntry =
 	| { kind: 'select'; match?: RegExp; response: string | symbol }
 	| { kind: 'confirm'; match?: RegExp; response: boolean | symbol }
 	| { kind: 'text'; match?: RegExp; response: string | symbol }
+	| { kind: 'multiselect'; match?: RegExp; response: (string | symbol)[] }
 
 export const select = <T>(
 	value: T | symbol,
@@ -33,6 +34,15 @@ export const confirm = (
 	kind: 'confirm',
 	match: typeof match === 'string' ? new RegExp(match) : match,
 	response: value,
+})
+
+export const multiselect = <T>(
+	values: T[] | symbol,
+	match?: string | RegExp
+): PromptEntry => ({
+	kind: 'multiselect',
+	match: typeof match === 'string' ? new RegExp(match) : match,
+	response: (values === CANCEL ? [CANCEL] : values.map(v => String(v))) as (string | symbol)[],
 })
 
 export class FakePrompter implements Prompter {
@@ -89,6 +99,16 @@ export class FakePrompter implements Prompter {
 		if (entry.match && !entry.match.test(opts.message)) throw new Error(`Message mismatch: got "${opts.message}"`)
 		if (entry.response === CANCEL) throw new CancelledError()
 		return entry.response as string
+	}
+
+	async multiselect<T>(opts: { message: string }): Promise<T[]> {
+		this._calls.push({ method: 'multiselect', args: opts })
+		const entry = this._script[this._cursor++]
+		if (!entry) throw new Error(`No script entry for multiselect #${this._cursor} (${opts.message})`)
+		if (entry.kind !== 'multiselect') throw new Error(`Expected multiselect, got ${entry.kind} for ${opts.message}`)
+		if (entry.match && !entry.match.test(opts.message)) throw new Error(`Message mismatch: got "${opts.message}"`)
+		if (entry.response.includes(CANCEL)) throw new CancelledError()
+		return entry.response as T[]
 	}
 
 	get calls() {
