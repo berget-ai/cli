@@ -95,6 +95,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'), // Agent selection
           confirm(true, 'Create'),
         ]),
@@ -116,7 +117,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
-          select('__skip__'), // Skip agent selection
+          confirm(false, 'Set up an agent for Pi?'),
         ]),
       });
 
@@ -184,6 +185,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
           confirm(false, /Create|Overwrite/),
         ]),
@@ -288,6 +290,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
           confirm(true, 'Create'),
         ]),
@@ -336,6 +339,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
           confirm(true, 'Create'),
         ]),
@@ -399,6 +403,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
           confirm(true, 'Create'),
         ]),
@@ -423,6 +428,7 @@ describe('runSetup', () => {
           select('pi'),
           select('project'),
           confirm(true), // API key creation prompt
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
           confirm(true, 'Create'),
         ]),
@@ -530,6 +536,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
           confirm(true, 'Create'),
         ]),
@@ -548,6 +555,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('global'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('backend'),
           confirm(true, 'Create'),
         ]),
@@ -582,13 +590,14 @@ describe('runSetup', () => {
         .getWrittenFiles()
         .get('/home/user/project/.opencode/agents/frontend.md');
 
-      // Second run with exact same content should not prompt for overwrite
+      // Second run with exact same content should prompt for confirmation
       const deps2 = makeDeps({
         files,
         prompter: new FakePrompter([
           select('opencode'),
           select('project'),
           multiselect(['backend', 'frontend']),
+          confirm(true, 'Write'),
         ]),
       });
 
@@ -613,8 +622,9 @@ describe('runSetup', () => {
         prompter: new FakePrompter([
           select('pi'),
           select('project'),
+          confirm(true, 'Set up an agent for Pi?'),
           select('fullstack'),
-          confirm(true, 'Overwrite'),
+          confirm(true, 'SYSTEM.md already exists'),
         ]),
       });
 
