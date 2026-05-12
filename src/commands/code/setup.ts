@@ -404,27 +404,13 @@ async function setupOpenCodeAgents(deps: {
   homeDir: string;
   prompter: Prompter;
   scope: 'global' | 'project';
-}): Promise<void> {
+}): Promise<boolean> {
   const { cwd, files, homeDir, prompter, scope } = deps;
 
   const agents = getAllAgents().filter((a) => a.config.mode === 'primary');
 
   if (agents.length === 0) {
-    return;
-  }
-
-  const selectedAgents = await prompter.multiselect({
-    message: 'Select agents to set up (optional - press enter to skip):',
-    options: agents.map((agent) => ({
-      hint: agent.config.description,
-      label: agent.config.name,
-      value: agent.config.name,
-    })),
-    required: false,
-  });
-
-  if (selectedAgents.length === 0) {
-    return;
+    return false;
   }
 
   const agentsDir =
@@ -432,35 +418,48 @@ async function setupOpenCodeAgents(deps: {
       ? pathJoin(cwd, '.opencode', 'agents')
       : pathJoin(homeDir, '.config', 'opencode', 'agents');
 
-  await files.mkdir(agentsDir);
+  prompter.note('Space to toggle, Enter to confirm.', 'Agent Setup');
 
-  const hasChanges = await Promise.all(
-    selectedAgents.map(async (agentName) => {
-      const agent = agents.find((a) => a.config.name === agentName);
-      if (!agent) return false;
-
-      const agentPath = pathJoin(agentsDir, `${agentName}.md`);
-      const existing = await files.readFile(agentPath);
-      const newContent = toMarkdown(agent);
-
-      if (existing === newContent) {
-        return false;
-      }
-
-      if (existing) {
-        prompter.note(
-          generateDiff(existing, newContent, agentPath),
-          `Changes to ${agentName} agent`,
-        );
-      }
-
-      return true;
+  const agentOptions = await Promise.all(
+    agents.map(async (agent) => {
+      const agentPath = pathJoin(agentsDir, `${agent.config.name}.md`);
+      const exists = await files.exists(agentPath);
+      return {
+        hint: exists ? 'already configured' : agent.config.description,
+        label: agent.config.name,
+        value: agent.config.name,
+      };
     }),
   );
 
-  if (!hasChanges.some(Boolean)) {
-    prompter.note('Agent files are already up to date.', 'No changes needed');
-    return;
+  const selectedAgents = await prompter.multiselect({
+    message: 'Select agents to set up:',
+    options: agentOptions,
+    required: false,
+  });
+
+  if (selectedAgents.length === 0) {
+    return false;
+  }
+
+  const newAgents: string[] = [];
+  const existingAgents: string[] = [];
+  await Promise.all(
+    selectedAgents.map(async (agentName) => {
+      const agentPath = pathJoin(agentsDir, `${agentName}.md`);
+      const exists = await files.exists(agentPath);
+      (exists ? existingAgents : newAgents).push(agentName);
+    }),
+  );
+
+  const summaryParts: string[] = [];
+  if (newAgents.length > 0) summaryParts.push(`New: ${newAgents.join(', ')}`);
+  if (existingAgents.length > 0) summaryParts.push(`Replaced: ${existingAgents.join(', ')}`);
+  if (summaryParts.length > 0) {
+    prompter.note(
+      `  Agent Setup Summary:\n${summaryParts.map((part) => `  ${part}`).join('\n')}`,
+      'Agent Setup',
+    );
   }
 
   const shouldWrite = await prompter.confirm({
@@ -471,6 +470,8 @@ async function setupOpenCodeAgents(deps: {
   if (!shouldWrite) {
     throw new CancelledError();
   }
+
+  await files.mkdir(agentsDir);
 
   const s = prompter.spinner();
   s.start('Writing agent configurations...');
@@ -485,6 +486,7 @@ async function setupOpenCodeAgents(deps: {
   }
 
   s.stop(`Wrote ${selectedAgents.length} agent(s) to ${agentsDir}`);
+  return true;
 }
 
 async function setupPi(deps: {
@@ -552,56 +554,49 @@ async function setupPiAgent(deps: {
   homeDir: string;
   prompter: Prompter;
   scope: 'global' | 'project';
-}): Promise<void> {
+}): Promise<boolean> {
   const { cwd, files, homeDir, prompter, scope } = deps;
 
   const agents = getAllAgents().filter((a) => a.config.mode === 'primary');
 
   if (agents.length === 0) {
-    return;
+    return false;
   }
-
-  const selectedAgentName = await prompter.select({
-    message: 'Select an agent (optional - press enter to skip):',
-    options: [
-      { label: 'Skip agent setup', value: '__skip__' },
-      ...agents.map((agent) => ({
-        hint: agent.config.description,
-        label: agent.config.name,
-        value: agent.config.name,
-      })),
-    ],
-  });
-
-  if (selectedAgentName === '__skip__') {
-    return;
-  }
-
-  const agent = agents.find((a) => a.config.name === selectedAgentName);
-  if (!agent) return;
 
   const systemPath =
     scope === 'project'
       ? pathJoin(cwd, '.pi', 'SYSTEM.md')
       : pathJoin(homeDir, '.pi', 'agent', 'SYSTEM.md');
 
-  const existing = await files.readFile(systemPath);
-  const newContent = toPiPrompt(agent);
+  prompter.note('Pi uses a single system prompt.', 'Agent Setup');
 
-  if (existing === newContent) {
-    prompter.note('Agent configuration is already up to date.', 'No changes needed');
-    return;
-  }
+  const setupAgent = await prompter.confirm({
+    initialValue: false,
+    message: 'Set up an agent for Pi?',
+  });
 
-  if (existing) {
-    prompter.note(generateDiff(existing, newContent, systemPath), 'Changes to agent configuration');
-  } else {
-    prompter.note(newContent, 'New agent configuration');
-  }
+  if (!setupAgent) return false;
+
+  const selectedAgentName = await prompter.select({
+    message: 'Choose an agent:',
+    options: agents.map((agent) => ({
+      hint: agent.config.description,
+      label: agent.config.name,
+      value: agent.config.name,
+    })),
+  });
+
+  const agent = agents.find((a) => a.config.name === selectedAgentName);
+  if (!agent) return false;
+
+  const systemExists = await files.exists(systemPath);
+  const confirmMsg = systemExists
+    ? `SYSTEM.md already exists. Replace with ${agent.config.name}?`
+    : 'Create agent configuration?';
 
   const shouldWrite = await prompter.confirm({
     initialValue: true,
-    message: existing ? 'Overwrite existing agent configuration?' : 'Create agent configuration?',
+    message: confirmMsg,
   });
 
   if (!shouldWrite) {
@@ -613,9 +608,10 @@ async function setupPiAgent(deps: {
 
   const systemDir = scope === 'project' ? pathJoin(cwd, '.pi') : pathJoin(homeDir, '.pi', 'agent');
   await files.mkdir(systemDir);
-  await files.writeFile(systemPath, newContent);
+  await files.writeFile(systemPath, toPiPrompt(agent));
 
   s.stop(`Wrote agent configuration to ${systemPath}`);
+  return true;
 }
 
 function stripJsoncComments(content: string): string {
