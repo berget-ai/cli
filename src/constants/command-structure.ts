@@ -76,10 +76,6 @@ export const SUBCOMMANDS = {
   // Code commands
   CODE: {
     INIT: 'init',
-    RUN: 'run',
-    SERVE: 'serve',
-    SETUP: 'setup',
-    UPDATE: 'update',
   },
 
   // Flux commands
@@ -164,14 +160,8 @@ export const COMMAND_DESCRIPTIONS = {
   [`${COMMAND_GROUPS.CLUSTERS} ${SUBCOMMANDS.CLUSTERS.GET_USAGE}`]:
     'Get resource usage for a cluster',
   [`${COMMAND_GROUPS.CLUSTERS} ${SUBCOMMANDS.CLUSTERS.LIST}`]: 'List all clusters',
-  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`]: 'Initialize project for AI coding assistant',
-
-  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.RUN}`]: 'Run AI coding assistant',
-  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.SERVE}`]: 'Start OpenCode web server',
-  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.SETUP}`]:
+  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`]:
     'Interactive setup for Berget AI coding tools',
-  [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.UPDATE}`]:
-    'Update OpenCode and agents to latest versions',
 
   [`${COMMAND_GROUPS.FLUX} ${SUBCOMMANDS.FLUX.BOOTSTRAP}`]: 'Bootstrap Flux CD',
   [`${COMMAND_GROUPS.FLUX} ${SUBCOMMANDS.FLUX.INSTALL}`]: 'Install Flux CD',

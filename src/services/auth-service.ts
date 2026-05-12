@@ -85,7 +85,7 @@ export class AuthService {
 
       console.log(chalk.cyan('\nNext steps:'));
       console.log(chalk.cyan('  • Create an API key: berget api-keys create'));
-      console.log(chalk.cyan('  • Setup OpenCode: berget code init'));
+      console.log(chalk.cyan('  • Initialize OpenCode: berget code init'));
 
       return true;
     } catch (error) {

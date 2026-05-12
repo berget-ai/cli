@@ -66,7 +66,7 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
     if (!loginResult.success) {
       s.stop('Login failed.');
       prompter.note(
-        `${loginResult.error || 'Login timed out or was cancelled.'}\n\nPlease run \`berget auth login\` manually, then run \`berget code setup\` again.`,
+        `${loginResult.error || 'Login timed out or was cancelled.'}\n\nPlease run \`berget auth login\` manually, then run \`berget code init\` again.`,
         'Authentication Failed',
       );
       return { authenticated: false };
@@ -129,7 +129,7 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
     s.start('Creating API key...');
     try {
       const { key } = await apiKeyService.create({
-        description: 'Created by berget code setup',
+        description: 'Created by berget code init',
         name: `${tool === 'opencode' ? 'OpenCode' : 'Pi'} (created by berget CLI)`,
       });
       await syncApiKeyToTool(files, homeDir, tool, key);
@@ -156,7 +156,7 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
     s.start('Creating API key...');
     try {
       const { key } = await apiKeyService.create({
-        description: 'Created by berget code setup',
+        description: 'Created by berget code init',
         name: `${tool === 'opencode' ? 'OpenCode' : 'Pi'} (created by berget CLI)`,
       });
       await syncApiKeyToTool(files, homeDir, tool, key);
