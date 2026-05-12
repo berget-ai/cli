@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ApiKeyServicePort, AuthServicePort } from '../ports/auth-services';
 
 import { CancelledError, CommandFailedError, PrerequisiteError } from '../errors';
-import { runSetup } from '../setup';
+import { runInit } from '../init';
 import { FakeApiKeyService } from './fake-api-key-service';
 import { FakeAuthService } from './fake-auth-service';
 import { FakeCommandRunner } from './fake-command-runner';
@@ -11,8 +11,8 @@ import { FakeFileStore } from './fake-file-store';
 import { CANCEL, confirm, FakePrompter, multiselect, select } from './fake-prompter';
 
 const makeDeps = (
-  overrides: Partial<Parameters<typeof runSetup>[0]> = {},
-): Parameters<typeof runSetup>[0] => {
+  overrides: Partial<Parameters<typeof runInit>[0]> = {},
+): Parameters<typeof runInit>[0] => {
   return {
     apiKeyService:
       (overrides.apiKeyService as ApiKeyServicePort) ?? new FakeApiKeyService('sk_ber_test'),
@@ -49,7 +49,7 @@ function makeJwt(payload: Record<string, unknown>): string {
   return `${header}.${body}.signature`;
 }
 
-describe('runSetup', () => {
+describe('runInit', () => {
   describe('happy path', () => {
     it('sets up opencode project without existing config', async () => {
       const deps = makeDeps({
@@ -61,7 +61,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -80,7 +80,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -101,7 +101,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const commands = deps.commands as FakeCommandRunner;
       expect(commands.calls.length).toBeGreaterThan(0);
@@ -121,7 +121,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -140,7 +140,7 @@ describe('runSetup', () => {
       });
 
       // Simulate opencode not being installed
-      await expect(runSetup(deps)).rejects.toBeInstanceOf(PrerequisiteError);
+      await expect(runInit(deps)).rejects.toBeInstanceOf(PrerequisiteError);
     });
   });
 
@@ -150,7 +150,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([select(CANCEL)]),
       });
 
-      await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError);
+      await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
     });
 
     it('throws CancelledError when user cancels at write confirmation', async () => {
@@ -162,7 +162,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError);
+      await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
     });
 
     it('throws CancelledError when user cancels at agent write confirmation (opencode)', async () => {
@@ -176,7 +176,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError);
+      await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
     });
 
     it('throws CancelledError when user cancels at agent write confirmation (pi)', async () => {
@@ -191,7 +191,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await expect(runSetup(deps)).rejects.toBeInstanceOf(CancelledError);
+      await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
     });
   });
 
@@ -215,7 +215,7 @@ describe('runSetup', () => {
         }),
       );
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const written = files.getWrittenFiles();
       const config = JSON.parse(written.get('/home/user/project/opencode.json')!);
@@ -245,7 +245,7 @@ describe('runSetup', () => {
 }`,
       );
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const written = files.getWrittenFiles();
       const content = written.get('/home/user/project/opencode.jsonc')!;
@@ -274,7 +274,7 @@ describe('runSetup', () => {
         ) + '\n',
       );
 
-      await runSetup(deps);
+      await runInit(deps);
 
       // Check that no write happened — content should be unchanged
       const written = files.getWrittenFiles();
@@ -305,7 +305,7 @@ describe('runSetup', () => {
         }),
       );
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const written = files.getWrittenFiles();
       const settings = JSON.parse(written.get('/home/user/project/.pi/settings.json')!);
@@ -324,7 +324,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -345,7 +345,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const commands = deps.commands as FakeCommandRunner;
       const installCall = commands.calls.find((c) => c.command === 'pi');
@@ -363,7 +363,7 @@ describe('runSetup', () => {
         prompter: new FakePrompter([select('pi'), select('project')]),
       });
 
-      await expect(runSetup(deps)).rejects.toBeInstanceOf(CommandFailedError);
+      await expect(runInit(deps)).rejects.toBeInstanceOf(CommandFailedError);
     });
   });
 
@@ -386,7 +386,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const prompter = deps.prompter as FakePrompter;
       const notes = prompter.calls.filter((c) => c.method === 'note');
@@ -409,7 +409,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const prompter = deps.prompter as FakePrompter;
       const notes = prompter.calls.filter((c) => c.method === 'note');
@@ -434,7 +434,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const written = files.getWrittenFiles();
       expect(written.has('/home/user/.pi/agent/auth.json')).toBe(true);
@@ -465,7 +465,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const written = files.getWrittenFiles();
       const parsed = JSON.parse(written.get('/home/user/.local/share/opencode/auth.json')!);
@@ -485,7 +485,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -503,7 +503,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -523,7 +523,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -542,7 +542,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -561,7 +561,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const written = files.getWrittenFiles();
@@ -580,7 +580,7 @@ describe('runSetup', () => {
       });
 
       // First run writes the files
-      await runSetup(deps);
+      await runInit(deps);
 
       const files = deps.files as FakeFileStore;
       const firstBackend = files
@@ -601,7 +601,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps2);
+      await runInit(deps2);
 
       // Content should be unchanged
       expect(files.getWrittenFiles().get('/home/user/project/.opencode/agents/backend.md')).toBe(
@@ -628,7 +628,7 @@ describe('runSetup', () => {
         ]),
       });
 
-      await runSetup(deps);
+      await runInit(deps);
 
       const written = files.getWrittenFiles();
       const content = written.get('/home/user/project/.pi/SYSTEM.md');

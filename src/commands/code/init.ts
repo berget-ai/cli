@@ -31,7 +31,7 @@ export interface WizardDeps {
   prompter: Prompter;
 }
 
-export async function runSetup(deps: WizardDeps): Promise<void> {
+export async function runInit(deps: WizardDeps): Promise<void> {
   const { apiKeyService, authService, commands, cwd, files, homeDir, prompter } = deps;
 
   prompter.intro(`${chalk.bgGreen.black(' berget code ')}`);
@@ -126,14 +126,14 @@ export async function runSetup(deps: WizardDeps): Promise<void> {
     }
   }
 
-  prompter.outro('Setup complete!');
+  prompter.outro('Initialization complete!');
 }
 
 // ─── OpenCode ────────────────────────────────────────────────────────────────
 
-export async function runSetupCommand(): Promise<void> {
+export async function runInitCommand(): Promise<void> {
   try {
-    await runSetup({
+    await runInit({
       apiKeyService: ApiKeyService.getInstance(),
       authService: AuthService.getInstance(),
       commands: new SpawnCommandRunner(),
