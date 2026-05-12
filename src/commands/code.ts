@@ -65,7 +65,7 @@ export function registerCodeCommands(program: Command): void {
 
         const config = {
           $schema: 'https://opencode.ai/config.json',
-          plugin: ['@bergetai/opencode-auth@1.0.16'],
+          plugin: ['@bergetai/opencode-auth'],
         };
 
         const agentsDir = path.join(process.cwd(), '.opencode', 'agents');
