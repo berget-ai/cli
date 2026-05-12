@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { applyEdits, modify, parse } from 'jsonc-parser';
 import * as os from 'node:os';
 
@@ -33,7 +34,11 @@ export interface WizardDeps {
 export async function runSetup(deps: WizardDeps): Promise<void> {
   const { apiKeyService, authService, commands, cwd, files, homeDir, prompter } = deps;
 
-  prompter.intro('\uD83D\uDD27 Berget Code Setup');
+  prompter.intro(`${chalk.bgGreen.black(' berget code ')}`);
+  prompter.note(
+    `Ask questions and report bugs on our GitHub repository:\n\n${chalk.cyan.underline('https://github.com/berget-ai/cli')}`,
+    'Need help?',
+  );
 
   const ocState = await getOpencodeState(files, homeDir, cwd);
   const piState = await getPiState(files, homeDir, cwd);
@@ -154,24 +159,7 @@ export async function runSetupCommand(): Promise<void> {
   }
 }
 
-// ─── Pi ────────────────────────────────────────────────────────────────────────
-
-function generateDiff(oldText: string, newText: string, filePath: string): string {
-  const oldLines = oldText.split('\n');
-  const newLines = newText.split('\n');
-  let result = `--- ${filePath}\n+++ ${filePath}\n`;
-
-  const maxLength = Math.max(oldLines.length, newLines.length);
-  for (let index = 0; index < maxLength; index++) {
-    const oldLine = oldLines[index];
-    const newLine = newLines[index];
-    if (oldLine !== newLine) {
-      if (oldLine !== undefined) result += `- ${oldLine}\n`;
-      if (newLine !== undefined) result += `+ ${newLine}\n`;
-    }
-  }
-  return result.trimEnd();
-}
+// ─── OpenCode Config Helpers ──────────────────────────────────────────────────
 
 function generateModifiedContent(existingContent: null | string, configPath: string): string {
   if (configPath.endsWith('.jsonc')) {
@@ -381,9 +369,9 @@ async function setupOpenCode(deps: {
   }
 
   if (existingContent) {
-    prompter.note(generateDiff(existingContent, newContent, configPath), 'Changes to be written');
+    prompter.note(`OpenCode config will be updated at:\n  ${configPath}`, 'Config update');
   } else {
-    prompter.note(`New config at ${configPath}:\n\n${newContent}`, 'Config preview');
+    prompter.note(`OpenCode config will be created at:\n  ${configPath}`, 'Config update');
   }
 
   const shouldWrite = await prompter.confirm({
