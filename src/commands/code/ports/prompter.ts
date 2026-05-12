@@ -8,6 +8,7 @@ export interface Prompter {
       label: string;
       value: T;
     }>;
+    required?: boolean;
   }): Promise<T[]>;
   note(message: string, title?: string): void;
   outro(message: string): void;

@@ -420,6 +420,7 @@ async function setupOpenCodeAgents(deps: {
       label: agent.config.name,
       value: agent.config.name,
     })),
+    required: false,
   });
 
   if (selectedAgents.length === 0) {
