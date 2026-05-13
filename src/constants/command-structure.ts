@@ -196,7 +196,7 @@ export const COMMAND_DESCRIPTIONS = {
   [COMMAND_GROUPS.CLUSTERS]: 'Manage Kubernetes clusters',
 
   // Code group
-  [COMMAND_GROUPS.CODE]: 'AI-powered coding assistant with OpenCode',
+  [COMMAND_GROUPS.CODE]: 'Configure Berget AI coding tools',
   // Flux group
   [COMMAND_GROUPS.FLUX]: 'Manage Flux CD',
   // Helm group
