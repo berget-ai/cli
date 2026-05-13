@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    runs-on: [infra-runner-set]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [22]
