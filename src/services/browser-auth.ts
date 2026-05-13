@@ -2,6 +2,8 @@ import * as crypto from 'node:crypto';
 import * as http from 'node:http';
 import * as net from 'node:net';
 
+import { logger } from '../utils/logger';
+
 export interface BrowserAuthOptions {
   callbackPort: number;
   clientId: string;
@@ -234,8 +236,9 @@ export class BrowserAuth {
         try {
           const open = await import('open').then((m) => m.default);
           await open(authUrl.toString());
-        } catch {
-          // Browser failed to open - user must open URL manually
+        } catch (error) {
+          logger.debug('Failed to open browser:', error);
+          logger.info(`Please open this URL in your browser: ${authUrl.toString()}`);
         }
       })();
     });
