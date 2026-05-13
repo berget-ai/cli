@@ -10,7 +10,7 @@ import { runInitCommand } from './code/init';
 export function registerCodeCommands(program: Command): void {
   const code = program
     .command(COMMAND_GROUPS.CODE)
-    .description('AI-powered coding assistant with OpenCode');
+    .description('Configure Berget AI coding tools');
 
   code
     .command(SUBCOMMANDS.CODE.INIT)
