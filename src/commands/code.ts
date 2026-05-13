@@ -8,9 +8,7 @@ import { runInitCommand } from './code/init';
  * Register code commands
  */
 export function registerCodeCommands(program: Command): void {
-  const code = program
-    .command(COMMAND_GROUPS.CODE)
-    .description('Configure Berget AI coding tools');
+  const code = program.command(COMMAND_GROUPS.CODE).description('Configure Berget AI coding tools');
 
   code
     .command(SUBCOMMANDS.CODE.INIT)
