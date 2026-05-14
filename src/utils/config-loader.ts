@@ -139,14 +139,14 @@ export class ConfigLoader {
       const config = this.loadConfig();
 
       // Extract from config or fall back to defaults
-      const primary = config.model || 'berget/kimi-k2.6';
+      const primary = config.model || 'berget/glm-4.7';
       const small = config.small_model || 'berget/gpt-oss';
 
       return { primary, small };
     } catch {
       // Fallback to defaults when no config exists (init scenario)
       return {
-        primary: 'berget/kimi-k2.6',
+        primary: 'berget/glm-4.7',
         small: 'berget/gpt-oss',
       };
     }
@@ -190,9 +190,9 @@ export class ConfigLoader {
 
     // Fallback to defaults
     return {
-      'kimi-k2.6': {
-        limit: { context: 256_000, output: 16_000 },
-        name: 'Kimi K2.6',
+      'glm-4.7': {
+        limit: { context: 90_000, output: 4000 },
+        name: 'GLM-4.7',
       },
       'gpt-oss': {
         limit: { context: 128_000, output: 4000 },
