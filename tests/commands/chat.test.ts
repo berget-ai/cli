@@ -45,7 +45,7 @@ describe('Chat Commands', () => {
   });
 
   describe('chat run command', () => {
-    it('should use berget/glm-4.7 as default model', () => {
+    it('should use berget/kimi-k2.6 as default model', () => {
       const chatCommand = program.commands.find((cmd) => cmd.name() === 'chat');
       const runCommand = chatCommand?.commands.find((cmd) => cmd.name() === 'run');
 
@@ -53,7 +53,7 @@ describe('Chat Commands', () => {
 
       // Check the help text which contains the default model
       const helpText = runCommand?.helpInformation();
-      expect(helpText).toContain('glm-4.7');
+      expect(helpText).toContain('kimi-k2.6');
     });
 
     it('should have streaming enabled by default', () => {
