@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ApiKeyServicePort, AuthServicePort } from '../ports/auth-services.js';
 
-import { CancelledError, CommandFailedError, PrerequisiteError } from '../errors.js';
+import { CancelledError, CommandFailedError } from '../errors.js';
 import { runInit } from '../init.js';
 import { FakeApiKeyService } from './fake-api-key-service.js';
 import { FakeAuthService } from './fake-auth-service.js';
@@ -133,14 +133,24 @@ describe('runInit', () => {
   });
 
   describe('prerequisites', () => {
-    it('throws PrerequisiteError when opencode is not installed', async () => {
+    it('handles missing opencode with interactive prompt', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner(),
-        prompter: new FakePrompter([select('opencode'), select('project')]),
+        prompter: new FakePrompter([select('opencode'), select('exit')]),
       });
 
-      // Simulate opencode not being installed
-      await expect(runInit(deps)).rejects.toBeInstanceOf(PrerequisiteError);
+      // User selects 'exit' when prompted about missing tool
+      await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
+    });
+
+    it('continues without installing when user chooses continue', async () => {
+      const deps = makeDeps({
+        commands: new FakeCommandRunner(),
+        prompter: new FakePrompter([select('opencode'), select('continue'), select('project')]),
+      });
+
+      // Should complete without throwing - auth is configured even without tool
+      await expect(runInit(deps)).resolves.not.toThrow();
     });
   });
 

@@ -5,7 +5,7 @@ import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
 import { getAllAgents, toPiPrompt } from '../../agents/index.js';
-import { CancelledError, CommandFailedError, PrerequisiteError } from './errors.js';
+import { CancelledError, CommandFailedError } from './errors.js';
 import { readJsonMaybe, writeJsonFile } from './utils.js';
 
 const PI_PROVIDER = 'npm:@bergetai/pi-provider';
@@ -47,11 +47,6 @@ export async function getPiState(
 export async function initPi(deps: InitPiDeps): Promise<void> {
   const { commands, cwd, files, homeDir, prompter, scope } = deps;
   const s = prompter.spinner();
-
-  const installed = await commands.checkInstalled('pi');
-  if (!installed) {
-    throw new PrerequisiteError('pi');
-  }
 
   const installArguments =
     scope === 'project' ? ['install', '-l', PI_PROVIDER] : ['install', PI_PROVIDER];
