@@ -10,6 +10,7 @@ import {
   syncApiKeyToTool,
   syncOAuthToTool,
 } from '../auth-sync.js';
+import { FatalError } from '../errors.js';
 import { FakeApiKeyService } from './fake-api-key-service.js';
 import { FakeAuthService } from './fake-auth-service.js';
 import { FakeFileStore } from './fake-file-store.js';
@@ -414,6 +415,54 @@ describe('configureAuth', () => {
     const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
     expect(parsed.berget.type).toBe('api');
     expect(parsed.berget.key).toBe('sk_ber_test');
+  });
+
+  it('Case B variant failure: login success + seat → chooses api_key + creation fails', async () => {
+    const files = new FakeFileStore();
+    const jwt = makeJwt({
+      exp: 9_999_999_999_999,
+      realm_access: { roles: ['berget_code_seat'] },
+    });
+    files.seed(
+      HOME + '/.berget/auth.json',
+      JSON.stringify({
+        access_token: jwt,
+        expires_at: 9_999_999_999_999,
+        refresh_token: 'ref',
+      }),
+    );
+
+    const prompter = new FakePrompter([select('api_key')]);
+    const failingApiKeyService = new FakeApiKeyService(
+      'sk_ber_test',
+      true,
+      'Before you can create API keys, you need to finish setting up your account.',
+    );
+
+    const deps = makeAuthDeps({ apiKeyService: failingApiKeyService, files, prompter });
+
+    await expect(configureAuth(deps, 'opencode')).rejects.toThrow(FatalError);
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
+  });
+
+  it('Case C failure: login success + no seat → confirms api key + creation fails', async () => {
+    const files = new FakeFileStore();
+    const prompter = new FakePrompter([confirm(true)]);
+
+    const failingApiKeyService = new FakeApiKeyService(
+      'sk_ber_test',
+      true,
+      'Before you can create API keys, you need to finish setting up your account.',
+    );
+    const deps = makeAuthDeps({
+      apiKeyService: failingApiKeyService,
+      authService: new FakeAuthService(true, false),
+      files,
+      prompter,
+    });
+
+    await expect(configureAuth(deps, 'opencode')).rejects.toThrow(FatalError);
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
   });
 
   it('Case D: login success + no seat → declines api key', async () => {

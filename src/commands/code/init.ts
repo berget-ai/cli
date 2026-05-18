@@ -12,7 +12,7 @@ import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
 import { configureAuth } from './auth-sync.js';
-import { CancelledError, CommandFailedError, PrerequisiteError } from './errors.js';
+import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {
   getOpencodeLabel,
   getOpencodeState,
@@ -144,6 +144,10 @@ export async function runInitCommand(): Promise<void> {
   } catch (error) {
     if (error instanceof CancelledError) {
       process.exit(130);
+    }
+    if (error instanceof FatalError) {
+      console.error(error.message);
+      process.exit(1);
     }
     if (error instanceof PrerequisiteError) {
       console.error(`Missing required binary: ${error.binary}`);

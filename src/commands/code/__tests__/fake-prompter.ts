@@ -48,6 +48,9 @@ export class FakePrompter implements Prompter {
       throw new Error(`Script not exhausted: ${this._script.length - this._cursor} entries left`);
     }
   }
+  cancel(message: string): void {
+    this._calls.push({ args: { message }, method: 'cancel' });
+  }
   async confirm(options: { message: string }): Promise<boolean> {
     this._calls.push({ args: options, method: 'confirm' });
     const entry = this._script[this._cursor++];

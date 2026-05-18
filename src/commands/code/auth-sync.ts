@@ -8,6 +8,7 @@ import {
   hasBergetCodeSeat,
   isTokenExpired,
 } from '../../auth/jwt.js';
+import { FatalError } from './errors.js';
 
 export interface AuthDeps {
   apiKeyService: ApiKeyServicePort;
@@ -144,13 +145,12 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
       await syncApiKeyToTool(files, homeDir, tool, key);
       s.stop('API key created and saved.');
       return { authenticated: true };
-    } catch {
+    } catch (error: any) {
       s.stop('API key creation failed.');
-      prompter.note(
-        'Could not create API key. Please create one manually with `berget api-keys create`.',
-        'Error',
+      throw new FatalError(
+        error?.message ||
+          'Could not create API key. Please create one manually with `berget api-keys create`.',
       );
-      return { authenticated: false };
     }
   }
 
@@ -171,13 +171,12 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
       await syncApiKeyToTool(files, homeDir, tool, key);
       s.stop('API key created and saved.');
       return { authenticated: true };
-    } catch {
+    } catch (error: any) {
       s.stop('API key creation failed.');
-      prompter.note(
-        'Could not create API key. Please create one manually with `berget api-keys create`.',
-        'Error',
+      throw new FatalError(
+        error?.message ||
+          'Could not create API key. Please create one manually with `berget api-keys create`.',
       );
-      return { authenticated: false };
     }
   }
 
