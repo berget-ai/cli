@@ -69,7 +69,9 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
     const s = prompter.spinner();
     s.start('Waiting for browser login...');
 
-    const loginResult = await authService.loginInteractive();
+    const loginResult = await authService.loginInteractive({
+      debug: process.env.LOG_LEVEL === 'debug',
+    });
     if (!loginResult.success) {
       s.stop('Login failed.');
       prompter.note(

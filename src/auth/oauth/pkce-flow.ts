@@ -7,11 +7,12 @@ import {
   calculatePKCECodeChallenge,
   type Configuration,
   randomPKCECodeVerifier,
+  ResponseBodyError,
 } from 'openid-client';
 
 import type { BrowserAuthResult } from '../types.js';
 
-import { logger } from '../../utils/logger.js';
+import { logger, LogLevel } from '../../utils/logger.js';
 
 const FALLBACK_CALLBACK_PORT = 8787;
 const AUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -28,7 +29,12 @@ export interface PkceFlowOptions {
  * and exchange the authorization code for tokens.
  */
 export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAuthResult> {
-  const { config, createServer: createServerFactory = http.createServer, debug } = options;
+  const {
+    config,
+    createServer: createServerFactory = http.createServer,
+    debug: debugOption,
+  } = options;
+  const debug = debugOption || logger.getLogLevel() >= LogLevel.DEBUG;
 
   const codeVerifier = randomPKCECodeVerifier();
   const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
@@ -51,8 +57,13 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
       state,
     });
 
+    if (debug) {
+      logger.debug('Built authorization URL:', authorizationUrl.toString().split('?')[0] + '?...');
+    }
+
     // Create the callback handler promise
     const authResult = await new Promise<{
+      callbackUrl?: string;
       code?: string;
       error?: string;
       success: boolean;
@@ -60,7 +71,12 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
       let resolved = false;
       const sockets = new Set<net.Socket>();
 
-      const safeResolve = (result: { code?: string; error?: string; success: boolean }) => {
+      const safeResolve = (result: {
+        callbackUrl?: string;
+        code?: string;
+        error?: string;
+        success: boolean;
+      }) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(timeoutHandle);
@@ -87,6 +103,9 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
 
         if (error) {
           const description = requestUrl.searchParams.get('error_description') || error;
+          if (debug) {
+            logger.debug(`Callback returned OAuth error: ${error} — ${description}`);
+          }
           res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
           res.end(getErrorPage('Authentication Failed', description));
           safeResolve({ error, success: false });
@@ -94,6 +113,9 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
         }
 
         if (receivedState !== state) {
+          if (debug) {
+            logger.debug(`State mismatch: expected ${state}, got ${receivedState}`);
+          }
           res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
           res.end(
             getErrorPage('Authentication Failed', 'Invalid state parameter. Please try again.'),
@@ -104,7 +126,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
 
         res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
         res.end(getSuccessPage());
-        safeResolve({ code, success: true });
+        safeResolve({ callbackUrl: requestUrl.toString(), code, success: true });
       });
 
       server.on('connection', (socket: net.Socket) => {
@@ -129,26 +151,47 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
       })();
     });
 
-    if (!authResult.success || !authResult.code) {
+    if (!authResult.success || !authResult.code || !authResult.callbackUrl) {
       return {
         error: authResult.error || 'Unknown error',
         success: false,
       };
     }
 
-    // Exchange code for tokens
-    const callbackUrl = new URL(
-      `/callback?code=${authResult.code}&state=${state}`,
-      `http://localhost:${port}`,
-    );
-    const tokenResult = await authorizationCodeGrant(config, callbackUrl, { expectedState: state });
+    // Exchange code for tokens using the FULL callback URL (preserves iss, session_state, etc.)
+    const callbackUrl = new URL(authResult.callbackUrl);
 
-    return {
-      accessToken: tokenResult.access_token,
-      expiresIn: tokenResult.expires_in,
-      refreshToken: tokenResult.refresh_token,
-      success: true,
-    };
+    if (debug) {
+      logger.debug('Exchanging code for tokens at token endpoint');
+      logger.debug('Callback URL used for exchange:', callbackUrl.toString());
+    }
+
+    try {
+      const tokenResult = await authorizationCodeGrant(config, callbackUrl, {
+        expectedState: state,
+        pkceCodeVerifier: codeVerifier,
+      });
+
+      if (debug) {
+        logger.debug('Token exchange succeeded. Expires in:', tokenResult.expires_in);
+      }
+
+      return {
+        accessToken: tokenResult.access_token,
+        expiresIn: tokenResult.expires_in,
+        refreshToken: tokenResult.refresh_token,
+        success: true,
+      };
+    } catch (tokenError) {
+      if (debug) {
+        logger.debug('Token exchange failed:', tokenError);
+        if (tokenError instanceof ResponseBodyError) {
+          logger.debug('ResponseBodyError details — status:', (tokenError as any).status);
+          logger.debug('ResponseBodyError details — response:', (tokenError as any).response);
+        }
+      }
+      throw tokenError;
+    }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : String(error),

@@ -103,8 +103,10 @@ vi.mock('open', () => ({
 vi.mock('../../utils/logger.js', () => ({
   logger: {
     debug: vi.fn(),
+    getLogLevel: vi.fn().mockReturnValue(0), // INFO = 3, but return 0 to keep tests fast
     info: vi.fn(),
   },
+  LogLevel: { DEBUG: 4, ERROR: 1, INFO: 3, NONE: 0, WARN: 2 },
 }));
 
 vi.mock('node:crypto', () => ({
@@ -250,5 +252,42 @@ describe('startPkceFlow', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('access_denied');
+  });
+
+  it('passes the full callback URL to authorizationCodeGrant (regression: must preserve iss, session_state)', async () => {
+    const mockServer = createMockServer();
+    const createServerFn = vi.fn(() => mockServer);
+    const mockConfig: any = {};
+
+    const { authorizationCodeGrant } = await import('openid-client');
+    (authorizationCodeGrant as ReturnType<typeof vi.fn>).mockClear();
+    (authorizationCodeGrant as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      access_token: 'new-access',
+      expires_in: 3600,
+      refresh_token: 'new-refresh',
+    });
+
+    const flowPromise = startPkceFlow({
+      config: mockConfig,
+      createServer: createServerFn as any,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // Keycloak sends extra params like iss and session_state
+    const req = {
+      url: '/callback?code=authcode123&state=mock-state-uuid&iss=https%3A%2F%2Fkeycloak.berget.ai%2Frealms%2Fberget&session_state=abc-def',
+    };
+    const res = { end: vi.fn(), writeHead: vi.fn() };
+    mockServer._triggerRequest(req, res);
+
+    await flowPromise;
+
+    expect(authorizationCodeGrant).toHaveBeenCalledTimes(1);
+    const passedUrl = (authorizationCodeGrant as ReturnType<typeof vi.fn>).mock.calls[0][1] as URL;
+    expect(passedUrl.searchParams.get('code')).toBe('authcode123');
+    expect(passedUrl.searchParams.get('state')).toBe('mock-state-uuid');
+    expect(passedUrl.searchParams.get('iss')).toBe('https://keycloak.berget.ai/realms/berget');
+    expect(passedUrl.searchParams.get('session_state')).toBe('abc-def');
   });
 });
