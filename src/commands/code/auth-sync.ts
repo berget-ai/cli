@@ -189,8 +189,6 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
   return { authenticated: false };
 }
 
-export { decodeJwtPayload, extractJwtExpiresAt, hasBergetCodeSeat, isTokenExpired };
-
 export async function isToolAuthenticated(
   files: FileStore,
   homeDir: string,

@@ -1,6 +1,7 @@
 import type { Configuration } from 'openid-client';
 
 import { refreshTokenGrant } from 'openid-client';
+import { ResponseBodyError } from 'openid-client';
 
 import type { TokenStore } from '../storage/token-store.js';
 import type { TokenData } from '../types.js';
@@ -60,13 +61,20 @@ async function doRefresh(config: Configuration, tokenStore: TokenStore): Promise
     await tokenStore.set(newTokenData);
     return true;
   } catch (error) {
-    // On invalid/expired refresh token (401/403 from Keycloak), clear tokens
-    if (
+    // On invalid/expired refresh token (401/403 from Keycloak), clear tokens.
+    // ResponseBodyError from openid-client carries structured error info.
+    if (error instanceof ResponseBodyError) {
+      // Keycloak returns invalid_grant when the refresh token is expired or revoked
+      if (error.error === 'invalid_grant' || error.status === 401 || error.status === 403) {
+        await tokenStore.clear();
+      }
+    } else if (
       error instanceof Error &&
       (error.message.includes('401') ||
         error.message.includes('403') ||
         error.message.includes('invalid_grant'))
     ) {
+      // Fallback for non-standard error shapes (e.g. network-level failures)
       await tokenStore.clear();
     }
     return false;

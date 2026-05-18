@@ -9,12 +9,26 @@ let mockRefreshTokenGrantResult: any = null;
 let mockRefreshTokenGrantError: Error | null = null;
 
 vi.mock('openid-client', async () => {
+  const ResponseBodyErrorClass = class extends Error {
+    cause: Record<string, unknown>;
+    code: string;
+    error: string;
+    status: number;
+    constructor(message: string, options: { cause: Record<string, unknown>; response: Response }) {
+      super(message);
+      this.cause = options.cause;
+      this.code = 'OAUTH_RESPONSE_BODY';
+      this.error = options.cause.error as string;
+      this.status = options.response.status;
+    }
+  };
   return {
     refreshTokenGrant: vi.fn(async (...args: any[]) => {
       mockRefreshTokenGrantCalls.push(args);
       if (mockRefreshTokenGrantError) throw mockRefreshTokenGrantError;
       return mockRefreshTokenGrantResult;
     }),
+    ResponseBodyError: ResponseBodyErrorClass,
   };
 });
 
@@ -125,7 +139,55 @@ describe('refreshAccessToken', () => {
     expect(mockRefreshTokenGrantCalls).toHaveLength(2);
   });
 
-  it('clears tokens on invalid_grant error from Keycloak', async () => {
+  it('clears tokens on ResponseBodyError with invalid_grant', async () => {
+    const store = createMockStore();
+    const mockConfig = createMockConfig();
+
+    const { ResponseBodyError } = await import('openid-client');
+    mockRefreshTokenGrantError = new ResponseBodyError('invalid_grant', {
+      cause: { error: 'invalid_grant', error_description: 'Token is expired' },
+      response: new Response(null, { status: 400 }),
+    });
+
+    const result = await refreshAccessToken(mockConfig, store);
+
+    expect(result).toBe(false);
+    expect(store.clear).toHaveBeenCalled();
+  });
+
+  it('clears tokens on ResponseBodyError with 401 status', async () => {
+    const store = createMockStore();
+    const mockConfig = createMockConfig();
+
+    const { ResponseBodyError } = await import('openid-client');
+    mockRefreshTokenGrantError = new ResponseBodyError('Unauthorized', {
+      cause: { error: 'invalid_token' },
+      response: new Response(null, { status: 401 }),
+    });
+
+    const result = await refreshAccessToken(mockConfig, store);
+
+    expect(result).toBe(false);
+    expect(store.clear).toHaveBeenCalled();
+  });
+
+  it('does not clear tokens on other ResponseBodyError', async () => {
+    const store = createMockStore();
+    const mockConfig = createMockConfig();
+
+    const { ResponseBodyError } = await import('openid-client');
+    mockRefreshTokenGrantError = new ResponseBodyError('Server Error', {
+      cause: { error: 'server_error' },
+      response: new Response(null, { status: 500 }),
+    });
+
+    const result = await refreshAccessToken(mockConfig, store);
+
+    expect(result).toBe(false);
+    expect(store.clear).not.toHaveBeenCalled();
+  });
+
+  it('clears tokens on plain Error fallback (backward compat)', async () => {
     const store = createMockStore();
     const mockConfig = createMockConfig();
 
