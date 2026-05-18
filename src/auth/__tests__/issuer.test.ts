@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clearConfigurationCache, getConfiguration } from '../issuer.js';
 
@@ -8,11 +8,8 @@ let mockDiscoveryCalls: any[] = [];
 vi.mock('openid-client', () => ({
   discovery: vi.fn((...args: any[]) => {
     mockDiscoveryCalls.push(args);
-    // Return a unique config based on the URL
-    const url = args[0] as URL;
-    return Promise.resolve({
-      issuer: url.toString(),
-    });
+    // Return a unique config object based on the URL (just a plain object)
+    return Promise.resolve({ _url: (args[0] as URL).toString() });
   }),
 }));
 
@@ -31,12 +28,12 @@ describe('getConfiguration', () => {
     };
 
     const result1 = await getConfiguration(authConfig);
-    expect(result1.issuer).toBe('https://keycloak.berget.ai/realms/berget');
+    expect((result1 as any)._url).toBe('https://keycloak.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(1);
 
     // Second call should use cache
     const result2 = await getConfiguration(authConfig);
-    expect(result2.issuer).toBe('https://keycloak.berget.ai/realms/berget');
+    expect((result2 as any)._url).toBe('https://keycloak.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(1); // no additional call
   });
 
@@ -59,7 +56,7 @@ describe('getConfiguration', () => {
     };
 
     const result = await getConfiguration(stageConfig);
-    expect(result.issuer).toBe('https://keycloak.stage.berget.ai/realms/berget');
+    expect((result as any)._url).toBe('https://keycloak.stage.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(2);
   });
 });

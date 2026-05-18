@@ -8,7 +8,7 @@
 
 import { type Configuration, discovery } from 'openid-client';
 
-import type { AuthConfig } from '../types.js';
+import type { AuthConfig } from './types.js';
 
 let cachedConfig: Configuration | null = null;
 

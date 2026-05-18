@@ -82,7 +82,7 @@ vi.mock('openid-client', async () => {
     buildAuthorizationUrl: vi.fn((_config, params) => {
       const url = new URL('https://keycloak.berget.ai/realms/berget/protocol/openid-connect/auth');
       for (const [key, value] of Object.entries(params)) {
-        url.searchParams.set(key, value);
+        url.searchParams.set(key, value as string);
       }
       return url;
     }),

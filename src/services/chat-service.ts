@@ -51,16 +51,13 @@ export class ChatService {
     try {
       logger.debug('Starting createCompletion method');
 
-      // Initialize options if undefined
       const optionsCopy = options ? { ...options } : { messages: [] };
 
-      // Check if messages are defined
       if (!optionsCopy.messages || !Array.isArray(optionsCopy.messages)) {
         logger.error('messages is undefined or not an array');
         optionsCopy.messages = [];
       }
 
-      // Log the options object
       logger.debug('Starting createCompletion with options:');
       try {
         logger.debug(
@@ -82,92 +79,8 @@ export class ChatService {
 
       const headers: Record<string, string> = {};
 
-      // First try to use the authenticated client (with refresh token support)
-      // Only fall back to API key flow if explicitly requested or no auth tokens available
-      const { TokenManager } = await import('../utils/token-manager.js');
-      const tokenManagerInstance = TokenManager.getInstance();
-      const hasValidAuth =
-        tokenManagerInstance.getAccessToken() && !tokenManagerInstance.isTokenExpired();
-
-      const environmentApiKeyForAuth = process.env.BERGET_API_KEY;
-      const hasExplicitApiKey = !!optionsCopy.apiKey || !!environmentApiKeyForAuth;
-
-      // If we have valid auth tokens and no explicit API key, use authenticated client
-      if (hasValidAuth && !hasExplicitApiKey) {
-        logger.debug('Using authenticated client with refresh token support');
-        // Create a copy without apiKey to let the authenticated client handle auth automatically
-        const { apiKey: _, ...optionsWithoutKey } = optionsCopy;
-        return this.executeCompletion(optionsWithoutKey, {});
-      }
-
-      // Check for environment variables first - prioritize this over everything else
-      const environmentApiKey = process.env.BERGET_API_KEY;
-      if (environmentApiKey) {
-        logger.debug('Using API key from BERGET_API_KEY environment variable');
-        optionsCopy.apiKey = environmentApiKey;
-        // Skip the default API key logic if we already have a key
-        return this.executeCompletion(optionsCopy, headers);
-      }
-      // If API key is already provided, use it directly
-      else if (optionsCopy.apiKey) {
-        logger.debug('Using API key provided in options');
-        // Skip the default API key logic if we already have a key
-        return this.executeCompletion(optionsCopy, headers);
-      }
-      // Only try to get the default API key if no API key is provided and no env var is set
-      else {
-        logger.debug('No API key provided, trying to get default');
-
-        try {
-          // Import the DefaultApiKeyManager directly
-          logger.debug('Importing DefaultApiKeyManager');
-
-          const { DefaultApiKeyManager } = await import('../utils/default-api-key.js');
-          const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
-
-          logger.debug('Got DefaultApiKeyManager instance');
-
-          // Try to get the default API key
-          logger.debug('Calling promptForDefaultApiKey');
-
-          const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData();
-          const apiKey =
-            defaultApiKeyData?.key || (await defaultApiKeyManager.promptForDefaultApiKey());
-
-          logger.debug(`Default API key data exists: ${!!defaultApiKeyData}`);
-          logger.debug(`promptForDefaultApiKey returned: ${apiKey ? 'a key' : 'null'}`);
-
-          if (apiKey) {
-            logger.debug('Using API key from default API key manager');
-            optionsCopy.apiKey = apiKey;
-          } else {
-            logger.warn('No API key available. You need to either:');
-            logger.warn('1. Create an API key with: berget api-keys create --name "My Key"');
-            logger.warn('2. Set a default API key with: berget api-keys set-default <id>');
-            logger.warn('3. Provide an API key with the --api-key option');
-            logger.warn('4. Set the BERGET_API_KEY environment variable');
-            logger.warn('\nExample:');
-            logger.warn('  export BERGET_API_KEY=your_api_key_here');
-            logger.warn('  # or for a single command:');
-            logger.warn('  BERGET_API_KEY=your_api_key_here berget chat run google/gemma-3-27b-it');
-            throw new Error('No API key provided and no default API key set');
-          }
-
-          // Set the API key in the options
-          logger.debug('Setting API key in options');
-
-          // Only set the API key if it's not null
-          if (apiKey) {
-            optionsCopy.apiKey = apiKey;
-          }
-        } catch (error) {
-          logger.error('Error getting API key:');
-          if (error instanceof Error) {
-            logger.error(error.message);
-          }
-          logger.warn('Please create an API key with: berget api-keys create --name "My Key"');
-          throw new Error('Failed to get API key');
-        }
+      if (optionsCopy.apiKey) {
+        headers['Authorization'] = optionsCopy.apiKey;
       }
 
       // Set default model if not provided
@@ -181,7 +94,7 @@ export class ChatService {
         JSON.stringify(
           {
             ...optionsCopy,
-            apiKey: optionsCopy.apiKey ? '***' : undefined, // Hide the actual API key in debug output
+            apiKey: optionsCopy.apiKey ? '***' : undefined,
           },
           null,
           2,
@@ -190,18 +103,15 @@ export class ChatService {
 
       return this.executeCompletion(optionsCopy, headers);
     } catch (error) {
-      // Improved error handling
       let errorMessage = 'Failed to create chat completion';
 
       if (error instanceof Error) {
         try {
-          // Try to parse the error message as JSON
           const parsedError = JSON.parse(error.message);
           if (parsedError.error && parsedError.error.message) {
             errorMessage = `Chat error: ${parsedError.error.message}`;
           }
         } catch {
-          // If parsing fails, use the original error message
           errorMessage = `Chat error: ${error.message}`;
         }
       }
@@ -217,15 +127,9 @@ export class ChatService {
    */
   public async listModels(apiKey?: string): Promise<any> {
     try {
-      // Check for environment variable first, then fallback to provided API key
-      const environmentApiKey = process.env.BERGET_API_KEY;
-      const effectiveApiKey = environmentApiKey || apiKey;
+      const headers = apiKey ? { Authorization: apiKey } : {};
 
-      if (effectiveApiKey) {
-        const headers = {
-          Authorization: effectiveApiKey,
-        };
-
+      if (apiKey) {
         const { data, error } = await this.client.GET('/v1/models', { headers });
         if (error) throw new Error(JSON.stringify(error));
         return data;
@@ -235,12 +139,10 @@ export class ChatService {
         return data;
       }
     } catch (error) {
-      // Improved error handling
       let errorMessage = 'Failed to list models';
 
       if (error instanceof Error) {
         try {
-          // Try to parse the error message as JSON
           const parsedError = JSON.parse(error.message);
           if (parsedError.error) {
             errorMessage = `Models error: ${
@@ -250,7 +152,6 @@ export class ChatService {
             }`;
           }
         } catch {
-          // If parsing fails, use the original error message
           errorMessage = `Models error: ${error.message}`;
         }
       }
@@ -337,9 +238,6 @@ export class ChatService {
   }
 
   /**
-
-
-  /**
    * Handle streaming response from the API
    * @param options Request options
    * @param headers Request headers
@@ -393,7 +291,7 @@ export class ChatService {
       const decoder = new TextDecoder();
       let fullContent = '';
       let fullResponse: any = null;
-      let buffer = ''; // Buffer to accumulate partial JSON data
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -402,15 +300,12 @@ export class ChatService {
         const chunk = decoder.decode(value, { stream: true });
         logger.debug(`Received chunk: ${chunk.length} bytes`);
 
-        // Add chunk to buffer
         buffer += chunk;
         logger.debug(`Added chunk to buffer. Buffer length: ${buffer.length}`);
 
-        // Process the buffer - it may contain multiple SSE events
         const lines = buffer.split('\n');
         logger.debug(`Processing ${lines.length} lines from buffer`);
 
-        // Keep track of processed lines to update buffer
         let processedLines = 0;
 
         for (const [index, line] of lines.entries()) {
@@ -420,23 +315,19 @@ export class ChatService {
             const jsonData = line.slice(5).trim();
             logger.debug(`Extracted JSON data: "${jsonData}"`);
 
-            // Skip empty data or [DONE] marker
             if (jsonData === '' || jsonData === '[DONE]') {
               logger.debug(`Skipping empty data or [DONE] marker`);
               processedLines = index + 1;
               continue;
             }
 
-            // Check if JSON looks complete (basic validation)
             if (!jsonData.startsWith('{')) {
               logger.warn(
                 `JSON data doesn't start with '{', might be partial: "${jsonData.slice(0, 50)}..."`,
               );
-              // Don't process this line yet, keep it in buffer
               break;
             }
 
-            // Count braces to check if JSON is complete
             let braceCount = 0;
             let inString = false;
             let escaped = false;
@@ -465,7 +356,6 @@ export class ChatService {
               logger.warn(
                 `JSON braces don't balance (${braceCount}), treating as partial: "${jsonData.slice(0, 50)}..."`,
               );
-              // Don't process this line yet, keep it in buffer
               break;
             }
 
@@ -473,40 +363,26 @@ export class ChatService {
               logger.debug(`Attempting to parse JSON of length: ${jsonData.length}`);
               const parsedData = JSON.parse(jsonData);
               logger.debug(`Successfully parsed JSON: ${JSON.stringify(parsedData, null, 2)}`);
-              processedLines = index + 1; // Mark this line as processed
+              processedLines = index + 1;
 
-              // Call the onChunk callback with the parsed data
               if (options.onChunk) {
                 options.onChunk(parsedData);
               }
 
-              // Keep track of the full response
               if (!fullResponse) {
                 fullResponse = parsedData;
               } else if (
                 parsedData.choices &&
                 parsedData.choices[0] &&
-                parsedData.choices[0].delta && // Accumulate content for the full response
+                parsedData.choices[0].delta &&
                 parsedData.choices[0].delta.content
               ) {
                 fullContent += parsedData.choices[0].delta.content;
               }
             } catch (error) {
               logger.error(`Error parsing chunk: ${error}`);
-              logger.error(
-                `JSON parse error at position ${(error as any).message?.match(/position (\d+)/)?.[1] || 'unknown'}`,
-              );
-              logger.error(`Problematic chunk length: ${jsonData.length}`);
-              logger.error(`Problematic chunk content: "${jsonData}"`);
-              logger.error(`Chunk starts with: "${jsonData.slice(0, 50)}..."`);
-              logger.error(
-                `Chunk ends with: "...${jsonData.slice(Math.max(0, jsonData.length - 50))}"`,
-              );
-
-              // Show character codes around the error position
-              const errorPos = Number.parseInt(
-                (error as any).message?.match(/position (\d+)/)?.[1] || '0',
-              );
+              const errorMsg = (error as any).message || '';
+              const errorPos = Number.parseInt(errorMsg.match(/position (\d+)/)?.[1] || '0');
               if (errorPos > 0) {
                 const start = Math.max(0, errorPos - 20);
                 const end = Math.min(jsonData.length, errorPos + 20);
@@ -522,7 +398,6 @@ export class ChatService {
           }
         }
 
-        // Update buffer to only contain unprocessed lines
         if (processedLines > 0) {
           const remainingLines = lines.slice(processedLines);
           buffer = remainingLines.join('\n');

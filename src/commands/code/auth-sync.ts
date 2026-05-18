@@ -2,6 +2,13 @@ import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services.j
 import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
+import {
+  decodeJwtPayload,
+  extractJwtExpiresAt,
+  hasBergetCodeSeat,
+  isTokenExpired,
+} from '../../auth/jwt.js';
+
 export interface AuthDeps {
   apiKeyService: ApiKeyServicePort;
   authService: AuthServicePort;
@@ -180,34 +187,7 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
   return { authenticated: false };
 }
 
-export function decodeJwtPayload(token: string): null | unknown {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
-    return JSON.parse(payload);
-  } catch {
-    return null;
-  }
-}
-
-export function hasBergetCodeSeat(accessToken: string): boolean {
-  const payload = decodeJwtPayload(accessToken);
-  if (!payload || typeof payload !== 'object') return false;
-  const p = payload as Record<string, unknown>;
-  const realmAccess = p.realm_access as Record<string, unknown> | undefined;
-  if (!realmAccess) return false;
-  const roles = realmAccess.roles as string[] | undefined;
-  if (!Array.isArray(roles)) return false;
-  return roles.includes('berget_code_seat');
-}
-
-export function isTokenExpired(expiresAt: number): boolean {
-  const now = Date.now();
-  const timeUntilExpiry = expiresAt - now;
-  const buffer = Math.min(30 * 1000, timeUntilExpiry * 0.1);
-  return now + buffer >= expiresAt;
-}
+export { decodeJwtPayload, extractJwtExpiresAt, hasBergetCodeSeat, isTokenExpired };
 
 export async function isToolAuthenticated(
   files: FileStore,
@@ -311,19 +291,4 @@ export async function syncOAuthToTool(
 
   await files.writeFile(authPath, JSON.stringify(updated, null, 2) + '\n');
   await files.chmod(authPath, 0o600);
-}
-
-function extractJwtExpiresAt(accessToken: string): number {
-  try {
-    const parts = accessToken.split('.');
-    if (parts.length !== 3) return 0;
-    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
-    const decoded = JSON.parse(payload);
-    if (typeof decoded.exp === 'number') {
-      return decoded.exp * 1000; // JWT exp is in seconds, convert to milliseconds
-    }
-  } catch {
-    // If decoding fails, return 0 (treated as expired)
-  }
-  return 0;
 }

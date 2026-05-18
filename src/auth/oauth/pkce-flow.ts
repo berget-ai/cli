@@ -31,7 +31,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
   const { config, createServer: createServerFactory = http.createServer, debug } = options;
 
   const codeVerifier = randomPKCECodeVerifier();
-  const codeChallenge = calculatePKCECodeChallenge(codeVerifier);
+  const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
   const state = crypto.randomUUID();
 
   try {
@@ -141,7 +141,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
       `/callback?code=${authResult.code}&state=${state}`,
       `http://localhost:${port}`,
     );
-    const tokenResult = await authorizationCodeGrant(config, callbackUrl, true);
+    const tokenResult = await authorizationCodeGrant(config, callbackUrl, { expectedState: state });
 
     return {
       accessToken: tokenResult.access_token,
@@ -276,7 +276,7 @@ function startCallbackServer(
   createServerFactory: typeof http.createServer,
 ): Promise<{ port: number; server: http.Server }> {
   return new Promise((resolve, reject) => {
-    const server = createServerFactory((req, res) => {
+    const server = createServerFactory((_req, res) => {
       // Will handle the callback in the outer function via req events
       // This callback is only used if no specific callback handler is attached
       res.writeHead(404);

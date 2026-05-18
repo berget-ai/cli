@@ -1,3 +1,4 @@
+import type { TokenStore } from '../storage/token-store.js';
 import type { AuthConfig, AuthState } from '../types.js';
 
 import { getAuthConfig } from '../config.js';
@@ -11,7 +12,7 @@ export async function resolveAuth(options?: {
   apiKey?: string;
   local?: boolean;
   stage?: boolean;
-  tokenStore?: FileTokenStore;
+  tokenStore?: TokenStore;
 }): Promise<AuthState | null> {
   // 1. Check explicit API key or BERGET_API_KEY
   const apiKey = await resolveApiKey({ apiKey: options?.apiKey });

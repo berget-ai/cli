@@ -1,18 +1,13 @@
 import chalk from 'chalk';
 
-import { clearAuthToken, createAuthenticatedClient, saveAuthToken } from '../client.js';
+import { getAuthConfig } from '../auth/config.js';
+import { getConfiguration } from '../auth/issuer.js';
+import { extractJwtExpiresAt } from '../auth/jwt.js';
+import { startPkceFlow } from '../auth/oauth/pkce-flow.js';
+import { FileTokenStore } from '../auth/storage/token-store.js';
+import { createAuthenticatedClient } from '../client.js';
 import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
 import { handleError } from '../utils/error-handler.js';
-import { BrowserAuth } from './browser-auth.js';
-
-// Keycloak configuration based on environment
-const isStageMode = process.argv.includes('--stage');
-const isLocalMode = process.argv.includes('--local');
-const KEYCLOAK_URL =
-  isStageMode || isLocalMode ? 'https://keycloak.stage.berget.ai' : 'https://keycloak.berget.ai';
-const KEYCLOAK_REALM = 'berget';
-const KEYCLOAK_CLIENT_ID = 'berget-code';
-const CALLBACK_PORT = 8787;
 
 /**
  * Service for authentication operations
@@ -41,35 +36,13 @@ export class AuthService {
    * Prints status to stdout/stderr. Use loginInteractive() when you need
    * a silent, UI-agnostic result (e.g. inside the setup wizard).
    */
-  public async login(): Promise<boolean> {
+  public async login(options?: { debug?: boolean; stage?: boolean }): Promise<boolean> {
     try {
-      clearAuthToken();
-
-      console.log(chalk.blue('Initiating login process...'));
-
-      const auth = makeBrowserAuth(process.argv.includes('--debug'));
-      const result = await auth.start();
+      const result = await this.loginInteractive(options);
 
       if (!result.success) {
         console.log(chalk.red(`\nAuthentication failed: ${result.error || 'Unknown error'}`));
         return false;
-      }
-
-      saveAuthToken(result.accessToken!, result.refreshToken!, result.expiresIn!);
-
-      if (process.argv.includes('--debug')) {
-        console.log(chalk.yellow('DEBUG: Token data received:'));
-        console.log(
-          chalk.yellow(
-            JSON.stringify(
-              {
-                expires_in: result.expiresIn,
-              },
-              null,
-              2,
-            ),
-          ),
-        );
       }
 
       console.log(chalk.green('\n✓ Successfully logged in to Berget'));
@@ -99,7 +72,7 @@ export class AuthService {
    * Does NOT print to stdout — returns tokens so callers can display
    * their own UI (e.g. via clack/prompts).
    */
-  public async loginInteractive(): Promise<{
+  public async loginInteractive(options?: { debug?: boolean; stage?: boolean }): Promise<{
     accessToken?: string;
     error?: string;
     expiresIn?: number;
@@ -107,13 +80,20 @@ export class AuthService {
     success: boolean;
   }> {
     try {
-      clearAuthToken();
+      const config = getAuthConfig(options);
+      const configuration = await getConfiguration(config);
+      const result = await startPkceFlow({ config: configuration, debug: options?.debug });
 
-      const auth = makeBrowserAuth(process.argv.includes('--debug'));
-      const result = await auth.start();
-
-      if (result.success) {
-        saveAuthToken(result.accessToken!, result.refreshToken!, result.expiresIn!);
+      if (result.success && result.accessToken && result.refreshToken) {
+        const tokenStore = new FileTokenStore();
+        const jwtExpiresAt = extractJwtExpiresAt(result.accessToken);
+        const expiresAt =
+          jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + (result.expiresIn || 3600) * 1000;
+        await tokenStore.set({
+          access_token: result.accessToken,
+          expires_at: expiresAt,
+          refresh_token: result.refreshToken,
+        });
       }
 
       return result;
@@ -127,7 +107,6 @@ export class AuthService {
 
   public async whoami(): Promise<any> {
     try {
-      // Create fresh client to ensure we have the latest token
       const client = createAuthenticatedClient();
       const { data: profile, error } = await client.GET('/v1/users/me');
       if (error) {
@@ -138,14 +117,4 @@ export class AuthService {
       return null;
     }
   }
-}
-
-function makeBrowserAuth(debug?: boolean): BrowserAuth {
-  return new BrowserAuth({
-    callbackPort: CALLBACK_PORT,
-    clientId: KEYCLOAK_CLIENT_ID,
-    debug,
-    keycloakUrl: KEYCLOAK_URL,
-    realm: KEYCLOAK_REALM,
-  });
 }

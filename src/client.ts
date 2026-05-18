@@ -1,6 +1,3 @@
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
 import createClient from 'openapi-fetch';
 
 import type { paths } from './types/api.js';
@@ -41,45 +38,4 @@ export function createAuthenticatedClient(options?: { local?: boolean; stage?: b
   );
 
   return client;
-}
-
-// Deprecated: backward-compat wrappers. To be removed in Phase 7.
-const tokenFilePath = path.join(os.homedir(), '.berget', 'auth.json');
-
-export function clearAuthToken(): void {
-  try {
-    if (fs.existsSync(tokenFilePath)) {
-      fs.unlinkSync(tokenFilePath);
-    }
-  } catch {
-    // silent
-  }
-}
-
-export function saveAuthToken(
-  accessToken: string,
-  refreshToken: string,
-  expiresIn: number = 3600,
-): void {
-  try {
-    const bergetDir = path.dirname(tokenFilePath);
-    if (!fs.existsSync(bergetDir)) {
-      fs.mkdirSync(bergetDir, { recursive: true });
-    }
-    fs.writeFileSync(
-      tokenFilePath,
-      JSON.stringify(
-        {
-          access_token: accessToken,
-          expires_at: Date.now() + expiresIn * 1000,
-          refresh_token: refreshToken,
-        },
-        null,
-        2,
-      ),
-    );
-    fs.chmodSync(tokenFilePath, 0o600);
-  } catch {
-    // silent
-  }
 }
