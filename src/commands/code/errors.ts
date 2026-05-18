@@ -15,6 +15,13 @@ export class CommandFailedError extends Error {
   }
 }
 
+export class FatalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FatalError';
+  }
+}
+
 export class PrerequisiteError extends Error {
   constructor(public readonly binary: string) {
     super(`Required binary not found: ${binary}`);

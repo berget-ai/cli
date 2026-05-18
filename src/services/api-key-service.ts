@@ -97,7 +97,7 @@ export class ApiKeyService {
 
           if (errorObject.error?.code === 'USER_NOT_FOUND') {
             throw new Error(
-              'Your account is still being set up. Please wait a moment and try again.\n\nIf this issue persists, please contact support at support@berget.ai',
+              'Before you can create API keys, you need to finish setting up your account.\n\nCheck your inbox for a verification email from Berget AI and complete the account setup.',
             );
           }
 
@@ -129,8 +129,6 @@ export class ApiKeyService {
 
       return data;
     } catch (error) {
-      console.error('Failed to create API key:', error);
-
       // Add additional context for common issues
       if (error instanceof Error) {
         if (error.message.includes('ECONNREFUSED')) {

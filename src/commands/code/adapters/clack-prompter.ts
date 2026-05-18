@@ -10,6 +10,9 @@ const unwrap = <T>(v: symbol | T): T => {
 };
 
 export class ClackPrompter implements Prompter {
+  cancel(message: string): void {
+    p.cancel(message);
+  }
   async confirm(options: { initialValue?: boolean; message: string }): Promise<boolean> {
     return unwrap(await p.confirm(options));
   }

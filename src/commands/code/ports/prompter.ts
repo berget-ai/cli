@@ -1,4 +1,5 @@
 export interface Prompter {
+  cancel(message: string): void;
   confirm(options: { initialValue?: boolean; message: string }): Promise<boolean>;
   intro(message: string): void;
   multiselect<T>(options: {
