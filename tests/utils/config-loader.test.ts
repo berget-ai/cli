@@ -45,7 +45,7 @@ describe('ConfigLoader', () => {
         const modelConfig = configLoader.getModelConfig();
 
         expect(modelConfig).toEqual({
-          primary: 'berget/glm-4.7',
+          primary: 'berget/kimi-k2.6',
           small: 'berget/gpt-oss',
         });
       });
@@ -54,7 +54,7 @@ describe('ConfigLoader', () => {
         const modelConfig = getModelConfig(testConfigPath);
 
         expect(modelConfig).toEqual({
-          primary: 'berget/glm-4.7',
+          primary: 'berget/kimi-k2.6',
           small: 'berget/gpt-oss',
         });
       });
@@ -65,10 +65,6 @@ describe('ConfigLoader', () => {
         const models = configLoader.getProviderModels();
 
         expect(models).toEqual({
-          'glm-4.7': {
-            limit: { context: 90_000, output: 4000 },
-            name: 'GLM-4.7',
-          },
           'gpt-oss': {
             limit: { context: 128_000, output: 4000 },
             modalities: {
@@ -76,6 +72,10 @@ describe('ConfigLoader', () => {
               output: ['text'],
             },
             name: 'GPT-OSS',
+          },
+          'kimi-k2.6': {
+            limit: { context: 256_000, output: 16_000 },
+            name: 'Kimi K2.6',
           },
           'llama-8b': {
             limit: { context: 128_000, output: 4000 },
@@ -88,10 +88,6 @@ describe('ConfigLoader', () => {
         const models = getProviderModels(testConfigPath);
 
         expect(models).toEqual({
-          'glm-4.7': {
-            limit: { context: 90_000, output: 4000 },
-            name: 'GLM-4.7',
-          },
           'gpt-oss': {
             limit: { context: 128_000, output: 4000 },
             modalities: {
@@ -99,6 +95,10 @@ describe('ConfigLoader', () => {
               output: ['text'],
             },
             name: 'GPT-OSS',
+          },
+          'kimi-k2.6': {
+            limit: { context: 256_000, output: 16_000 },
+            name: 'Kimi K2.6',
           },
           'llama-8b': {
             limit: { context: 128_000, output: 4000 },
@@ -229,7 +229,7 @@ describe('ConfigLoader', () => {
       const modelConfig = configLoader.getModelConfig();
 
       expect(modelConfig).toEqual({
-        primary: 'berget/glm-4.7',
+        primary: 'berget/kimi-k2.6',
         small: 'berget/gpt-oss',
       });
     });
@@ -238,10 +238,6 @@ describe('ConfigLoader', () => {
       const models = configLoader.getProviderModels();
 
       expect(models).toEqual({
-        'glm-4.7': {
-          limit: { context: 90_000, output: 4000 },
-          name: 'GLM-4.7',
-        },
         'gpt-oss': {
           limit: { context: 128_000, output: 4000 },
           modalities: {
@@ -249,6 +245,10 @@ describe('ConfigLoader', () => {
             output: ['text'],
           },
           name: 'GPT-OSS',
+        },
+        'kimi-k2.6': {
+          limit: { context: 256_000, output: 16_000 },
+          name: 'Kimi K2.6',
         },
         'llama-8b': {
           limit: { context: 128_000, output: 4000 },
@@ -296,7 +296,7 @@ describe('ConfigLoader', () => {
 
       // And return sensible defaults
       expect(configLoader.getModelConfig()).toEqual({
-        primary: 'berget/glm-4.7',
+        primary: 'berget/kimi-k2.6',
         small: 'berget/gpt-oss',
       });
       expect(configLoader.getAllAgentConfigs()).toEqual({});
@@ -312,7 +312,7 @@ describe('ConfigLoader', () => {
       expect(() => getAllAgentConfigs(testConfigPath)).not.toThrow();
 
       expect(getModelConfig(testConfigPath)).toEqual({
-        primary: 'berget/glm-4.7',
+        primary: 'berget/kimi-k2.6',
         small: 'berget/gpt-oss',
       });
       expect(getAllAgentConfigs(testConfigPath)).toEqual({});

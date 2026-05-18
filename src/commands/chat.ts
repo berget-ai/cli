@@ -20,7 +20,7 @@ export function registerChatCommands(program: Command): void {
     .command(SUBCOMMANDS.CHAT.RUN)
     .description('Run a chat session with a specified model')
     .argument('[message]', 'Message to send directly (skips interactive mode)')
-    .option('-m, --model <model>', 'Model to use (default: glm-4.7)')
+    .option('-m, --model <model>', 'Model to use (default: kimi-k2.6)')
 
     .option('-t, --temperature <temp>', 'Temperature (0-1)', Number.parseFloat)
     .option('--max-tokens <tokens>', 'Maximum tokens to generate', Number.parseInt)
