@@ -1,3 +1,4 @@
+import { confirm as clackConfirm, isCancel } from '@clack/prompts';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import readline from 'node:readline';
@@ -118,13 +119,14 @@ export function registerChatCommands(program: Command): void {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
 
               // We need to rotate the key to get the actual key value
-              if (
-                await confirm(
-                  chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`,
-                  ),
-                )
-              ) {
+              const shouldRotate = await clackConfirm({
+                message: `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue?`,
+              });
+              if (isCancel(shouldRotate)) {
+                console.log(chalk.yellow('Operation cancelled.'));
+                return;
+              }
+              if (shouldRotate) {
                 const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
                 apiKey = rotatedKey.key;
                 console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
@@ -312,7 +314,8 @@ export function registerChatCommands(program: Command): void {
             if (error instanceof Error) {
               console.error(chalk.red(error.message));
             }
-            process.exit(1);
+            process.exitCode = 1;
+            return;
           }
         }
 
@@ -512,13 +515,14 @@ export function registerChatCommands(program: Command): void {
               console.log(chalk.dim(`Using API key: ${selectedKey.name}`));
 
               // We need to rotate the key to get the actual key value
-              if (
-                await confirm(
-                  chalk.yellow(
-                    `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue? (y/n)`,
-                  ),
-                )
-              ) {
+              const shouldRotate = await clackConfirm({
+                message: `To use API key "${selectedKey.name}", it needs to be rotated. This will invalidate the current key. Continue?`,
+              });
+              if (isCancel(shouldRotate)) {
+                console.log(chalk.yellow('Operation cancelled.'));
+                return;
+              }
+              if (shouldRotate) {
                 const rotatedKey = await apiKeyService.rotate(options.apiKeyId);
                 apiKey = rotatedKey.key;
                 console.log(chalk.green(`API key "${selectedKey.name}" rotated successfully.`));
@@ -571,21 +575,4 @@ export function registerChatCommands(program: Command): void {
         handleError('Failed to list chat models', error);
       }
     });
-}
-
-/**
- * Helper function to get user confirmation
- */
-async function confirm(question: string): Promise<boolean> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise<boolean>((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
-    });
-  });
 }

@@ -140,22 +140,26 @@ export async function runInitCommand(): Promise<void> {
       homeDir: os.homedir(),
       prompter: new ClackPrompter(),
     });
-    process.exit(0);
+    process.exitCode = 0;
   } catch (error) {
     if (error instanceof CancelledError) {
-      process.exit(130);
+      process.exitCode = 130;
+      return;
     }
     if (error instanceof FatalError) {
       console.error(error.message);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     if (error instanceof PrerequisiteError) {
       console.error(`Missing required binary: ${error.binary}`);
-      process.exit(2);
+      process.exitCode = 2;
+      return;
     }
     if (error instanceof CommandFailedError) {
       console.error(error.message);
-      process.exit(5);
+      process.exitCode = 5;
+      return;
     }
     throw error;
   }

@@ -107,8 +107,13 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
   if (!jwtPayload) {
     const s = prompter.spinner();
     s.start('Authenticating with Berget AI...');
-    await syncOAuthToTool(files, homeDir, tool, cliAuth);
-    s.stop('Authenticated.');
+    try {
+      await syncOAuthToTool(files, homeDir, tool, cliAuth);
+      s.stop('Authenticated.');
+    } catch (error) {
+      s.stop('Authentication failed.');
+      throw error;
+    }
     prompter.note(
       'Warning: Could not verify Berget Code subscription status.\nIf you do not have a subscription, the tool may show an authorization error.',
       'Authentication',
@@ -129,8 +134,13 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
     if (method === 'subscription') {
       const s = prompter.spinner();
       s.start('Authenticating with Berget AI via subscription...');
-      await syncOAuthToTool(files, homeDir, tool, cliAuth);
-      s.stop('Authenticated.');
+      try {
+        await syncOAuthToTool(files, homeDir, tool, cliAuth);
+        s.stop('Authenticated.');
+      } catch (error) {
+        s.stop('Authentication failed.');
+        throw error;
+      }
       return { authenticated: true };
     }
 

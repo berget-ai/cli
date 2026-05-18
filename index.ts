@@ -37,7 +37,7 @@ if (process.argv.length <= 2) {
 
   // Show the full help (including logo and commands)
   program.outputHelp();
-  process.exit(0);
+  process.exitCode = 0;
 }
 
 // Add helpful suggestions for common command mistakes
@@ -80,7 +80,7 @@ program.on('command:*', (operands) => {
     console.log(chalk.blue('\nRun `berget --help` for a list of available commands.'));
   }
 
-  process.exit(1);
+  process.exitCode = 1;
 });
 
 program.parse(process.argv);
