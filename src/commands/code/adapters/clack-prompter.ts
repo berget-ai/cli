@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 
-import type { Prompter, Spinner } from '../ports/prompter.js';
+import type { Prompter, Spinner, TaskItem } from '../ports/prompter.js';
 
 import { CancelledError } from '../errors.js';
 
@@ -19,6 +19,9 @@ export class ClackPrompter implements Prompter {
   intro(message: string): void {
     p.intro(message);
   }
+  log(type: 'error' | 'info' | 'message' | 'step' | 'success' | 'warn', message: string): void {
+    p.log[type](message);
+  }
   async multiselect<T>(options: {
     message: string;
     options: ReadonlyArray<{
@@ -35,7 +38,9 @@ export class ClackPrompter implements Prompter {
   outro(message: string): void {
     p.outro(message);
   }
+
   async select<T>(options: {
+    initialValue?: T;
     message: string;
     options: ReadonlyArray<{
       hint?: string;
@@ -52,6 +57,18 @@ export class ClackPrompter implements Prompter {
       start: (message: string) => s.start(message),
       stop: (message: string) => s.stop(message),
     };
+  }
+
+  async tasks(items: ReadonlyArray<TaskItem>): Promise<void> {
+    await p.tasks(
+      items.map((item) => ({
+        task: async (message: (msg: string) => void) => {
+          const result = await item.task(message);
+          return result ?? item.title;
+        },
+        title: item.title,
+      })),
+    );
   }
 
   async text(options: { message: string; placeholder?: string }): Promise<string> {
