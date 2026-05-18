@@ -1,4 +1,4 @@
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
 
 /**
  * Service for managing Kubernetes resources

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ApiKeyServicePort, AuthServicePort } from '../ports/auth-services';
+import type { ApiKeyServicePort, AuthServicePort } from '../ports/auth-services.js';
 
-import { CancelledError, CommandFailedError, PrerequisiteError } from '../errors';
-import { runInit } from '../init';
-import { FakeApiKeyService } from './fake-api-key-service';
-import { FakeAuthService } from './fake-auth-service';
-import { FakeCommandRunner } from './fake-command-runner';
-import { FakeFileStore } from './fake-file-store';
-import { CANCEL, confirm, FakePrompter, multiselect, select } from './fake-prompter';
+import { CancelledError, CommandFailedError, PrerequisiteError } from '../errors.js';
+import { runInit } from '../init.js';
+import { FakeApiKeyService } from './fake-api-key-service.js';
+import { FakeAuthService } from './fake-auth-service.js';
+import { FakeCommandRunner } from './fake-command-runner.js';
+import { FakeFileStore } from './fake-file-store.js';
+import { CANCEL, confirm, FakePrompter, multiselect, select } from './fake-prompter.js';
 
 const makeDeps = (
   overrides: Partial<Parameters<typeof runInit>[0]> = {},

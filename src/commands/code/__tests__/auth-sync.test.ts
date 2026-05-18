@@ -10,11 +10,11 @@ import {
   readCliAuth,
   syncApiKeyToTool,
   syncOAuthToTool,
-} from '../auth-sync';
-import { FakeApiKeyService } from './fake-api-key-service';
-import { FakeAuthService } from './fake-auth-service';
-import { FakeFileStore } from './fake-file-store';
-import { confirm, FakePrompter, select } from './fake-prompter';
+} from '../auth-sync.js';
+import { FakeApiKeyService } from './fake-api-key-service.js';
+import { FakeAuthService } from './fake-auth-service.js';
+import { FakeFileStore } from './fake-file-store.js';
+import { confirm, FakePrompter, select } from './fake-prompter.js';
 
 function base64urlEncode(data: string): string {
   return Buffer.from(data).toString('base64url');

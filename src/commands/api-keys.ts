@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 
-import { ApiKey, ApiKeyService } from '../services/api-key-service';
-import { DefaultApiKeyManager } from '../utils/default-api-key';
-import { handleError } from '../utils/error-handler';
+import { ApiKey, ApiKeyService } from '../services/api-key-service.js';
+import { DefaultApiKeyManager } from '../utils/default-api-key.js';
+import { handleError } from '../utils/error-handler.js';
 
 /**
  * Register API key commands

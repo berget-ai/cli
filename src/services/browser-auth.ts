@@ -2,7 +2,7 @@ import * as crypto from 'node:crypto';
 import * as http from 'node:http';
 import * as net from 'node:net';
 
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 export interface BrowserAuthOptions {
   callbackPort: number;

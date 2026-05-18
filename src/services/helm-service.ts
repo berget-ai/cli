@@ -1,4 +1,4 @@
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
 
 export interface HelmInstallOptions {
   chart: string;

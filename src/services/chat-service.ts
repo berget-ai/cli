@@ -1,5 +1,5 @@
-import { createAuthenticatedClient } from '../client';
-import { logger } from '../utils/logger';
+import { createAuthenticatedClient } from '../client.js';
+import { logger } from '../utils/logger.js';
 
 export interface ChatCompletionOptions {
   apiKey?: string;
@@ -84,7 +84,7 @@ export class ChatService {
 
       // First try to use the authenticated client (with refresh token support)
       // Only fall back to API key flow if explicitly requested or no auth tokens available
-      const { TokenManager } = await import('../utils/token-manager');
+      const { TokenManager } = await import('../utils/token-manager.js');
       const tokenManagerInstance = TokenManager.getInstance();
       const hasValidAuth =
         tokenManagerInstance.getAccessToken() && !tokenManagerInstance.isTokenExpired();
@@ -122,7 +122,7 @@ export class ChatService {
           // Import the DefaultApiKeyManager directly
           logger.debug('Importing DefaultApiKeyManager');
 
-          const { DefaultApiKeyManager } = await import('../utils/default-api-key');
+          const { DefaultApiKeyManager } = await import('../utils/default-api-key.js');
           const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
 
           logger.debug('Got DefaultApiKeyManager instance');

@@ -2,10 +2,10 @@ import chalk from 'chalk';
 import { applyEdits, modify, parse } from 'jsonc-parser';
 import * as os from 'node:os';
 
-import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services';
-import type { CommandRunner } from './ports/command-runner';
-import type { FileStore } from './ports/file-store';
-import type { Prompter } from './ports/prompter';
+import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services.js';
+import type { CommandRunner } from './ports/command-runner.js';
+import type { FileStore } from './ports/file-store.js';
+import type { Prompter } from './ports/prompter.js';
 
 import { getAllAgents, toMarkdown, toPiPrompt } from '../../agents/index.js';
 import { ApiKeyService } from '../../services/api-key-service.js';
@@ -14,7 +14,7 @@ import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
 import { configureAuth } from './auth-sync.js';
-import { CancelledError, CommandFailedError, PrerequisiteError } from './errors';
+import { CancelledError, CommandFailedError, PrerequisiteError } from './errors.js';
 
 const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.22';
 const PI_PROVIDER = 'npm:@bergetai/pi-provider';

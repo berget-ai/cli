@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 
-import { createAuthenticatedClient } from '../client';
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
-import { handleError } from '../utils/error-handler';
+import { createAuthenticatedClient } from '../client.js';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
+import { handleError } from '../utils/error-handler.js';
 
 /**
  * Register billing commands

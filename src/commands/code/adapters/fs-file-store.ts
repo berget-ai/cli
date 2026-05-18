@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 
-import type { FileStore } from '../ports/file-store';
+import type { FileStore } from '../ports/file-store.js';
 
 export class FsFileStore implements FileStore {
   async chmod(filePath: string, mode: number): Promise<void> {

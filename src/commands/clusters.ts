@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 
-import { Cluster, ClusterService } from '../services/cluster-service';
-import { handleError } from '../utils/error-handler';
+import { Cluster, ClusterService } from '../services/cluster-service.js';
+import { handleError } from '../utils/error-handler.js';
 
 /**
  * Register cluster commands

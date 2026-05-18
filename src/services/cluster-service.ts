@@ -1,5 +1,5 @@
-import { createAuthenticatedClient } from '../client';
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
+import { createAuthenticatedClient } from '../client.js';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
 
 export interface Cluster {
   created: string;

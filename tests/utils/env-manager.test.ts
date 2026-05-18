@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   hasEnvKey as hasEnvironmentKey,
   updateEnvFile as updateEnvironmentFile,
-} from '../../src/utils/env-manager';
+} from '../../src/utils/env-manager.js';
 
 vi.mock('fs');
 vi.mock('fs/promises');

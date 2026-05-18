@@ -1,8 +1,8 @@
 import * as p from '@clack/prompts';
 
-import type { Prompter, Spinner } from '../ports/prompter';
+import type { Prompter, Spinner } from '../ports/prompter.js';
 
-import { CancelledError } from '../errors';
+import { CancelledError } from '../errors.js';
 
 const unwrap = <T>(v: symbol | T): T => {
   if (p.isCancel(v)) throw new CancelledError();

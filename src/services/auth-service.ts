@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 
-import { clearAuthToken, createAuthenticatedClient, saveAuthToken } from '../client';
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
-import { handleError } from '../utils/error-handler';
-import { BrowserAuth } from './browser-auth';
+import { clearAuthToken, createAuthenticatedClient, saveAuthToken } from '../client.js';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
+import { handleError } from '../utils/error-handler.js';
+import { BrowserAuth } from './browser-auth.js';
 
 // Keycloak configuration based on environment
 const isStageMode = process.argv.includes('--stage');

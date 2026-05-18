@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { fixOpenCodeConfig, validateOpenCodeConfig } from '../../src/utils/opencode-validator';
+import { fixOpenCodeConfig, validateOpenCodeConfig } from '../../src/utils/opencode-validator.js';
 
 describe('OpenCode Validator', () => {
   it('should validate a correct OpenCode configuration', () => {
