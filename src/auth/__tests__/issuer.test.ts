@@ -59,4 +59,27 @@ describe('getConfiguration', () => {
     expect((result as any)._url).toBe('https://keycloak.stage.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(2);
   });
+
+  it('does not cross-contaminate cache between different issuers', async () => {
+    const prodConfig = {
+      apiBaseUrl: 'https://api.berget.ai',
+      clientId: 'berget-code',
+      keycloakUrl: 'https://keycloak.berget.ai',
+      realm: 'berget',
+    };
+
+    const stageConfig = {
+      ...prodConfig,
+      keycloakUrl: 'https://keycloak.stage.berget.ai',
+    };
+
+    // First call discovers stage
+    const stageResult = await getConfiguration(stageConfig);
+    expect((stageResult as any)._url).toBe('https://keycloak.stage.berget.ai/realms/berget');
+
+    // Second call with prod must NOT return stage config from cache
+    const prodResult = await getConfiguration(prodConfig);
+    expect((prodResult as any)._url).toBe('https://keycloak.berget.ai/realms/berget');
+    expect(mockDiscoveryCalls).toHaveLength(2); // two distinct discoveries
+  });
 });

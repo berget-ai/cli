@@ -10,22 +10,25 @@ import { type Configuration, discovery } from 'openid-client';
 
 import type { AuthConfig } from './types.js';
 
-let cachedConfig: Configuration | null = null;
+const cache = new Map<string, Configuration>();
 
 export function clearConfigurationCache(): void {
-  cachedConfig = null;
+  cache.clear();
 }
 
 export async function getConfiguration(config: AuthConfig): Promise<Configuration> {
-  if (cachedConfig) return cachedConfig;
+  const issuerUrl = new URL(`${config.keycloakUrl}/realms/${config.realm}`).toString();
 
-  const issuerUrl = new URL(`${config.keycloakUrl}/realms/${config.realm}`);
-  cachedConfig = await discovery(
-    issuerUrl,
+  const cached = cache.get(issuerUrl);
+  if (cached) return cached;
+
+  const configuration = await discovery(
+    new URL(issuerUrl),
     config.clientId,
     {}, // no additional client metadata needed for public PKCE client
     // 4th arg (clientAuth) omitted — public PKCE client has no auth
   );
 
-  return cachedConfig;
+  cache.set(issuerUrl, configuration);
+  return configuration;
 }

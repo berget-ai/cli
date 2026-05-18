@@ -276,12 +276,10 @@ function startCallbackServer(
   createServerFactory: typeof http.createServer,
 ): Promise<{ port: number; server: http.Server }> {
   return new Promise((resolve, reject) => {
-    const server = createServerFactory((_req, res) => {
-      // Will handle the callback in the outer function via req events
-      // This callback is only used if no specific callback handler is attached
-      res.writeHead(404);
-      res.end();
-    });
+    // Do not pass a request handler here — the caller will attach it via
+    // server.on('request'). Passing a handler would cause double writes
+    // if the caller also uses server.on('request').
+    const server = createServerFactory();
 
     function attemptListen(port: number) {
       server.once('error', (error: NodeJS.ErrnoException) => {

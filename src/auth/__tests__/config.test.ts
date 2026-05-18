@@ -31,6 +31,14 @@ describe('getAuthConfig', () => {
     vi.unstubAllEnvs();
   });
 
+  it('overrides keycloakUrl with BERGET_KEYCLOAK_URL env var', () => {
+    vi.stubEnv('BERGET_KEYCLOAK_URL', 'https://custom.keycloak.example.com');
+    const config = getAuthConfig();
+    expect(config.keycloakUrl).toBe('https://custom.keycloak.example.com');
+    expect(config.apiBaseUrl).toBe('https://api.berget.ai'); // default
+    vi.unstubAllEnvs();
+  });
+
   it('does not read process.argv at module load', () => {
     const originalArgv = process.argv;
     process.argv = ['node', 'berget', '--stage'];

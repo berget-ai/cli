@@ -29,9 +29,14 @@ function createMockServer(options: { eaddrinuse?: boolean } = {}): any {
   }
 
   const server = {
+    _factoryHandler: undefined as ((req: any, res: any) => void) | undefined,
     _listenCallCount: () => listenCallCount,
     _listeners: listeners,
     _triggerRequest: (req: any, res: any) => {
+      // If there's a handler passed to createServerFactory, it fires first
+      if (server._factoryHandler) {
+        server._factoryHandler(req, res);
+      }
       for (const handler of [...listeners.request]) {
         handler(req, res);
       }
@@ -107,6 +112,26 @@ vi.mock('node:crypto', () => ({
 }));
 
 describe('startPkceFlow', () => {
+  it('creates server without a request handler to avoid double-header writes', async () => {
+    const mockServer = createMockServer();
+    const createServerFn = vi.fn((factoryHandler) => {
+      mockServer._factoryHandler = factoryHandler;
+      return mockServer;
+    });
+
+    startPkceFlow({
+      config: {} as any,
+      createServer: createServerFn as any,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Passing a request handler to createServer() would cause duplicate
+    // header writes (factory handler + server.on('request')).
+    // The fix: createServer with no handler, then use .on('request').
+    expect(mockServer._factoryHandler).toBeUndefined();
+  });
+
   it('starts server, builds auth URL with PKCE, exchanges code for tokens', async () => {
     const mockServer = createMockServer();
     const createServerFn = vi.fn(() => mockServer);

@@ -45,14 +45,5 @@ export async function resolveAuth(options?: {
     };
   }
 
-  // 3. Default API key manager as last resort
-  const defaultKey = await resolveApiKey({ apiKey: options?.apiKey });
-  if (defaultKey) {
-    return {
-      method: 'api_key',
-      token: defaultKey,
-    };
-  }
-
   return null;
 }

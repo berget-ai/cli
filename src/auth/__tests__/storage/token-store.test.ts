@@ -9,17 +9,14 @@ describe('FileTokenStore', () => {
   const getTempAuthPath = () => path.join(os.tmpdir(), `berget-auth-test-${Date.now()}.json`);
 
   it('returns null when auth file does not exist', async () => {
-    const store = new FileTokenStore();
-    // Mock the path to a non-existent file
-    (store as any).tokenFilePath = getTempAuthPath();
+    const store = new FileTokenStore(getTempAuthPath());
     const result = await store.get();
     expect(result).toBeNull();
   });
 
   it('round-trips TokenData and preserves exact JSON shape', async () => {
-    const store = new FileTokenStore();
     const tempPath = getTempAuthPath();
-    (store as any).tokenFilePath = tempPath;
+    const store = new FileTokenStore(tempPath);
 
     const tokenData = {
       access_token: 'test-access-token',
@@ -39,9 +36,8 @@ describe('FileTokenStore', () => {
   });
 
   it('sets 0o600 permissions on write', async () => {
-    const store = new FileTokenStore();
     const tempPath = getTempAuthPath();
-    (store as any).tokenFilePath = tempPath;
+    const store = new FileTokenStore(tempPath);
 
     await store.set({
       access_token: 'tok',
@@ -56,9 +52,8 @@ describe('FileTokenStore', () => {
   });
 
   it('clears by unlinking the file', async () => {
-    const store = new FileTokenStore();
     const tempPath = getTempAuthPath();
-    (store as any).tokenFilePath = tempPath;
+    const store = new FileTokenStore(tempPath);
 
     await store.set({
       access_token: 'tok',
@@ -84,9 +79,8 @@ describe('FileTokenStore', () => {
   });
 
   it('returns null for malformed JSON', async () => {
-    const store = new FileTokenStore();
     const tempPath = getTempAuthPath();
-    (store as any).tokenFilePath = tempPath;
+    const store = new FileTokenStore(tempPath);
 
     await fs.writeFile(tempPath, 'not json');
     const result = await store.get();
@@ -94,9 +88,8 @@ describe('FileTokenStore', () => {
   });
 
   it('returns null for missing required fields', async () => {
-    const store = new FileTokenStore();
     const tempPath = getTempAuthPath();
-    (store as any).tokenFilePath = tempPath;
+    const store = new FileTokenStore(tempPath);
 
     await fs.writeFile(tempPath, JSON.stringify({ access_token: 'only' }));
     const result = await store.get();

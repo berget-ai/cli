@@ -97,6 +97,34 @@ describe('refreshAccessToken', () => {
     expect(mockRefreshTokenGrantCalls).toHaveLength(1); // Only one actual call
   });
 
+  it('does not deduplicate across different stores', async () => {
+    // Two different configs/stores should not share the same in-flight promise.
+    // This guards against writing tokens from store A into store B.
+    const storeA = createMockStore({
+      _data: { access_token: 'old-a', expires_at: 1, refresh_token: 'refresh-a' },
+    });
+    const storeB = createMockStore({
+      _data: { access_token: 'old-b', expires_at: 1, refresh_token: 'refresh-b' },
+    });
+    const configA = { issuer: 'https://keycloak.berget.ai' } as any;
+    const configB = { issuer: 'https://keycloak.stage.berget.ai' } as any;
+
+    mockRefreshTokenGrantResult = {
+      access_token: 'new-token',
+      expires_in: 3600,
+    };
+
+    const [rA, rB] = await Promise.all([
+      refreshAccessToken(configA, storeA),
+      refreshAccessToken(configB, storeB),
+    ]);
+
+    expect(rA).toBe(true);
+    expect(rB).toBe(true);
+    // Two separate network calls because configs/stores are different
+    expect(mockRefreshTokenGrantCalls).toHaveLength(2);
+  });
+
   it('clears tokens on invalid_grant error from Keycloak', async () => {
     const store = createMockStore();
     const mockConfig = createMockConfig();

@@ -1,6 +1,17 @@
 import type { AuthConfig } from './types.js';
 
 export function getAuthConfig(options?: { local?: boolean; stage?: boolean }): AuthConfig {
+  // Allow explicit override of Keycloak URL
+  if (process.env.BERGET_KEYCLOAK_URL) {
+    const apiBaseUrl = process.env.BERGET_API_URL || 'https://api.berget.ai';
+    return {
+      apiBaseUrl,
+      clientId: 'berget-code',
+      keycloakUrl: process.env.BERGET_KEYCLOAK_URL,
+      realm: 'berget',
+    };
+  }
+
   let apiBaseUrl: string;
   let keycloakUrl: string;
 

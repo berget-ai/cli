@@ -7,25 +7,32 @@ import type { TokenData } from '../types.js';
 
 import { extractJwtExpiresAt } from '../jwt.js';
 
-// Global in-flight refresh promise — shared across all callers
-let inFlightRefresh: null | Promise<boolean> = null;
+// In-flight refresh promises keyed by config, then by store.
+// This prevents two calls with the SAME config+store from duplicating,
+// while ensuring different stores don't share promises.
+const inFlightByConfig = new WeakMap<Configuration, Map<TokenStore, Promise<boolean>>>();
 
 export async function refreshAccessToken(
   config: Configuration,
   tokenStore: TokenStore,
 ): Promise<boolean> {
-  // Return existing promise if a refresh is already in progress
-  if (inFlightRefresh) {
-    return inFlightRefresh;
+  let storeMap = inFlightByConfig.get(config);
+  if (!storeMap) {
+    storeMap = new Map<TokenStore, Promise<boolean>>();
+    inFlightByConfig.set(config, storeMap);
   }
 
-  inFlightRefresh = doRefresh(config, tokenStore);
-
-  try {
-    return await inFlightRefresh;
-  } finally {
-    inFlightRefresh = null;
+  const existing = storeMap.get(tokenStore);
+  if (existing) {
+    return existing;
   }
+
+  const promise = doRefresh(config, tokenStore).finally(() => {
+    storeMap!.delete(tokenStore);
+  });
+
+  storeMap.set(tokenStore, promise);
+  return promise;
 }
 
 async function doRefresh(config: Configuration, tokenStore: TokenStore): Promise<boolean> {

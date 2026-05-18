@@ -13,8 +13,8 @@ export interface TokenStore {
 export class FileTokenStore implements TokenStore {
   private tokenFilePath: string;
 
-  constructor() {
-    this.tokenFilePath = getTokenFilePath();
+  constructor(filePath?: string) {
+    this.tokenFilePath = filePath || getDefaultTokenFilePath();
   }
 
   async clear(): Promise<void> {
@@ -55,7 +55,7 @@ export class FileTokenStore implements TokenStore {
   }
 }
 
-function getTokenFilePath(): string {
+function getDefaultTokenFilePath(): string {
   const bergetDir = path.join(os.homedir(), '.berget');
   return path.join(bergetDir, 'auth.json');
 }
