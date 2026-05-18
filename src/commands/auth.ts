@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 
-import { clearAuthToken } from '../client.js';
+import { FileTokenStore } from '../auth/storage/token-store.js';
 import { AuthService } from '../services/auth-service.js';
 import { handleError } from '../utils/error-handler.js';
 
@@ -24,8 +24,9 @@ export function registerAuthCommands(program: Command): void {
   auth
     .command(AuthService.COMMANDS.LOGOUT)
     .description('Log out from Berget')
-    .action(() => {
-      clearAuthToken();
+    .action(async () => {
+      const tokenStore = new FileTokenStore();
+      await tokenStore.clear();
       console.log(chalk.green('You have been logged out from Berget'));
     });
 

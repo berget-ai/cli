@@ -15,7 +15,9 @@ export class FakeAuthService implements AuthServicePort {
     return this._shouldSucceed;
   }
 
-  loginInteractive(): ReturnType<AuthServicePort['loginInteractive']> {
+  loginInteractive(_options?: {
+    debug?: boolean;
+  }): ReturnType<AuthServicePort['loginInteractive']> {
     this.loginInteractiveCallCount++;
     if (!this._shouldSucceed) {
       return Promise.resolve({ error: 'Login failed', success: false });

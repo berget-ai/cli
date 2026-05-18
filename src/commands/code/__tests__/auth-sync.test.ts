@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { decodeJwtPayload, hasBergetCodeSeat } from '../../../auth/jwt.js';
 import {
   type AuthDeps,
   type CliAuth,
   configureAuth,
-  decodeJwtPayload,
-  hasBergetCodeSeat,
   isToolAuthenticated,
   readCliAuth,
   syncApiKeyToTool,

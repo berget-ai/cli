@@ -2,7 +2,8 @@
 import chalk from 'chalk';
 import { Option, program } from 'commander';
 
-import { version } from './package.json';
+import pkg from './package.json' with { type: 'json' };
+const { version } = pkg;
 import { registerCommands } from './src/commands/index.js';
 import { checkBergetConfig } from './src/utils/config-checker.js';
 process.env.DOTENV_CONFIG_OVERRIDE = 'true';
