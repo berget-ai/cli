@@ -5,6 +5,7 @@ import {
   type AuthDeps,
   type CliAuth,
   configureAuth,
+  ensureCliAuth,
   isToolAuthenticated,
   readCliAuth,
   syncApiKeyToTool,
@@ -298,13 +299,13 @@ describe('configureAuth', () => {
     const prompter = new FakePrompter([select('keep')]);
 
     const deps = makeAuthDeps({ files, prompter });
-    const result = await configureAuth(deps, 'opencode');
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
     expect(result.authenticated).toBe(true);
     expect((deps.prompter as FakePrompter).calls.length).toBe(1); // Only the select prompt
   });
 
-  it('Case A reconfigure: already authenticated — reconfigure with fresh browser login', async () => {
+  it('Case A reconfigure: already authenticated — reconfigure with valid CLI token', async () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + '/.local/share/opencode/auth.json',
@@ -314,39 +315,18 @@ describe('configureAuth', () => {
     const prompter = new FakePrompter([select('reconfigure'), select('subscription')]);
 
     const deps = makeAuthDeps({ files, prompter });
-    const authService = deps.authService as FakeAuthService;
-    const result = await configureAuth(deps, 'opencode');
-
-    expect(result.authenticated).toBe(true);
-    // Should have called loginInteractive (no token reuse since no ~/.berget/auth.json seeded)
-    expect(authService.loginInteractiveCallCount).toBeGreaterThanOrEqual(1);
-  });
-
-  it('Case A reconfigure: already authenticated — reconfigure with valid CLI token → skips browser', async () => {
-    const farFuture = Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 year from now
-    const files = new FakeFileStore();
-    files.seed(
-      HOME + '/.local/share/opencode/auth.json',
-      JSON.stringify({ berget: { type: 'oauth' } }),
-    );
-    files.seed(
-      HOME + '/.berget/auth.json',
-      JSON.stringify({
-        access_token: makeJwt({ exp: farFuture, realm_access: { roles: ['berget_code_seat'] } }),
-        expires_at: farFuture,
-        refresh_token: 'ref',
+    const result = await configureAuth(
+      deps,
+      'opencode',
+      fakeCliAuth({
+        access_token: makeJwt({
+          exp: 9_999_999_999_999,
+          realm_access: { roles: ['berget_code_seat'] },
+        }),
       }),
     );
 
-    const prompter = new FakePrompter([select('reconfigure'), select('subscription')]);
-
-    const authService = new FakeAuthService(true);
-    const deps = makeAuthDeps({ authService, files, prompter });
-    const result = await configureAuth(deps, 'opencode');
-
     expect(result.authenticated).toBe(true);
-    // Should NOT have called loginInteractive since token was reused
-    expect(authService.loginInteractiveCallCount).toBe(0);
   });
 
   it('Case B: login success + berget_code_seat → chooses subscription', async () => {
@@ -355,19 +335,16 @@ describe('configureAuth', () => {
       exp: 9_999_999_999_999,
       realm_access: { roles: ['berget_code_seat'] },
     });
-    files.seed(
-      HOME + '/.berget/auth.json',
-      JSON.stringify({
-        access_token: jwt,
-        expires_at: 9_999_999_999_999,
-        refresh_token: 'ref',
-      }),
-    );
+    const cliAuth: CliAuth = {
+      access_token: jwt,
+      expires_at: 9_999_999_999_999,
+      refresh_token: 'ref',
+    };
 
     const prompter = new FakePrompter([select('subscription')]);
 
     const deps = makeAuthDeps({ files, prompter });
-    const result = await configureAuth(deps, 'opencode');
+    const result = await configureAuth(deps, 'opencode', cliAuth);
 
     expect(result.authenticated).toBe(true);
     const written = files.getWrittenFiles();
@@ -382,19 +359,16 @@ describe('configureAuth', () => {
       exp: 9_999_999_999_999,
       realm_access: { roles: ['berget_code_seat'] },
     });
-    files.seed(
-      HOME + '/.berget/auth.json',
-      JSON.stringify({
-        access_token: jwt,
-        expires_at: 9_999_999_999_999,
-        refresh_token: 'ref',
-      }),
-    );
+    const cliAuth: CliAuth = {
+      access_token: jwt,
+      expires_at: 9_999_999_999_999,
+      refresh_token: 'ref',
+    };
 
     const prompter = new FakePrompter([select('api_key')]);
 
     const deps = makeAuthDeps({ files, prompter });
-    const result = await configureAuth(deps, 'opencode');
+    const result = await configureAuth(deps, 'opencode', cliAuth);
 
     expect(result.authenticated).toBe(true);
     const written = files.getWrittenFiles();
@@ -407,8 +381,8 @@ describe('configureAuth', () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([confirm(true)]);
 
-    const deps = makeAuthDeps({ authService: new FakeAuthService(true, false), files, prompter });
-    const result = await configureAuth(deps, 'opencode');
+    const deps = makeAuthDeps({ files, prompter });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
     expect(result.authenticated).toBe(true);
     const written = files.getWrittenFiles();
@@ -423,14 +397,11 @@ describe('configureAuth', () => {
       exp: 9_999_999_999_999,
       realm_access: { roles: ['berget_code_seat'] },
     });
-    files.seed(
-      HOME + '/.berget/auth.json',
-      JSON.stringify({
-        access_token: jwt,
-        expires_at: 9_999_999_999_999,
-        refresh_token: 'ref',
-      }),
-    );
+    const cliAuth: CliAuth = {
+      access_token: jwt,
+      expires_at: 9_999_999_999_999,
+      refresh_token: 'ref',
+    };
 
     const prompter = new FakePrompter([select('api_key')]);
     const failingApiKeyService = new FakeApiKeyService(
@@ -441,7 +412,7 @@ describe('configureAuth', () => {
 
     const deps = makeAuthDeps({ apiKeyService: failingApiKeyService, files, prompter });
 
-    await expect(configureAuth(deps, 'opencode')).rejects.toThrow(FatalError);
+    await expect(configureAuth(deps, 'opencode', cliAuth)).rejects.toThrow(FatalError);
     expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
   });
 
@@ -456,12 +427,11 @@ describe('configureAuth', () => {
     );
     const deps = makeAuthDeps({
       apiKeyService: failingApiKeyService,
-      authService: new FakeAuthService(true, false),
       files,
       prompter,
     });
 
-    await expect(configureAuth(deps, 'opencode')).rejects.toThrow(FatalError);
+    await expect(configureAuth(deps, 'opencode', fakeCliAuth())).rejects.toThrow(FatalError);
     expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
   });
 
@@ -469,33 +439,29 @@ describe('configureAuth', () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([confirm(false)]);
 
-    const deps = makeAuthDeps({ authService: new FakeAuthService(true, false), files, prompter });
-    const result = await configureAuth(deps, 'opencode');
+    const deps = makeAuthDeps({ files, prompter });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
     expect(result.authenticated).toBe(false);
     expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
   });
 
-  it('Case E: login fails', async () => {
+  it('Case E: login fails → returns false when cliAuth is null', async () => {
     const files = new FakeFileStore();
-    const authService = new FakeAuthService(false);
 
-    const deps = makeAuthDeps({ authService, files });
-    const result = await configureAuth(deps, 'opencode');
+    const deps = makeAuthDeps({ files });
+    const result = await configureAuth(deps, 'opencode', null);
 
     expect(result.authenticated).toBe(false);
   });
 
-  it('fails authentication when jwt decode fails', async () => {
+  it('fails authentication when cliAuth is null', async () => {
     const prompter = new FakePrompter([]);
 
-    const deps = makeAuthDeps({
-      authService: new FakeAuthService(true, true, false), // valid login, has seat, but invalid token
-      prompter,
-    });
-    const result = await configureAuth(deps, 'opencode');
+    const deps = makeAuthDeps({ prompter });
+    const result = await configureAuth(deps, 'opencode', null);
 
-    expect(result.authenticated).toBe(false); // Should fail due to invalid JWT
+    expect(result.authenticated).toBe(false);
     const written = (deps.files as FakeFileStore).getWrittenFiles();
     expect(written.size).toBe(0); // No files should be written
   });
@@ -506,25 +472,117 @@ describe('configureAuth', () => {
       HOME + '/.local/share/opencode/auth.json',
       JSON.stringify({ openai: { key: 'sk-openai', type: 'api' } }),
     );
-    files.seed(
-      HOME + '/.berget/auth.json',
-      JSON.stringify({
-        access_token: makeJwt({
-          realm_access: { exp: 9_999_999_999_999, roles: ['berget_code_seat'] },
-        }),
-        expires_at: 9_999_999_999_999,
-        refresh_token: 'ref',
-      }),
-    );
 
     const prompter = new FakePrompter([select('subscription')]);
 
     const deps = makeAuthDeps({ files, prompter });
-    await configureAuth(deps, 'opencode');
+    await configureAuth(
+      deps,
+      'opencode',
+      fakeCliAuth({
+        access_token: makeJwt({
+          exp: 9_999_999_999_999,
+          realm_access: { roles: ['berget_code_seat'] },
+        }),
+      }),
+    );
 
     const written = files.getWrittenFiles();
     const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
     expect(parsed.openai).toEqual({ key: 'sk-openai', type: 'api' });
     expect(parsed.berget).toBeDefined();
+  });
+});
+
+type EnsureCliAuthDeps = Pick<AuthDeps, 'authService' | 'files' | 'homeDir' | 'prompter'>;
+
+describe('ensureCliAuth', () => {
+  const makeEnsureDeps = (overrides: Partial<EnsureCliAuthDeps> = {}): EnsureCliAuthDeps =>
+    ({
+      authService: new FakeAuthService(true),
+      files: new FakeFileStore(),
+      homeDir: HOME,
+      prompter: new FakePrompter([]),
+      ...overrides,
+    }) as Pick<AuthDeps, 'authService' | 'files' | 'homeDir' | 'prompter'>;
+
+  it('returns valid existing token without calling loginInteractive', async () => {
+    const farFuture = Math.floor(Date.now() / 1000) + 3600 * 24 * 365;
+    const files = new FakeFileStore();
+    files.seed(
+      HOME + '/.berget/auth.json',
+      JSON.stringify({
+        access_token: makeJwt({ exp: farFuture, realm_access: { roles: ['berget_code_seat'] } }),
+        expires_at: farFuture * 1000,
+        refresh_token: 'ref',
+      }),
+    );
+
+    const authService = new FakeAuthService(true);
+    const deps = makeEnsureDeps({ authService, files });
+    const result = await ensureCliAuth(deps);
+
+    expect(result).not.toBeNull();
+    expect(result!.access_token).toBeTruthy();
+    expect(authService.loginInteractiveCallCount).toBe(0);
+  });
+
+  it('calls loginInteractive when token is expired', async () => {
+    const farPast = Math.floor(Date.now() / 1000) - 3600;
+    const files = new FakeFileStore();
+    files.seed(
+      HOME + '/.berget/auth.json',
+      JSON.stringify({
+        access_token: makeJwt({ exp: farPast, realm_access: { roles: ['default-roles-berget'] } }),
+        expires_at: farPast * 1000,
+        refresh_token: 'ref',
+      }),
+    );
+
+    const authService = new FakeAuthService(true);
+    const prompter = new FakePrompter([]);
+    const deps = makeEnsureDeps({ authService, files, prompter });
+    const result = await ensureCliAuth(deps);
+
+    expect(result).not.toBeNull();
+    expect(authService.loginInteractiveCallCount).toBe(1);
+  });
+
+  it('returns auth on successful login when no existing token', async () => {
+    const authService = new FakeAuthService(true);
+    const prompter = new FakePrompter([]);
+    const deps = makeEnsureDeps({ authService, prompter });
+    const result = await ensureCliAuth(deps);
+
+    expect(result).not.toBeNull();
+    expect(result!.access_token).toBeTruthy();
+    expect(authService.loginInteractiveCallCount).toBe(1);
+  });
+
+  it('returns null on failed login', async () => {
+    const authService = new FakeAuthService(false);
+    const prompter = new FakePrompter([]);
+    const deps = makeEnsureDeps({ authService, prompter });
+    const result = await ensureCliAuth(deps);
+
+    expect(result).toBeNull();
+    expect(authService.loginInteractiveCallCount).toBe(1);
+
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const failNote = notes.find((n) => (n.args as any).title === 'Authentication Failed');
+    expect(failNote).toBeDefined();
+  });
+
+  it('returns null when JWT is invalid after login', async () => {
+    const authService = new FakeAuthService(true, true, false); // succeed, has seat, invalid token
+    const prompter = new FakePrompter([]);
+    const deps = makeEnsureDeps({ authService, prompter });
+    const result = await ensureCliAuth(deps);
+
+    expect(result).toBeNull();
+
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const errorNote = notes.find((n) => (n.args as any).title === 'Authentication Error');
+    expect(errorNote).toBeDefined();
   });
 });

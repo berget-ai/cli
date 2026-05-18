@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth-service.js';
 import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
-import { configureAuth } from './auth-sync.js';
+import { configureAuth, ensureCliAuth } from './auth-sync.js';
 import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {
   getOpencodeLabel,
@@ -40,6 +40,8 @@ export async function runInit(deps: WizardDeps): Promise<void> {
     `Ask questions and report bugs on our GitHub repository:\n\n${chalk.cyan.underline('https://github.com/berget-ai/cli')}`,
     'Need help?',
   );
+
+  const cliAuth = await ensureCliAuth({ authService, files, homeDir, prompter });
 
   const ocState = await getOpencodeState(files, homeDir, cwd);
   const piState = await getPiState(files, homeDir, cwd);
@@ -138,8 +140,9 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   prompter.log('step', 'Configuring authentication...');
 
   const authResult = await configureAuth(
-    { apiKeyService, authService, files, homeDir, prompter },
+    { apiKeyService, files, homeDir, prompter },
     tool,
+    cliAuth,
   );
 
   // Only configure the tool if it's installed (or user chose retry and it was found)
