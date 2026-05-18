@@ -40,8 +40,12 @@ const TOOL_API_KEY_TYPES: Record<'opencode' | 'pi', string> = {
   pi: 'api_key',
 };
 
-export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Promise<AuthResult> {
-  const { apiKeyService, authService, files, homeDir, prompter } = deps;
+export async function configureAuth(
+  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter'>,
+  tool: 'opencode' | 'pi',
+  cliAuth: CliAuth | null,
+): Promise<AuthResult> {
+  const { apiKeyService, files, homeDir, prompter } = deps;
 
   const alreadyAuth = await isToolAuthenticated(files, homeDir, tool);
 
@@ -58,44 +62,12 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
       return { authenticated: true };
     }
     // Fall through to reconfigure
-  } else {
+  } else if (cliAuth !== null) {
     prompter.note('Authentication required to use Berget AI.', 'Connect your account');
   }
 
-  // Try to reuse existing CLI tokens (from ~/.berget/auth.json)
-  let cliAuth: CliAuth | null = await readCliAuth(files, homeDir);
-
-  if (!cliAuth || isTokenExpired(cliAuth.expires_at)) {
-    // No valid tokens → full browser login
-    const s = prompter.spinner();
-    s.start('Waiting for browser login...');
-
-    const loginResult = await authService.loginInteractive({
-      debug: process.env.LOG_LEVEL === 'debug',
-    });
-    if (!loginResult.success) {
-      s.stop('Login failed.');
-      prompter.note(
-        `${loginResult.error || 'Login timed out or was cancelled.'}\n\nPlease run \`berget auth login\` manually, then run \`berget code init\` again.`,
-        'Authentication Failed',
-      );
-      return { authenticated: false };
-    }
-
-    s.stop('Successfully logged in to Berget.');
-
-    const jwtExpiresAt = extractJwtExpiresAt(loginResult.accessToken!);
-    if (jwtExpiresAt === 0) {
-      s.stop('Login succeeded but received invalid token.');
-      prompter.note('Please try logging in again or contact support.', 'Authentication Error');
-      return { authenticated: false };
-    }
-
-    cliAuth = {
-      access_token: loginResult.accessToken!,
-      expires_at: jwtExpiresAt,
-      refresh_token: loginResult.refreshToken!,
-    };
+  if (cliAuth === null) {
+    return { authenticated: false };
   }
 
   // Check Berget Code seat
@@ -186,6 +158,50 @@ export async function configureAuth(deps: AuthDeps, tool: 'opencode' | 'pi'): Pr
     'Authentication',
   );
   return { authenticated: false };
+}
+
+export async function ensureCliAuth(
+  deps: Pick<AuthDeps, 'authService' | 'files' | 'homeDir' | 'prompter'>,
+): Promise<CliAuth | null> {
+  const { authService, files, homeDir, prompter } = deps;
+
+  const cliAuth: CliAuth | null = await readCliAuth(files, homeDir);
+
+  if (cliAuth && !isTokenExpired(cliAuth.expires_at)) {
+    return cliAuth;
+  }
+
+  prompter.note('Authentication required to use Berget AI.', 'Connect your account');
+
+  const s = prompter.spinner();
+  s.start('Waiting for browser login...');
+
+  const loginResult = await authService.loginInteractive({
+    debug: process.env.LOG_LEVEL === 'debug',
+  });
+  if (!loginResult.success) {
+    s.stop('Login failed.');
+    prompter.note(
+      `${loginResult.error || 'Login timed out or was cancelled.'}\n\nPlease run \`berget auth login\` manually, then run \`berget code init\` again.`,
+      'Authentication Failed',
+    );
+    return null;
+  }
+
+  s.stop('Successfully logged in to Berget.');
+
+  const jwtExpiresAt = extractJwtExpiresAt(loginResult.accessToken!);
+  if (jwtExpiresAt === 0) {
+    s.stop('Login succeeded but received invalid token.');
+    prompter.note('Please try logging in again or contact support.', 'Authentication Error');
+    return null;
+  }
+
+  return {
+    access_token: loginResult.accessToken!,
+    expires_at: jwtExpiresAt,
+    refresh_token: loginResult.refreshToken!,
+  };
 }
 
 export async function isToolAuthenticated(
