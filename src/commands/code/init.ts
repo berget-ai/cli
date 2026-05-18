@@ -20,6 +20,7 @@ import {
   initOpenCodeAgents,
 } from './opencode.js';
 import { getPiLabel, getPiState, initPi, initPiAgent } from './pi.js';
+import { checkTool, promptForMissingTool } from './tool-check.js';
 
 export interface WizardDeps {
   apiKeyService: ApiKeyServicePort;
@@ -60,6 +61,49 @@ export async function runInit(deps: WizardDeps): Promise<void> {
     ],
   });
 
+  // Check if the selected tool is installed
+  const toolCheck = await checkTool(commands, tool);
+  let toolConfigured = toolCheck.installed;
+
+  if (!toolCheck.installed) {
+    // Non-TTY guard: print instructions and exit instead of hanging
+    // Only trigger when explicitly false (not undefined, as in tests)
+    if (process.stdin.isTTY === false) {
+      console.error(`${toolCheck.name} is not installed.`);
+      console.error('Install it first:');
+      console.error(`  ${toolCheck.installCommand}`);
+      console.error(`Docs: ${toolCheck.docsUrl}`);
+      process.exit(1);
+    }
+
+    const action = await promptForMissingTool(prompter, toolCheck);
+
+    if (action === 'exit') {
+      throw new CancelledError();
+    }
+
+    if (action === 'retry') {
+      // Re-check once. If still missing, show prompt again.
+      const recheck = await checkTool(commands, tool);
+      if (recheck.installed) {
+        toolConfigured = true;
+      } else {
+        const secondAction = await promptForMissingTool(prompter, recheck);
+        if (secondAction === 'exit') throw new CancelledError();
+        if (secondAction === 'continue') toolConfigured = false;
+        if (secondAction === 'retry') {
+          // One more check, then give up and treat as "continue"
+          const finalCheck = await checkTool(commands, tool);
+          toolConfigured = finalCheck.installed;
+        }
+      }
+    }
+
+    if (action === 'continue') {
+      toolConfigured = false;
+    }
+  }
+
   const scope = await prompter.select<'global' | 'project'>({
     initialValue: 'project',
     message: 'Where should the configuration apply?',
@@ -98,21 +142,32 @@ export async function runInit(deps: WizardDeps): Promise<void> {
     tool,
   );
 
-  if (tool === 'opencode') {
-    await initOpenCode({ commands, cwd, files, homeDir, prompter, scope });
-    await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
-  } else {
-    await initPi({ commands, cwd, files, homeDir, prompter, scope });
-    await initPiAgent({ cwd, files, homeDir, prompter, scope });
+  // Only configure the tool if it's installed (or user chose retry and it was found)
+  if (toolConfigured) {
+    if (tool === 'opencode') {
+      await initOpenCode({ commands, cwd, files, homeDir, prompter, scope });
+      await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
+    } else {
+      await initPi({ commands, cwd, files, homeDir, prompter, scope });
+      await initPiAgent({ cwd, files, homeDir, prompter, scope });
+    }
   }
 
-  const nextSteps = authResult.authenticated
-    ? tool === 'opencode'
-      ? "You're all set!\n\n1. Run: opencode\n2. Select model: /models"
-      : "You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model"
-    : tool === 'opencode'
-      ? 'Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models'
-      : 'Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model';
+  const nextSteps = toolConfigured
+    ? authResult.authenticated
+      ? tool === 'opencode'
+        ? "You're all set!\n\n1. Run: opencode\n2. Select model: /models"
+        : "You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model"
+      : tool === 'opencode'
+        ? 'Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models'
+        : 'Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model'
+    : authResult.authenticated
+      ? tool === 'opencode'
+        ? `Auth is configured. Next steps:\n\n1. Install OpenCode:\n   ${toolCheck.installCommand}\n2. Run: opencode\n3. Select model: /models`
+        : `Auth is configured. Next steps:\n\n1. Install Pi:\n   ${toolCheck.installCommand}\n2. Run: pi\n3. Select model: /model`
+      : tool === 'opencode'
+        ? `Next steps:\n\n1. Install OpenCode:\n   ${toolCheck.installCommand}\n2. Run: opencode\n3. Authenticate with Berget AI`
+        : `Next steps:\n\n1. Install Pi:\n   ${toolCheck.installCommand}\n2. Run: pi\n3. Authenticate with Berget AI`;
 
   const toolName = tool === 'opencode' ? 'OpenCode' : 'Pi';
   const docsUrl =

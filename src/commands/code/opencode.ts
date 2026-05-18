@@ -6,7 +6,7 @@ import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
 import { getAllAgents, toMarkdown } from '../../agents/index.js';
-import { CancelledError, PrerequisiteError } from './errors.js';
+import { CancelledError } from './errors.js';
 import { readJsonMaybe } from './utils.js';
 
 const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.22';
@@ -51,12 +51,7 @@ export async function getOpencodeState(
 /* ─── State helpers ─────────────────────────────────────────────────────── */
 
 export async function initOpenCode(deps: InitOpenCodeDeps): Promise<void> {
-  const { commands, cwd, files, homeDir, prompter, scope } = deps;
-
-  const installed = await commands.checkInstalled('opencode');
-  if (!installed) {
-    throw new PrerequisiteError('opencode');
-  }
+  const { commands: _commands, cwd, files, homeDir, prompter, scope } = deps;
 
   const configPath = await resolveOpencodeConfigPath(files, homeDir, cwd, scope);
   const existingContent = await files.readFile(configPath);
