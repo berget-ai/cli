@@ -2,13 +2,13 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import readline from 'node:readline';
 
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
-import { ApiKeyService } from '../services/api-key-service';
-import { AuthService } from '../services/auth-service';
-import { ChatCompletionOptions, ChatMessage, ChatService } from '../services/chat-service';
-import { DefaultApiKeyManager } from '../utils/default-api-key';
-import { handleError } from '../utils/error-handler';
-import { containsMarkdown, renderMarkdown } from '../utils/markdown-renderer';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
+import { ApiKeyService } from '../services/api-key-service.js';
+import { AuthService } from '../services/auth-service.js';
+import { ChatCompletionOptions, ChatMessage, ChatService } from '../services/chat-service.js';
+import { DefaultApiKeyManager } from '../utils/default-api-key.js';
+import { handleError } from '../utils/error-handler.js';
+import { containsMarkdown, renderMarkdown } from '../utils/markdown-renderer.js';
 
 /**
  * Register chat commands

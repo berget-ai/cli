@@ -1,4 +1,4 @@
-import type { CommandRunner } from '../ports/command-runner';
+import type { CommandRunner } from '../ports/command-runner.js';
 
 type Handler = {
   match: (command: string, arguments_: readonly string[]) => boolean;

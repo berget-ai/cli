@@ -1,4 +1,4 @@
-import type { ApiKeyServicePort } from '../ports/auth-services';
+import type { ApiKeyServicePort } from '../ports/auth-services.js';
 
 export class FakeApiKeyService implements ApiKeyServicePort {
   private readonly _key: string;

@@ -1,4 +1,4 @@
-import type { FileStore } from '../ports/file-store';
+import type { FileStore } from '../ports/file-store.js';
 
 export interface FileEntry {
   content: string;

@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 
-import { clearAuthToken } from '../client';
-import { AuthService } from '../services/auth-service';
-import { handleError } from '../utils/error-handler';
+import { clearAuthToken } from '../client.js';
+import { AuthService } from '../services/auth-service.js';
+import { handleError } from '../utils/error-handler.js';
 
 /**
  * Register authentication commands

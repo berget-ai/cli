@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 
-import type { CommandRunner } from '../ports/command-runner';
+import type { CommandRunner } from '../ports/command-runner.js';
 
 export class SpawnCommandRunner implements CommandRunner {
   async checkInstalled(binary: string): Promise<boolean> {

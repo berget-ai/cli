@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 /**
  * Centralized agent configuration loader

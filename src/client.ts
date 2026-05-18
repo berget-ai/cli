@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import createClient from 'openapi-fetch';
 
-import type { paths } from './types/api';
+import type { paths } from './types/api.js';
 
-import { logger } from './utils/logger';
-import { TokenManager } from './utils/token-manager';
+import { logger } from './utils/logger.js';
+import { TokenManager } from './utils/token-manager.js';
 
 type ApiMethod = (...args: unknown[]) => Promise<any>;
 

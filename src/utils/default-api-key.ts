@@ -3,8 +3,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import readline from 'node:readline';
 
-import { ApiKeyService } from '../services/api-key-service';
-import { logger } from './logger';
+import { ApiKeyService } from '../services/api-key-service.js';
+import { logger } from './logger.js';
 
 interface DefaultApiKeyData {
   id: string;

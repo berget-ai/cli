@@ -1,13 +1,13 @@
 import { Command } from 'commander';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { registerChatCommands } from '../../src/commands/chat';
-import { ChatService } from '../../src/services/chat-service';
-import { DefaultApiKeyManager } from '../../src/utils/default-api-key';
+import { registerChatCommands } from '../../src/commands/chat.js';
+import { ChatService } from '../../src/services/chat-service.js';
+import { DefaultApiKeyManager } from '../../src/utils/default-api-key.js';
 
 // Mock dependencies
-vi.mock('../../src/services/chat-service');
-vi.mock('../../src/utils/default-api-key');
+vi.mock('../../src/services/chat-service.js');
+vi.mock('../../src/utils/default-api-key.js');
 vi.mock('readline', () => ({
   createInterface: vi.fn(() => ({
     close: vi.fn(),

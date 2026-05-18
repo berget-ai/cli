@@ -1,6 +1,6 @@
-import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services';
-import type { FileStore } from './ports/file-store';
-import type { Prompter } from './ports/prompter';
+import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services.js';
+import type { FileStore } from './ports/file-store.js';
+import type { Prompter } from './ports/prompter.js';
 
 export interface AuthDeps {
   apiKeyService: ApiKeyServicePort;

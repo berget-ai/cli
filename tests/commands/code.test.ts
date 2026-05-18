@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { registerCodeCommands } from '../../src/commands/code';
+import { registerCodeCommands } from '../../src/commands/code.js';
 
 describe('Code Commands', () => {
   let program: Command;

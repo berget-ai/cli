@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 
-import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure';
-import { handleError } from '../utils/error-handler';
-import { runInitCommand } from './code/init';
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
+import { handleError } from '../utils/error-handler.js';
+import { runInitCommand } from './code/init.js';
 
 /**
  * Register code commands

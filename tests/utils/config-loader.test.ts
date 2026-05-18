@@ -5,7 +5,7 @@ import {
   getAllAgentConfigs,
   getModelConfig,
   getProviderModels,
-} from '../../src/utils/config-loader';
+} from '../../src/utils/config-loader.js';
 
 // Mock fs module
 const mockFs = vi.hoisted(() => ({

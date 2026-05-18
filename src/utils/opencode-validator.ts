@@ -1,14 +1,19 @@
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
+import _Ajv from 'ajv';
+import _addFormats from 'ajv-formats';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// Load the official OpenCode JSON Schema
+// CJS→ESM interop in NodeNext resolution
+// These packages use `export =`; TypeScript won't synthesize the default import
+const Ajv = _Ajv as unknown as new (opts?: any) => any;
+const addFormats = _addFormats as unknown as (ajv: any) => void;
+
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const schemaPath = join(__dirname, '..', 'schemas', 'opencode-schema.json');
 
-let ajv: Ajv;
+let ajv: any;
 let openCodeSchema: any;
 let validateFunction: any;
 

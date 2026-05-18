@@ -1,6 +1,6 @@
-import type { Prompter, Spinner } from '../ports/prompter';
+import type { Prompter, Spinner } from '../ports/prompter.js';
 
-import { CancelledError } from '../errors';
+import { CancelledError } from '../errors.js';
 
 export const CANCEL = Symbol('cancel');
 

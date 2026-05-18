@@ -1,4 +1,4 @@
-import type { AuthServicePort } from '../ports/auth-services';
+import type { AuthServicePort } from '../ports/auth-services.js';
 
 export class FakeAuthService implements AuthServicePort {
   loginCallCount = 0;
