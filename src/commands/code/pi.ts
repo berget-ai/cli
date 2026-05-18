@@ -158,13 +158,16 @@ export async function initPiAgent(deps: {
 
   const s = prompter.spinner();
   s.start('Writing agent configuration...');
-
-  const systemDir =
-    scope === 'project' ? path.join(cwd, '.pi') : path.join(homeDir, '.pi', 'agent');
-  await files.mkdir(systemDir);
-  await files.writeFile(systemPath, toPiPrompt(agent));
-
-  s.stop(`Wrote agent configuration to ${systemPath}`);
+  try {
+    const systemDir =
+      scope === 'project' ? path.join(cwd, '.pi') : path.join(homeDir, '.pi', 'agent');
+    await files.mkdir(systemDir);
+    await files.writeFile(systemPath, toPiPrompt(agent));
+    s.stop(`Wrote agent configuration to ${systemPath}`);
+  } catch (error) {
+    s.stop('Failed to write agent configuration.');
+    throw error;
+  }
   return true;
 }
 

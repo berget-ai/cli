@@ -44,6 +44,7 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   const piState = await getPiState(files, homeDir, cwd);
 
   const tool = await prompter.select<'opencode' | 'pi'>({
+    initialValue: 'opencode',
     message: 'How do you want to use Berget AI?',
     options: [
       {
@@ -60,6 +61,7 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   });
 
   const scope = await prompter.select<'global' | 'project'>({
+    initialValue: 'project',
     message: 'Where should the configuration apply?',
     options: [
       {
@@ -89,6 +91,8 @@ export async function runInit(deps: WizardDeps): Promise<void> {
     ],
   });
 
+  prompter.log('step', 'Configuring authentication...');
+
   const authResult = await configureAuth(
     { apiKeyService, authService, files, homeDir, prompter },
     tool,
@@ -97,34 +101,29 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   if (tool === 'opencode') {
     await initOpenCode({ commands, cwd, files, homeDir, prompter, scope });
     await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
-
-    if (authResult.authenticated) {
-      prompter.note(
-        `You're all set!\n\n1. Run: opencode\n2. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`,
-        'Successfully configured Berget AI for OpenCode',
-      );
-    } else {
-      prompter.note(
-        `Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/opencode-berget-auth`,
-        'Successfully configured Berget AI for OpenCode',
-      );
-    }
   } else {
     await initPi({ commands, cwd, files, homeDir, prompter, scope });
     await initPiAgent({ cwd, files, homeDir, prompter, scope });
-
-    if (authResult.authenticated) {
-      prompter.note(
-        `You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`,
-        'Successfully configured Berget AI for Pi',
-      );
-    } else {
-      prompter.note(
-        `Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model\n\nFor more information, see official docs:\n\nhttps://github.com/berget-ai/pi-provider`,
-        'Successfully configured Berget AI for Pi',
-      );
-    }
   }
+
+  const nextSteps = authResult.authenticated
+    ? tool === 'opencode'
+      ? "You're all set!\n\n1. Run: opencode\n2. Select model: /models"
+      : "You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model"
+    : tool === 'opencode'
+      ? 'Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models'
+      : 'Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model';
+
+  const toolName = tool === 'opencode' ? 'OpenCode' : 'Pi';
+  const docsUrl =
+    tool === 'opencode'
+      ? 'https://github.com/berget-ai/opencode-berget-auth'
+      : 'https://github.com/berget-ai/pi-provider';
+
+  prompter.note(
+    `${nextSteps}\n\nFor more information, see official docs:\n\n${docsUrl}`,
+    `Successfully configured Berget AI for ${toolName}`,
+  );
 
   prompter.outro('Initialization complete!');
 }
@@ -140,22 +139,26 @@ export async function runInitCommand(): Promise<void> {
       homeDir: os.homedir(),
       prompter: new ClackPrompter(),
     });
-    process.exit(0);
+    process.exitCode = 0;
   } catch (error) {
     if (error instanceof CancelledError) {
-      process.exit(130);
+      process.exitCode = 130;
+      return;
     }
     if (error instanceof FatalError) {
       console.error(error.message);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
     if (error instanceof PrerequisiteError) {
       console.error(`Missing required binary: ${error.binary}`);
-      process.exit(2);
+      process.exitCode = 2;
+      return;
     }
     if (error instanceof CommandFailedError) {
       console.error(error.message);
-      process.exit(5);
+      process.exitCode = 5;
+      return;
     }
     throw error;
   }

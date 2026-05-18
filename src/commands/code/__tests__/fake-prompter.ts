@@ -1,4 +1,4 @@
-import type { Prompter, Spinner } from '../ports/prompter.js';
+import type { Prompter, Spinner, TaskItem } from '../ports/prompter.js';
 
 import { CancelledError } from '../errors.js';
 
@@ -67,6 +67,10 @@ export class FakePrompter implements Prompter {
     this._calls.push({ args: { message }, method: 'intro' });
   }
 
+  log(type: string, message: string): void {
+    this._calls.push({ args: { message, type }, method: 'log' });
+  }
+
   async multiselect<T>(options: { message: string }): Promise<T[]> {
     this._calls.push({ args: options, method: 'multiselect' });
     const entry = this._script[this._cursor++];
@@ -88,7 +92,7 @@ export class FakePrompter implements Prompter {
     this._calls.push({ args: { message }, method: 'outro' });
   }
 
-  async select<T>(options: { message: string }): Promise<T> {
+  async select<T>(options: { initialValue?: T; message: string }): Promise<T> {
     this._calls.push({ args: options, method: 'select' });
     const entry = this._script[this._cursor++];
     if (!entry) throw new Error(`No script entry for select #${this._cursor} (${options.message})`);
@@ -109,6 +113,16 @@ export class FakePrompter implements Prompter {
         this._calls.push({ args: { message: message }, method: 'spinner.stop' });
       },
     };
+  }
+
+  async tasks(items: ReadonlyArray<TaskItem>): Promise<void> {
+    this._calls.push({ args: { items: items.map((i) => i.title) }, method: 'tasks' });
+    for (const item of items) {
+      const noop = (_msg: string) => {
+        // no-op in tests
+      };
+      await item.task(noop);
+    }
   }
 
   async text(options: { message: string }): Promise<string> {

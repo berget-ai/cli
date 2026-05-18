@@ -80,8 +80,13 @@ export async function initOpenCode(deps: InitOpenCodeDeps): Promise<void> {
 
   const s = prompter.spinner();
   s.start('Writing OpenCode configuration...');
-  await files.writeFile(configPath, newContent);
-  s.stop(`Wrote configuration to ${configPath}.`);
+  try {
+    await files.writeFile(configPath, newContent);
+    s.stop(`Wrote configuration to ${configPath}.`);
+  } catch (error) {
+    s.stop('Failed to write configuration.');
+    throw error;
+  }
 }
 
 export async function initOpenCodeAgents(deps: {
@@ -161,17 +166,20 @@ export async function initOpenCodeAgents(deps: {
 
   const s = prompter.spinner();
   s.start('Writing agent configurations...');
+  try {
+    for (const agentName of selectedAgents) {
+      const agent = agents.find((a) => a.config.name === agentName);
+      if (!agent) continue;
 
-  for (const agentName of selectedAgents) {
-    const agent = agents.find((a) => a.config.name === agentName);
-    if (!agent) continue;
-
-    const agentPath = path.join(agentsDir, `${agentName}.md`);
-    const content = toMarkdown(agent);
-    await files.writeFile(agentPath, content);
+      const agentPath = path.join(agentsDir, `${agentName}.md`);
+      const content = toMarkdown(agent);
+      await files.writeFile(agentPath, content);
+    }
+    s.stop(`Wrote ${selectedAgents.length} agent(s) to ${agentsDir}`);
+  } catch (error) {
+    s.stop('Failed to write agent configurations.');
+    throw error;
   }
-
-  s.stop(`Wrote ${selectedAgents.length} agent(s) to ${agentsDir}`);
   return true;
 }
 
