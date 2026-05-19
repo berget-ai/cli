@@ -22,6 +22,11 @@ import {
 import { getPiLabel, getPiState, initPi, initPiAgent } from './pi.js';
 import { checkTool, promptForMissingTool } from './tool-check.js';
 
+export interface InitCommandResult {
+  exitCode: number;
+  stderr?: string;
+}
+
 export interface WizardDeps {
   apiKeyService: ApiKeyServicePort;
   authService: AuthServicePort;
@@ -29,11 +34,26 @@ export interface WizardDeps {
   cwd: string;
   files: FileStore;
   homeDir: string;
+  isTty?: boolean;
   prompter: Prompter;
 }
 
+export async function executeInitCommand(deps: WizardDeps): Promise<InitCommandResult> {
+  try {
+    await runInit(deps);
+    return { exitCode: 0 };
+  } catch (error) {
+    if (error instanceof CancelledError) return { exitCode: 130 };
+    if (error instanceof FatalError) return { exitCode: 1, stderr: error.message };
+    if (error instanceof PrerequisiteError)
+      return { exitCode: 2, stderr: `Missing required binary: ${error.binary}` };
+    if (error instanceof CommandFailedError) return { exitCode: 5, stderr: error.message };
+    throw error;
+  }
+}
+
 export async function runInit(deps: WizardDeps): Promise<void> {
-  const { apiKeyService, authService, commands, cwd, files, homeDir, prompter } = deps;
+  const { apiKeyService, authService, commands, cwd, files, homeDir, isTty, prompter } = deps;
 
   prompter.intro(`${chalk.bgGreen.black(' berget code ')}`);
   prompter.note(
@@ -68,14 +88,12 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   let toolConfigured = toolCheck.installed;
 
   if (!toolCheck.installed) {
-    // Non-TTY guard: print instructions and exit instead of hanging
-    // Only trigger when explicitly false (not undefined, as in tests)
-    if (process.stdin.isTTY === false) {
-      console.error(`${toolCheck.name} is not installed.`);
-      console.error('Install it first:');
-      console.error(`  ${toolCheck.installCommand}`);
-      console.error(`Docs: ${toolCheck.docsUrl}`);
-      process.exit(1);
+    // Non-TTY guard: throw instead of exit so callers (including tests)
+    // can decide how to handle the failure.
+    if (isTty === false) {
+      throw new FatalError(
+        `${toolCheck.name} is not installed.\nInstall it first:\n  ${toolCheck.installCommand}\nDocs: ${toolCheck.docsUrl}`,
+      );
     }
 
     const action = await promptForMissingTool(prompter, toolCheck);
@@ -187,37 +205,17 @@ export async function runInit(deps: WizardDeps): Promise<void> {
 }
 
 export async function runInitCommand(): Promise<void> {
-  try {
-    await runInit({
-      apiKeyService: ApiKeyService.getInstance(),
-      authService: AuthService.getInstance(),
-      commands: new SpawnCommandRunner(),
-      cwd: process.cwd(),
-      files: new FsFileStore(),
-      homeDir: os.homedir(),
-      prompter: new ClackPrompter(),
-    });
-    process.exitCode = 0;
-  } catch (error) {
-    if (error instanceof CancelledError) {
-      process.exitCode = 130;
-      return;
-    }
-    if (error instanceof FatalError) {
-      console.error(error.message);
-      process.exitCode = 1;
-      return;
-    }
-    if (error instanceof PrerequisiteError) {
-      console.error(`Missing required binary: ${error.binary}`);
-      process.exitCode = 2;
-      return;
-    }
-    if (error instanceof CommandFailedError) {
-      console.error(error.message);
-      process.exitCode = 5;
-      return;
-    }
-    throw error;
-  }
+  const result = await executeInitCommand({
+    apiKeyService: ApiKeyService.getInstance(),
+    authService: AuthService.getInstance(),
+    commands: new SpawnCommandRunner(),
+    cwd: process.cwd(),
+    files: new FsFileStore(),
+    homeDir: os.homedir(),
+    isTty: process.stdin.isTTY,
+    prompter: new ClackPrompter(),
+  });
+
+  if (result.stderr) console.error(result.stderr);
+  process.exitCode = result.exitCode;
 }

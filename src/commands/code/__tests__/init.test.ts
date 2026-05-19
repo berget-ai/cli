@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ApiKeyServicePort, AuthServicePort } from '../ports/auth-services.js';
+import type { CommandRunner } from '../ports/command-runner.js';
 
-import { CancelledError, CommandFailedError } from '../errors.js';
-import { runInit } from '../init.js';
+import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from '../errors.js';
+import { executeInitCommand, runInit } from '../init.js';
 import { FakeApiKeyService } from './fake-api-key-service.js';
 import { FakeAuthService } from './fake-auth-service.js';
 import { FakeCommandRunner } from './fake-command-runner.js';
@@ -25,6 +26,7 @@ const makeDeps = (
     cwd: '/home/user/project',
     files: overrides.files ?? new FakeFileStore(),
     homeDir: '/home/user',
+    isTty: overrides.isTty ?? true,
     prompter: overrides.prompter ?? new FakePrompter([]),
     ...Object.fromEntries(
       Object.entries(overrides).filter(
@@ -33,7 +35,8 @@ const makeDeps = (
           k !== 'files' &&
           k !== 'commands' &&
           k !== 'authService' &&
-          k !== 'apiKeyService',
+          k !== 'apiKeyService' &&
+          k !== 'isTty',
       ),
     ),
   };
@@ -41,6 +44,22 @@ const makeDeps = (
 
 function base64urlEncode(data: string): string {
   return Buffer.from(data).toString('base64url');
+}
+
+function createStubRunner(checkResponses: boolean[]): CommandRunner {
+  let idx = 0;
+  const calls: Array<{ args: string[]; command: string }> = [];
+  return {
+    checkInstalled: async (binary: string): Promise<boolean> => {
+      calls.push({ args: [], command: `check:${binary}` });
+      return checkResponses[idx++] ?? false;
+    },
+    getCalls: () => calls,
+    run: async (command: string, args: readonly string[]): Promise<string> => {
+      calls.push({ args: [...args], command });
+      return '';
+    },
+  } as CommandRunner & { getCalls(): Array<{ args: string[]; command: string }> };
 }
 
 function makeJwt(payload: Record<string, unknown>): string {
@@ -151,6 +170,110 @@ describe('runInit', () => {
 
       // Should complete without throwing - auth is configured even without tool
       await expect(runInit(deps)).resolves.not.toThrow();
+    });
+  });
+
+  describe('non-TTY guard', () => {
+    it('throws FatalError for missing opencode when isTty is false', async () => {
+      const deps = makeDeps({
+        commands: createStubRunner([false]), // opencode not installed
+        isTty: false,
+        prompter: new FakePrompter([select('opencode')]),
+      });
+
+      await expect(runInit(deps)).rejects.toBeInstanceOf(FatalError);
+    });
+
+    it('throws FatalError for missing pi when isTty is false', async () => {
+      const deps = makeDeps({
+        commands: createStubRunner([false]), // pi not installed
+        isTty: false,
+        prompter: new FakePrompter([select('pi')]),
+      });
+
+      await expect(runInit(deps)).rejects.toBeInstanceOf(FatalError);
+    });
+  });
+
+  describe('retry loop', () => {
+    it('retry then recheck succeeds → tool gets configured', async () => {
+      const commands = createStubRunner([false, true]); // first: missing, recheck: found
+
+      const deps = makeDeps({
+        commands,
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('retry'),
+          select('project'),
+          confirm(true, 'Create'),
+          multiselect([]),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const files = deps.files as FakeFileStore;
+      expect(files.getWrittenFiles().has('/home/user/project/opencode.json')).toBe(true);
+    });
+
+    it('retry → recheck fails → continue → completes without tool config', async () => {
+      const commands = createStubRunner([false]); // never found
+
+      const deps = makeDeps({
+        commands,
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('retry'),
+          select('continue'),
+          select('project'),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const files = deps.files as FakeFileStore;
+      // Should NOT create opencode config since toolConfigured = false
+      expect(files.getWrittenFiles().has('/home/user/project/opencode.json')).toBe(false);
+    });
+
+    it('retry → recheck fails → retry → final check succeeds → tool configured', async () => {
+      const commands = createStubRunner([false, false, true]); // third check succeeds
+
+      const deps = makeDeps({
+        commands,
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('retry'),
+          select('retry'),
+          select('project'),
+          confirm(true, 'Create'),
+          multiselect([]),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const files = deps.files as FakeFileStore;
+      expect(files.getWrittenFiles().has('/home/user/project/opencode.json')).toBe(true);
+    });
+
+    it('retry → recheck fails → retry → final check fails → completes without tool config', async () => {
+      const commands = createStubRunner([false]); // never found
+
+      const deps = makeDeps({
+        commands,
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('retry'),
+          select('retry'),
+          select('project'),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const files = deps.files as FakeFileStore;
+      expect(files.getWrittenFiles().has('/home/user/project/opencode.json')).toBe(false);
     });
   });
 
@@ -645,6 +768,198 @@ describe('runInit', () => {
       expect(content).not.toBe('old agent content');
       // Pi doesn't use front matter, so check for system prompt content
       expect(content).toContain('Fullstack Agent');
+    });
+  });
+
+  describe('nextSteps branching', () => {
+    it('shows auth-required message when toolConfigured=true but auth=false (opencode)', async () => {
+      const deps = makeDeps({
+        authService: new FakeAuthService(false), // login fails
+        commands: new FakeCommandRunner().handle('opencode --version', 'mocked'), // tool is installed
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('project'),
+          confirm(true, 'Create'),
+          multiselect([]),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const prompter = deps.prompter as FakePrompter;
+      const notes = prompter.calls.filter((c) => c.method === 'note');
+      const lastNote = notes.at(-1);
+      expect(JSON.stringify(lastNote)).toContain('/connect');
+      expect(JSON.stringify(lastNote)).not.toContain("You're all set");
+    });
+
+    it('shows auth-only next steps when toolConfigured=false but auth=true (pi)', async () => {
+      const files = new FakeFileStore();
+      const farFuture = Math.floor(Date.now() / 1000) + 3600 * 24 * 365;
+      files.seed(
+        '/home/user/.berget/auth.json',
+        JSON.stringify({
+          access_token: makeJwt({ exp: farFuture, realm_access: { roles: ['berget_code_seat'] } }),
+          expires_at: farFuture * 1000,
+          refresh_token: 'ref',
+        }),
+      );
+
+      const deps = makeDeps({
+        commands: new FakeCommandRunner(), // pi not installed
+        files,
+        prompter: new FakePrompter([
+          select('pi'),
+          select('continue'), // skip install
+          select('project'),
+          select('subscription'),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const prompter = deps.prompter as FakePrompter;
+      const notes = prompter.calls.filter((c) => c.method === 'note');
+      const lastNote = notes.at(-1);
+      const noteText = JSON.stringify(lastNote);
+      expect(noteText).toContain('Install Pi:');
+      expect(noteText).toContain('Run: pi');
+      expect(noteText).toContain('Select model: /model');
+    });
+
+    it('shows full setup instructions when toolConfigured=false and auth=false (opencode)', async () => {
+      const deps = makeDeps({
+        authService: new FakeAuthService(false), // login fails
+        commands: new FakeCommandRunner(), // opencode not installed
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('continue'), // skip install
+          select('project'),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const prompter = deps.prompter as FakePrompter;
+      const notes = prompter.calls.filter((c) => c.method === 'note');
+      const lastNote = notes.at(-1);
+      const noteText = JSON.stringify(lastNote);
+      expect(noteText).toContain('Install OpenCode:');
+      expect(noteText).toContain('Run: opencode');
+      expect(noteText).toContain('Authenticate with Berget AI');
+    });
+  });
+});
+
+describe('executeInitCommand', () => {
+  describe('result mapping', () => {
+    it('returns exitCode 0 on success', async () => {
+      const deps = makeDeps({
+        prompter: new FakePrompter([
+          select('opencode'),
+          select('project'),
+          confirm(true, 'Create'),
+          multiselect([]),
+        ]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBeUndefined();
+    });
+
+    it('returns exitCode 130 on CancelledError', async () => {
+      const deps = makeDeps({
+        prompter: new FakePrompter([select(CANCEL)]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(130);
+      expect(result.stderr).toBeUndefined();
+    });
+
+    it('returns exitCode 1 and stderr on FatalError', async () => {
+      const deps = makeDeps({
+        commands: createStubRunner([false]), // not installed
+        isTty: false,
+        prompter: new FakePrompter([select('opencode')]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('OpenCode is not installed');
+      expect(result.stderr).toContain('Install it first:');
+    });
+
+    it('returns exitCode 2 and stderr on PrerequisiteError', async () => {
+      const deps = makeDeps({
+        commands: {
+          checkInstalled: async () => {
+            throw new PrerequisiteError('some-binary');
+          },
+          run: async () => '',
+        },
+        prompter: new FakePrompter([select('opencode')]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toBe('Missing required binary: some-binary');
+    });
+
+    it('returns exitCode 5 and stderr on CommandFailedError', async () => {
+      const deps = makeDeps({
+        commands: new FakeCommandRunner()
+          .handle('pi --version', 'mocked')
+          .handle('pi install', new Error('npm error')),
+        prompter: new FakePrompter([select('pi'), select('project')]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(5);
+      expect(result.stderr).toContain('pi install');
+    });
+
+    it('re-throws unknown errors', async () => {
+      const deps = makeDeps({
+        commands: {
+          checkInstalled: async () => {
+            throw new Error('unexpected explosion');
+          },
+          run: async () => '',
+        },
+        prompter: new FakePrompter([select('opencode')]),
+      });
+
+      await expect(executeInitCommand(deps)).rejects.toThrow('unexpected explosion');
+    });
+  });
+
+  describe('non-TTY via executeInitCommand', () => {
+    it('maps isTty=false + missing tool to exitCode 1 with install instructions', async () => {
+      const deps = makeDeps({
+        commands: createStubRunner([false]), // not installed
+        isTty: false,
+        prompter: new FakePrompter([select('opencode')]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('OpenCode is not installed');
+      expect(result.stderr).toContain('https://opencode.ai/docs');
+    });
+
+    it('maps isTty=false + missing pi to exitCode 1 with pi install instructions', async () => {
+      const deps = makeDeps({
+        commands: new FakeCommandRunner(), // pi not installed
+        isTty: false,
+        prompter: new FakePrompter([select('pi')]),
+      });
+
+      const result = await executeInitCommand(deps);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Pi is not installed');
+      expect(result.stderr).toContain('https://pi.dev/docs/latest');
     });
   });
 });
