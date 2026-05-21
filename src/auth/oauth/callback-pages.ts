@@ -4,6 +4,8 @@
  */
 
 export function getErrorPage(title: string, message: string): string {
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -51,8 +53,8 @@ export function getErrorPage(title: string, message: string): string {
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </div>
-      <h1>${title}</h1>
-      <p>${message}</p>
+      <h1>${safeTitle}</h1>
+      <p>${safeMessage}</p>
       <div class="brand">BERGET</div>
     </div>
   </body>
@@ -112,4 +114,16 @@ export function getSuccessPage(): string {
     </div>
   </body>
 </html>`;
+}
+
+/**
+ * Escape HTML special characters to prevent XSS.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 }
