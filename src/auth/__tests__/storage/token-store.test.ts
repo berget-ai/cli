@@ -115,15 +115,15 @@ describe('FileTokenStore', () => {
     const tempPath = getTempAuthPath();
     const store = new FileTokenStore(tempPath);
 
-    await fs.writeFile(tempPath, JSON.stringify({ access_token: 'tok', expires_at: 1, refresh_token: 'ref' }));
+    await fs.writeFile(
+      tempPath,
+      JSON.stringify({ access_token: 'tok', expires_at: 1, refresh_token: 'ref' }),
+    );
     await fs.chmod(tempPath, 0o000);
 
     const result = await store.get();
     expect(result).toBeNull();
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('EACCES'),
-      expect.any(String),
-    );
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('EACCES'), expect.any(String));
 
     // cleanup
     await fs.chmod(tempPath, 0o600);

@@ -248,9 +248,7 @@ describe('refreshAccessToken', () => {
     expect(result).toBe(true);
     expect(mockRefreshTokenGrantCalls).toHaveLength(2);
     expect(store.clear).not.toHaveBeenCalled();
-    expect(store.set).toHaveBeenCalledWith(
-      expect.objectContaining({ access_token: 'new-access' }),
-    );
+    expect(store.set).toHaveBeenCalledWith(expect.objectContaining({ access_token: 'new-access' }));
   });
 
   it('retries up to 3 times on transient failures then gives up without clearing tokens', async () => {
