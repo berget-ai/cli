@@ -11,6 +11,8 @@ export enum LogLevel {
   DEBUG = 4,
 }
 
+const REDACTION = '[REDACTED]';
+
 /**
  * Logger class for centralized logging with configurable log levels
  */
@@ -37,14 +39,19 @@ export class Logger {
   }
 
   /**
-   * Log a debug message (only shown at DEBUG level)
+   * Log a debug message (only shown at DEBUG level).
+   * Automatically redacts known secrets from string arguments.
    */
   public debug(message: string, ...arguments_: any[]): void {
     if (this.logLevel >= LogLevel.DEBUG) {
-      if (arguments_.length > 0) {
-        console.log(chalk.yellow(`DEBUG: ${message}`), ...arguments_);
+      const redactedMessage = redactSecrets(message);
+      const redactedArgs = arguments_.map((arg) =>
+        typeof arg === 'string' ? redactSecrets(arg) : arg,
+      );
+      if (redactedArgs.length > 0) {
+        console.log(chalk.yellow(`DEBUG: ${redactedMessage}`), ...redactedArgs);
       } else {
-        console.log(chalk.yellow(`DEBUG: ${message}`));
+        console.log(chalk.yellow(`DEBUG: ${redactedMessage}`));
       }
     }
   }
@@ -159,6 +166,29 @@ export class Logger {
       }
     }
   }
+}
+
+/**
+ * Redact known secret patterns from log strings.
+ * Handles Bearer tokens, URL query parameters (code, access_token,
+ * refresh_token), Berget API keys, and JWT-like strings.
+ */
+function redactSecrets(value: string): string {
+  let result = value;
+
+  // Bearer tokens
+  result = result.replace(/Bearer\s+\S+/gi, `Bearer ${REDACTION}`);
+
+  // URL query parameters: code=..., access_token=..., refresh_token=...
+  result = result.replace(/\b(code|access_token|refresh_token)=[^&\s]*/gi, `$1=${REDACTION}`);
+
+  // Berget API keys (sk_ber_*)
+  result = result.replace(/sk_ber_\w+/g, REDACTION);
+
+  // JWT-like strings (3 base64url segments separated by dots)
+  result = result.replace(/ey[A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]*){2,}/g, REDACTION);
+
+  return result;
 }
 
 // Export a singleton instance for easy import
