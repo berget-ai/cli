@@ -18,26 +18,8 @@ const agents: Record<string, Agent> = {
   security,
 };
 
-export { agents };
-
-export function getAgent(name: string): Agent | undefined {
-  return agents[name];
-}
-
 export function getAllAgents(): Agent[] {
   return Object.values(agents);
-}
-
-export function toAgentTemplate(agent: Agent): {
-  content: string;
-  description: string;
-  name: string;
-} {
-  return {
-    content: agent.systemPrompt,
-    description: agent.config.description,
-    name: agent.config.name,
-  };
 }
 
 export function toMarkdown(agent: Agent): string {
@@ -70,4 +52,4 @@ export function toPiPrompt(agent: Agent): string {
   return agent.systemPrompt;
 }
 
-export { type Agent, type AgentConfig } from './types.js';
+export { type Agent } from './types.js';

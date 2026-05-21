@@ -1,10 +1,5 @@
 import type { FileStore } from '../ports/file-store.js';
 
-export interface FileEntry {
-  content: string;
-  isDirectory?: boolean;
-}
-
 export class FakeFileStore implements FileStore {
   private _chmodCalls: Array<{ mode: number; path: string }> = [];
   private dirs: Set<string> = new Set();

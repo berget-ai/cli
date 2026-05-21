@@ -1,5 +1,3 @@
-export type LogType = 'error' | 'info' | 'message' | 'step' | 'success' | 'warn';
-
 export interface Prompter {
   cancel(message: string): void;
   confirm(options: { initialValue?: boolean; message: string }): Promise<boolean>;
@@ -35,11 +33,9 @@ export interface Spinner {
   stop(message: string): void;
 }
 
-export interface TaskContext {
-  message: (msg: string) => void;
-}
-
 export interface TaskItem {
   task: (updateMessage: (msg: string) => void) => Promise<string | undefined>;
   title: string;
 }
+
+type LogType = 'error' | 'info' | 'message' | 'step' | 'success' | 'warn';

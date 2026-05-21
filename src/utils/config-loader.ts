@@ -285,36 +285,22 @@ export class ConfigLoader {
 }
 
 /**
- * Convenience function to get agent configuration
- */
-export function getAgentConfig(agentName: string, configPath?: string): AgentConfig | null {
-  return getConfigLoader(configPath).getAgentConfig(agentName);
-}
-
-/**
  * Convenience function to get all agent configurations
  */
 export function getAllAgentConfigs(configPath?: string): Record<string, AgentConfig> {
-  return getConfigLoader(configPath).getAllAgentConfigs();
-}
-
-/**
- * Convenience function to get the config loader instance
- */
-export function getConfigLoader(configPath?: string): ConfigLoader {
-  return ConfigLoader.getInstance(configPath);
+  return ConfigLoader.getInstance(configPath).getAllAgentConfigs();
 }
 
 /**
  * Convenience function to get model configuration
  */
 export function getModelConfig(configPath?: string): ModelConfig {
-  return getConfigLoader(configPath).getModelConfig();
+  return ConfigLoader.getInstance(configPath).getModelConfig();
 }
 
 /**
  * Convenience function to get provider models
  */
 export function getProviderModels(configPath?: string): Record<string, ProviderModelConfig> {
-  return getConfigLoader(configPath).getProviderModels();
+  return ConfigLoader.getInstance(configPath).getProviderModels();
 }

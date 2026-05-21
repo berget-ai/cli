@@ -16,12 +16,6 @@ export const select = <T>(value: symbol | T, match?: RegExp | string): PromptEnt
   response: typeof value === 'symbol' ? value : String(value),
 });
 
-export const text = (value: string | symbol, match?: RegExp | string): PromptEntry => ({
-  kind: 'text',
-  match: typeof match === 'string' ? new RegExp(match) : match,
-  response: value,
-});
-
 export const confirm = (value: boolean | symbol, match?: RegExp | string): PromptEntry => ({
   kind: 'confirm',
   match: typeof match === 'string' ? new RegExp(match) : match,

@@ -14,16 +14,16 @@ export async function readJsonMaybe(files: FileStore, filePath: string): Promise
   }
 }
 
-export function stripJsoncComments(content: string): string {
-  content = content.replaceAll(/\/\/.*$/gm, '');
-  content = content.replaceAll(/\/\*[\s\S]*?\*\//g, '');
-  return content;
-}
-
 export async function writeJsonFile(
   files: FileStore,
   filePath: string,
   data: Record<string, unknown>,
 ): Promise<void> {
   await files.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`);
+}
+
+function stripJsoncComments(content: string): string {
+  content = content.replaceAll(/\/\/.*$/gm, '');
+  content = content.replaceAll(/\/\*[\s\S]*?\*\//g, '');
+  return content;
 }

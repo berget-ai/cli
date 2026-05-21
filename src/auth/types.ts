@@ -5,8 +5,6 @@ export interface AuthConfig {
   realm: string;
 }
 
-export type AuthMethod = 'api_key' | 'oauth';
-
 export interface AuthState {
   expiresAt?: number;
   method: AuthMethod;
@@ -27,3 +25,5 @@ export interface TokenData {
   expires_at: number;
   refresh_token: string;
 }
+
+type AuthMethod = 'api_key' | 'oauth';

@@ -3,7 +3,7 @@ export interface Agent {
   systemPrompt: string;
 }
 
-export interface AgentConfig {
+interface AgentConfig {
   description: string;
   mode?: 'primary' | 'subagent';
   name: string;
