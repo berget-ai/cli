@@ -11,9 +11,9 @@ import { extractJwtExpiresAt } from '../jwt.js';
 // Well-known transient network error codes. Retrying these is safe and
 // common, e.g. brief DNS failure, port temporarily unavailable.
 const TRANSIENT_ERROR_CODES = new Set([
+  'EAI_AGAIN',
   'ECONNREFUSED',
   'ECONNRESET',
-  'EAI_AGAIN',
   'ENETUNREACH',
   'ENOTFOUND',
   'ETIMEDOUT',
