@@ -4,6 +4,8 @@ import * as path from 'node:path';
 
 import type { TokenData } from '../types.js';
 
+import { logger } from '../../utils/logger.js';
+
 export interface TokenStore {
   clear(): Promise<void>;
   get(): Promise<null | TokenData>;
@@ -26,8 +28,22 @@ export class FileTokenStore implements TokenStore {
   }
 
   async get(): Promise<null | TokenData> {
+    let data: string | undefined;
     try {
-      const data = await fs.readFile(this.tokenFilePath, 'utf8');
+      data = await fs.readFile(this.tokenFilePath, 'utf8');
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') {
+        return null; // Not logged in — expected
+      }
+      logger.warn(
+        `Could not read auth file (${code || 'unknown error'}). Run \`berget auth login\` to re-authenticate.`,
+        String(error),
+      );
+      return null;
+    }
+
+    try {
       const parsed = JSON.parse(data) as TokenData;
       // Validate shape
       if (
@@ -38,7 +54,11 @@ export class FileTokenStore implements TokenStore {
         return parsed;
       }
       return null;
-    } catch {
+    } catch (error) {
+      logger.warn(
+        `Auth file appears corrupted. Run \`berget auth login\` to re-authenticate.`,
+        String(error),
+      );
       return null;
     }
   }

@@ -1,17 +1,28 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { logger } from '../../../utils/logger.js';
 import { FileTokenStore } from '../../storage/token-store.js';
 
 describe('FileTokenStore', () => {
   const getTempAuthPath = () => path.join(os.tmpdir(), `berget-auth-test-${Date.now()}.json`);
 
+  beforeEach(() => {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    vi.spyOn(logger, 'debug').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('returns null when auth file does not exist', async () => {
     const store = new FileTokenStore(getTempAuthPath());
     const result = await store.get();
     expect(result).toBeNull();
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it('round-trips TokenData and preserves exact JSON shape', async () => {
@@ -78,13 +89,17 @@ describe('FileTokenStore', () => {
     ).toBe(false);
   });
 
-  it('returns null for malformed JSON', async () => {
+  it('returns null for malformed JSON and logs warning', async () => {
     const tempPath = getTempAuthPath();
     const store = new FileTokenStore(tempPath);
 
     await fs.writeFile(tempPath, 'not json');
     const result = await store.get();
     expect(result).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('corrupted'),
+      expect.any(String),
+    );
   });
 
   it('returns null for missing required fields', async () => {
@@ -94,5 +109,24 @@ describe('FileTokenStore', () => {
     await fs.writeFile(tempPath, JSON.stringify({ access_token: 'only' }));
     const result = await store.get();
     expect(result).toBeNull();
+  });
+
+  it('returns null and logs warning on permission error', async () => {
+    const tempPath = getTempAuthPath();
+    const store = new FileTokenStore(tempPath);
+
+    await fs.writeFile(tempPath, JSON.stringify({ access_token: 'tok', expires_at: 1, refresh_token: 'ref' }));
+    await fs.chmod(tempPath, 0o000);
+
+    const result = await store.get();
+    expect(result).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('EACCES'),
+      expect.any(String),
+    );
+
+    // cleanup
+    await fs.chmod(tempPath, 0o600);
+    await fs.unlink(tempPath);
   });
 });
