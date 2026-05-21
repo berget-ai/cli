@@ -455,6 +455,34 @@ describe('configureAuth', () => {
     expect(result.authenticated).toBe(false);
   });
 
+  it('skips seat check when JWT cannot be decoded', async () => {
+    const files = new FakeFileStore();
+    // No prompts expected — the !jwtPayload guard should short-circuit
+    const prompter = new FakePrompter([]);
+
+    const deps = makeAuthDeps({ files, prompter });
+
+    const cliAuth: CliAuth = {
+      access_token: 'not-a-valid-jwt-string',
+      expires_at: Date.now() + 3600000,
+      refresh_token: 'ref',
+    };
+
+    const result = await configureAuth(deps, 'opencode', cliAuth);
+
+    expect(result.authenticated).toBe(true);
+    // No seat-selection prompt should have been shown
+    const selectCalls = prompter.calls.filter((c) => c.method === 'select');
+    expect(selectCalls).toHaveLength(0);
+    // OAuth was synced to the tool
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(true);
+    // Warning note displayed
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const warningNote = notes.find((n) => (n.args as any).title === 'Authentication');
+    expect(warningNote).toBeDefined();
+    expect((warningNote!.args as any).message).toContain('Could not verify');
+  });
+
   it('fails authentication when cliAuth is null', async () => {
     const prompter = new FakePrompter([]);
 
