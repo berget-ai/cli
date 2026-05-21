@@ -43,7 +43,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
 
   try {
     const { port, server } = await startCallbackServer(createServerFactory);
-    const redirectUri = `http://localhost:${port}/callback`;
+    const redirectUri = `http://127.0.0.1:${port}/callback`;
 
     if (debug) {
       console.log(`Callback server listening on port ${port}`);
@@ -90,7 +90,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
       };
 
       server.on('request', (request, res) => {
-        const requestUrl = new URL(request.url || '', `http://localhost:${port}`);
+        const requestUrl = new URL(request.url || '', `http://127.0.0.1:${port}`);
 
         if (requestUrl.pathname !== '/callback') {
           res.writeHead(404, { Connection: 'close' });
@@ -232,7 +232,7 @@ function startCallbackServer(
         }
       });
 
-      server.listen(port);
+      server.listen(port, '127.0.0.1');
     }
 
     attemptListen(FALLBACK_CALLBACK_PORT);

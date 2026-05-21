@@ -56,7 +56,7 @@ function createMockServer(options: { eaddrinuse?: boolean } = {}): any {
         }
       }
     },
-    listen: vi.fn((port: number) => {
+    listen: vi.fn((port: number, _host?: string) => {
       listenCallCount++;
       if (options.eaddrinuse && listenCallCount === 1 && port === 8787) {
         setTimeout(() => {
@@ -154,7 +154,7 @@ describe('startPkceFlow', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    expect(mockServer.listen).toHaveBeenCalledWith(8787);
+    expect(mockServer.listen).toHaveBeenCalledWith(8787, '127.0.0.1');
 
     // Trigger the callback request
     const req = {
@@ -202,8 +202,8 @@ describe('startPkceFlow', () => {
     const result = await flowPromise;
 
     expect(result.success).toBe(true);
-    expect(mockServer.listen).toHaveBeenCalledWith(8787);
-    expect(mockServer.listen).toHaveBeenCalledWith(0);
+    expect(mockServer.listen).toHaveBeenCalledWith(8787, '127.0.0.1');
+    expect(mockServer.listen).toHaveBeenCalledWith(0, '127.0.0.1');
   });
 
   it('returns error when state mismatch', async () => {
