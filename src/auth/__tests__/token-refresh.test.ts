@@ -7,6 +7,7 @@ import { refreshAccessToken } from '../oauth/token-refresh.js';
 let mockRefreshTokenGrantCalls: any[] = [];
 let mockRefreshTokenGrantResult: any = null;
 let mockRefreshTokenGrantError: Error | null = null;
+let mockRefreshTokenGrantSequence: Array<{ error?: Error; result?: any }> = [];
 
 vi.mock('openid-client', async () => {
   const ResponseBodyErrorClass = class extends Error {
@@ -25,6 +26,11 @@ vi.mock('openid-client', async () => {
   return {
     refreshTokenGrant: vi.fn(async (...args: any[]) => {
       mockRefreshTokenGrantCalls.push(args);
+      if (mockRefreshTokenGrantSequence.length > 0) {
+        const next = mockRefreshTokenGrantSequence.shift()!;
+        if (next.error) throw next.error;
+        return next.result;
+      }
       if (mockRefreshTokenGrantError) throw mockRefreshTokenGrantError;
       return mockRefreshTokenGrantResult;
     }),
@@ -37,6 +43,7 @@ describe('refreshAccessToken', () => {
     mockRefreshTokenGrantCalls = [];
     mockRefreshTokenGrantResult = null;
     mockRefreshTokenGrantError = null;
+    mockRefreshTokenGrantSequence = [];
   });
 
   const createMockStore = (
@@ -217,5 +224,66 @@ describe('refreshAccessToken', () => {
         refresh_token: 'refresh-token', // old one preserved
       }),
     );
+  });
+
+  it('retries on transient network failure and succeeds', async () => {
+    const store = createMockStore();
+    const mockConfig = createMockConfig();
+    const transientError = Object.assign(new Error('connect ECONNREFUSED'), {
+      code: 'ECONNREFUSED',
+    });
+
+    mockRefreshTokenGrantSequence = [
+      { error: transientError },
+      {
+        result: {
+          access_token: 'new-access',
+          expires_in: 3600,
+        },
+      },
+    ];
+
+    const result = await refreshAccessToken(mockConfig, store);
+
+    expect(result).toBe(true);
+    expect(mockRefreshTokenGrantCalls).toHaveLength(2);
+    expect(store.clear).not.toHaveBeenCalled();
+    expect(store.set).toHaveBeenCalledWith(
+      expect.objectContaining({ access_token: 'new-access' }),
+    );
+  });
+
+  it('retries up to 3 times on transient failures then gives up without clearing tokens', async () => {
+    const store = createMockStore();
+    const mockConfig = createMockConfig();
+
+    mockRefreshTokenGrantSequence = [
+      { error: Object.assign(new Error('ETIMEDOUT'), { code: 'ETIMEDOUT' }) },
+      { error: Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' }) },
+      { error: Object.assign(new Error('ECONNRESET'), { code: 'ECONNRESET' }) },
+    ];
+
+    const result = await refreshAccessToken(mockConfig, store);
+
+    expect(result).toBe(false);
+    expect(mockRefreshTokenGrantCalls).toHaveLength(3);
+    expect(store.clear).not.toHaveBeenCalled();
+  });
+
+  it('does not retry on permanent auth errors', async () => {
+    const store = createMockStore();
+    const mockConfig = createMockConfig();
+
+    const { ResponseBodyError } = await import('openid-client');
+    mockRefreshTokenGrantError = new ResponseBodyError('invalid_grant', {
+      cause: { error: 'invalid_grant' },
+      response: new Response(null, { status: 400 }),
+    });
+
+    const result = await refreshAccessToken(mockConfig, store);
+
+    expect(result).toBe(false);
+    expect(mockRefreshTokenGrantCalls).toHaveLength(1); // No retry
+    expect(store.clear).toHaveBeenCalled();
   });
 });
