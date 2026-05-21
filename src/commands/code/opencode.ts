@@ -9,7 +9,7 @@ import { getAllAgents, toMarkdown } from '../../agents/index.js';
 import { CancelledError } from './errors.js';
 import { readJsonMaybe } from './utils.js';
 
-const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.22';
+const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.24';
 const OPENCODE_PLUGIN_NAME = '@bergetai/opencode-auth';
 
 export interface InitOpenCodeDeps {

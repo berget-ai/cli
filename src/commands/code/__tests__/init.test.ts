@@ -86,7 +86,7 @@ describe('runInit', () => {
       const written = files.getWrittenFiles();
       expect(written.has('/home/user/project/opencode.json')).toBe(true);
       const config = JSON.parse(written.get('/home/user/project/opencode.json')!);
-      expect(config.plugin).toContain('@bergetai/opencode-auth@1.0.22');
+      expect(config.plugin).toContain('@bergetai/opencode-auth@1.0.24');
     });
 
     it('sets up opencode globally without existing config', async () => {
@@ -354,7 +354,7 @@ describe('runInit', () => {
       const config = JSON.parse(written.get('/home/user/project/opencode.json')!);
       expect(config.customField).toBe('should-preserve');
       expect(config.plugin).toContain('other-plugin');
-      expect(config.plugin).toContain('@bergetai/opencode-auth@1.0.22');
+      expect(config.plugin).toContain('@bergetai/opencode-auth@1.0.24');
     });
 
     it('preserves jsonc comments when updating', async () => {
@@ -400,7 +400,7 @@ describe('runInit', () => {
         JSON.stringify(
           {
             $schema: 'https://opencode.ai/config.json',
-            plugin: ['@bergetai/opencode-auth@1.0.22'],
+            plugin: ['@bergetai/opencode-auth@1.0.24'],
           },
           null,
           2,
@@ -413,7 +413,7 @@ describe('runInit', () => {
       const written = files.getWrittenFiles();
       const content = written.get('/home/user/project/opencode.json')!;
       const config = JSON.parse(content);
-      expect(config.plugin).toEqual(['@bergetai/opencode-auth@1.0.22']);
+      expect(config.plugin).toEqual(['@bergetai/opencode-auth@1.0.24']);
       expect(content).toContain('$schema');
     });
 
