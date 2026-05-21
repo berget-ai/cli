@@ -72,7 +72,6 @@ export async function configureAuth(
 
   // Check Berget Code seat
   const jwtPayload = decodeJwtPayload(cliAuth.access_token);
-  const hasSeat = jwtPayload ? hasBergetCodeSeat(cliAuth.access_token) : true;
 
   // If we can't decode the JWT, sync OAuth anyway — the tokens are valid even if
   // we can't verify the subscription role. Let the tool handle authorization.
@@ -92,6 +91,9 @@ export async function configureAuth(
     );
     return { authenticated: true };
   }
+
+  // JWT decoded successfully — check subscription seat
+  const hasSeat = hasBergetCodeSeat(cliAuth.access_token);
 
   if (hasSeat) {
     // Case B: Has seat — ask how to authenticate
