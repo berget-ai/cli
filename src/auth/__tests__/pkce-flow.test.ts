@@ -228,6 +228,7 @@ describe('startPkceFlow', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Invalid state');
+    expect(res.writeHead).toHaveBeenCalledWith(403, expect.any(Object));
   });
 
   it('returns error when callback has error param', async () => {
@@ -252,6 +253,33 @@ describe('startPkceFlow', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('access_denied');
+    expect(res.writeHead).toHaveBeenCalledWith(400, expect.any(Object));
+  });
+
+  it('returns error 400 when code is missing on valid state', async () => {
+    const mockServer = createMockServer();
+    const createServerFn = vi.fn(() => mockServer);
+    const mockConfig: any = {};
+
+    const flowPromise = startPkceFlow({
+      config: mockConfig,
+      createServer: createServerFn as any,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // Valid state but no code (e.g., stray HTTP probe)
+    const req = {
+      url: '/callback?state=mock-state-uuid',
+    };
+    const res = { end: vi.fn(), writeHead: vi.fn() };
+    mockServer._triggerRequest(req, res);
+
+    const result = await flowPromise;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Missing authorization code');
+    expect(res.writeHead).toHaveBeenCalledWith(400, expect.any(Object));
   });
 
   it('passes the full callback URL to authorizationCodeGrant (regression: must preserve iss, session_state)', async () => {
