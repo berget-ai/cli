@@ -78,7 +78,7 @@ describe('PKCE Flow - Issue 1: Callback Server Binding', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      return new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         const req = http.get(
           `http://${redirectUrl.hostname}:${redirectUrl.port}/callback?code=test-auth-code&state=${state}`,
           (res) => {
@@ -88,6 +88,8 @@ describe('PKCE Flow - Issue 1: Callback Server Binding', () => {
         );
         req.on('error', reject);
       });
+
+      return undefined as unknown as ReturnType<typeof open>;
     });
 
     const result = await startPkceFlow({

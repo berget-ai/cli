@@ -7,7 +7,7 @@ describe('Logger - secret redaction (debug)', () => {
   let stdout: string;
 
   beforeEach(() => {
-    logger = new Logger();
+    logger = Logger.getInstance();
     logger.setLogLevel(LogLevel.DEBUG);
     stdout = '';
     vi.spyOn(console, 'log').mockImplementation((...args: any[]) => {
