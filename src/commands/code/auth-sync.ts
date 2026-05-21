@@ -8,6 +8,7 @@ import {
   hasBergetCodeSeat,
   isTokenExpired,
 } from '../../auth/jwt.js';
+import { logger } from '../../utils/logger.js';
 import { FatalError } from './errors.js';
 
 export interface AuthDeps {
@@ -234,25 +235,30 @@ export async function isToolAuthenticated(
 export async function readCliAuth(files: FileStore, homeDir: string): Promise<CliAuth | null> {
   const content = await files.readFile(CLI_AUTH_PATH(homeDir));
   if (!content) return null;
+  let parsed: any;
   try {
-    const parsed = JSON.parse(content);
-    if (parsed.access_token && parsed.refresh_token) {
-      // Extract the actual expiry time from the JWT token instead of using the stored expires_at
-      const jwtExpiresAt = extractJwtExpiresAt(parsed.access_token);
-      if (jwtExpiresAt === 0) {
-        // Invalid token, return null
-        return null;
-      }
-      return {
-        access_token: parsed.access_token,
-        expires_at: jwtExpiresAt,
-        refresh_token: parsed.refresh_token,
-      };
-    }
-    return null;
-  } catch {
+    parsed = JSON.parse(content);
+  } catch (error) {
+    logger.warn(
+      `CLI auth file appears corrupted. Run \`berget auth login\` to re-authenticate.`,
+      String(error),
+    );
     return null;
   }
+  if (parsed.access_token && parsed.refresh_token) {
+    // Extract the actual expiry time from the JWT token instead of using the stored expires_at
+    const jwtExpiresAt = extractJwtExpiresAt(parsed.access_token);
+    if (jwtExpiresAt === 0) {
+      // Invalid token, return null
+      return null;
+    }
+    return {
+      access_token: parsed.access_token,
+      expires_at: jwtExpiresAt,
+      refresh_token: parsed.refresh_token,
+    };
+  }
+  return null;
 }
 
 export async function syncApiKeyToTool(
