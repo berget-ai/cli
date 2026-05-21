@@ -107,7 +107,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
           if (debug) {
             logger.debug(`Callback returned OAuth error: ${error} — ${description}`);
           }
-          res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
+          res.writeHead(400, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
           res.end(getErrorPage('Authentication Failed', description));
           safeResolve({ error, success: false });
           return;
@@ -117,11 +117,18 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
           if (debug) {
             logger.debug(`State mismatch: expected ${state}, got ${receivedState}`);
           }
-          res.writeHead(200, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
+          res.writeHead(403, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
           res.end(
             getErrorPage('Authentication Failed', 'Invalid state parameter. Please try again.'),
           );
           safeResolve({ error: 'Invalid state parameter', success: false });
+          return;
+        }
+
+        if (!code) {
+          res.writeHead(400, { Connection: 'close', 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(getErrorPage('Authentication Failed', 'Missing authorization code.'));
+          safeResolve({ error: 'Missing authorization code', success: false });
           return;
         }
 
