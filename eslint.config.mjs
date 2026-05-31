@@ -1,8 +1,10 @@
 import vitest from '@vitest/eslint-plugin';
+import eslintConfigPrettier from 'eslint-config-prettier';
 import perfectionist from 'eslint-plugin-perfectionist';
 import prettier from 'eslint-plugin-prettier';
 import promise from 'eslint-plugin-promise';
 import sonarjs from 'eslint-plugin-sonarjs';
+import unicorn from 'eslint-plugin-unicorn';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -26,6 +28,7 @@ export default tseslint.config(
   sonarjs.configs.recommended,
   promise.configs['flat/recommended'],
   perfectionist.configs['recommended-natural'],
+  unicorn.configs.recommended,
   {
     files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
     languageOptions: {
@@ -50,7 +53,7 @@ export default tseslint.config(
         project: './tsconfig.json',
         tsconfigRootDir: process.cwd(),
       },
-      sourceType: 'commonjs',
+      sourceType: 'module',
     },
     plugins: {
       prettier,
@@ -77,6 +80,27 @@ export default tseslint.config(
       'sonarjs/publicly-writable-directories': 'off',
       'sonarjs/redundant-type-aliases': 'off',
       'sonarjs/slow-regex': 'off',
+      // Unicorn: disable the most disruptive rules for this codebase
+      'unicorn/consistent-function-scoping': 'off',
+      'unicorn/import-style': 'off',
+      'unicorn/no-array-for-each': 'off',
+      'unicorn/no-array-sort': 'off',
+      'unicorn/no-null': 'off',
+      'unicorn/no-process-exit': 'off',
+      'unicorn/no-useless-spread': 'off',
+      'unicorn/no-useless-undefined': 'off',
+      'unicorn/numeric-separators-style': 'off',
+      'unicorn/prefer-code-point': 'off',
+      'unicorn/prefer-number-properties': 'off',
+      'unicorn/prefer-response-static-json': 'off',
+      'unicorn/prefer-string-raw': 'off',
+      'unicorn/prefer-string-replace-all': 'off',
+      'unicorn/prefer-string-slice': 'off',
+      'unicorn/prefer-ternary': 'off',
+      'unicorn/prefer-top-level-await': 'off',
+      'unicorn/prevent-abbreviations': 'off',
+      'unicorn/text-encoding-identifier-case': 'off',
     },
   },
+  eslintConfigPrettier,
 );
