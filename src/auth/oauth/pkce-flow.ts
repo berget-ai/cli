@@ -54,7 +54,7 @@ export async function startPkceFlow(options: PkceFlowOptions): Promise<BrowserAu
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
       redirect_uri: redirectUri,
-      scope: 'openid email profile',
+      scope: 'openid email profile offline_access',
       state,
     });
 
