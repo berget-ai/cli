@@ -34,6 +34,11 @@ function isTransientError(error: unknown): boolean {
 // while ensuring different stores don't share promises.
 const inFlightByConfig = new WeakMap<Configuration, Map<TokenStore, Promise<boolean>>>();
 
+interface RefreshErrorAction {
+  clearTokens: boolean;
+  retry: boolean;
+}
+
 export async function refreshAccessToken(
   config: Configuration,
   tokenStore: TokenStore,
@@ -57,6 +62,29 @@ export async function refreshAccessToken(
   return promise;
 }
 
+function classifyRefreshError(error: unknown, attempt: number): RefreshErrorAction {
+  if (error instanceof ResponseBodyError) {
+    const isPermanent =
+      error.error === 'invalid_grant' || error.status === 401 || error.status === 403;
+    return { clearTokens: isPermanent, retry: false };
+  }
+
+  if (
+    error instanceof Error &&
+    (error.message.includes('401') ||
+      error.message.includes('403') ||
+      error.message.includes('invalid_grant'))
+  ) {
+    return { clearTokens: true, retry: false };
+  }
+
+  if (isTransientError(error) && attempt < MAX_RETRIES - 1) {
+    return { clearTokens: false, retry: true };
+  }
+
+  return { clearTokens: false, retry: false };
+}
+
 /**
  * Try to refresh the access token with exponential backoff on transient
  * network failures. Permanent auth errors clear stored tokens; transient
@@ -71,46 +99,16 @@ async function doRefresh(config: Configuration, tokenStore: TokenStore): Promise
   while (true) {
     try {
       const result = await refreshTokenGrant(config, tokenData.refresh_token);
-
-      // Extract tokens from response
-      const accessToken = result.access_token;
-      const refreshToken = result.refresh_token || tokenData.refresh_token;
-      const expiresIn = result.expires_in || 3600;
-
-      // Calculate expiration from JWT or fallback
-      const jwtExpiresAt = extractJwtExpiresAt(accessToken);
-      const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000;
-
-      const newTokenData: TokenData = {
-        access_token: accessToken,
-        expires_at: expiresAt,
-        refresh_token: refreshToken,
-      };
-
-      await tokenStore.set(newTokenData);
+      await storeNewTokens(tokenStore, tokenData.refresh_token, result);
       return true;
     } catch (error) {
-      // On invalid/expired refresh token (401/403 from Keycloak), clear tokens.
-      // ResponseBodyError from openid-client carries structured error info.
-      if (error instanceof ResponseBodyError) {
-        if (error.error === 'invalid_grant' || error.status === 401 || error.status === 403) {
-          await tokenStore.clear();
-        }
-        return false;
-      }
+      const action = classifyRefreshError(error, attempt);
 
-      if (
-        error instanceof Error &&
-        (error.message.includes('401') ||
-          error.message.includes('403') ||
-          error.message.includes('invalid_grant'))
-      ) {
-        // Fallback for non-standard error shapes (e.g. network-level failures)
+      if (action.clearTokens) {
         await tokenStore.clear();
-        return false;
       }
 
-      if (isTransientError(error) && attempt < MAX_RETRIES - 1) {
+      if (action.retry) {
         await sleep(INITIAL_BACKOFF_MS * 2 ** attempt);
         attempt++;
         continue;
@@ -123,4 +121,25 @@ async function doRefresh(config: Configuration, tokenStore: TokenStore): Promise
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function storeNewTokens(
+  tokenStore: TokenStore,
+  oldRefreshToken: string,
+  result: any,
+): Promise<void> {
+  const accessToken = result.access_token;
+  const refreshToken = result.refresh_token || oldRefreshToken;
+  const expiresIn = result.expires_in || 3600;
+
+  const jwtExpiresAt = extractJwtExpiresAt(accessToken);
+  const expiresAt = jwtExpiresAt > 0 ? jwtExpiresAt : Date.now() + expiresIn * 1000;
+
+  const newTokenData: TokenData = {
+    access_token: accessToken,
+    expires_at: expiresAt,
+    refresh_token: refreshToken,
+  };
+
+  await tokenStore.set(newTokenData);
 }
