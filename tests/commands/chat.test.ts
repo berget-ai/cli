@@ -42,6 +42,7 @@ describe('Chat Commands', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    delete process.env.BERGET_API_KEY;
   });
 
   describe('chat run command', () => {
@@ -85,9 +86,6 @@ describe('Chat Commands', () => {
       // but since it involves readline interaction, we just verify
       // that the service would be called with correct defaults
       expect(mockChatService.createCompletion).not.toHaveBeenCalled();
-
-      // Clean up
-      delete process.env.BERGET_API_KEY;
     });
   });
 
