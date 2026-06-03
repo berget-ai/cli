@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { decodeJwtPayload, hasBergetCodeSeat } from '../../../auth/jwt.js';
 import {
@@ -16,6 +16,26 @@ import { FakeApiKeyService } from './fake-api-key-service.js';
 import { FakeAuthService } from './fake-auth-service.js';
 import { FakeFileStore } from './fake-file-store.js';
 import { confirm, FakePrompter, select } from './fake-prompter.js';
+
+const ENV_KEYS = [
+  'XDG_CONFIG_HOME',
+  'XDG_DATA_HOME',
+  'OPENCODE_CONFIG',
+  'OPENCODE_CONFIG_DIR',
+  'PI_CODING_AGENT_DIR',
+];
+
+beforeEach(() => {
+  for (const key of ENV_KEYS) {
+    delete process.env[key];
+  }
+});
+
+afterEach(() => {
+  for (const key of ENV_KEYS) {
+    delete process.env[key];
+  }
+});
 
 function base64urlEncode(data: string): string {
   return Buffer.from(data).toString('base64url');
