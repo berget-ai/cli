@@ -55,72 +55,14 @@ export class ApiKeyService {
    */
   public async create(options: CreateApiKeyOptions): Promise<ApiKeyResponse> {
     try {
-      // Validate input before sending request
-      if (!options.name || options.name.trim().length === 0) {
-        throw new Error('API key name is required and cannot be empty');
-      }
-
-      if (options.name.length > 100) {
-        throw new Error('API key name must be 100 characters or less');
-      }
-
-      if (options.description && options.description.length > 500) {
-        throw new Error('API key description must be 500 characters or less');
-      }
+      this.validateCreateOptions(options);
 
       const { data, error } = await this.client.POST('/v1/api-keys', {
         body: options,
       });
 
       if (error) {
-        // Enhanced error handling with specific troubleshooting
-
-        // Handle specific error cases
-        if (typeof error === 'object' && error !== null) {
-          const errorObject = error as any;
-
-          if (errorObject.error?.code === 'API_KEY_CREATION_FAILED') {
-            let detailedMessage = 'Failed to create API key. This could be due to:\n';
-            detailedMessage += '• Account limits or quota restrictions\n';
-            detailedMessage += '• Insufficient permissions for API key creation\n';
-            detailedMessage += '• Temporary server issues\n';
-            detailedMessage += '• Billing or subscription issues\n\n';
-            detailedMessage += 'Troubleshooting steps:\n';
-            detailedMessage += '1. Check if you have reached your API key limit\n';
-            detailedMessage += '2. Verify your account has API key creation permissions\n';
-            detailedMessage += '3. Check your billing status and subscription\n';
-            detailedMessage += '4. Try again in a few minutes if this is a temporary issue\n';
-            detailedMessage += '5. Contact support if the problem persists';
-
-            throw new Error(detailedMessage);
-          }
-
-          if (errorObject.error?.code === 'USER_NOT_FOUND') {
-            throw new Error(
-              'Before you can create API keys, you need to finish setting up your account.\n\nCheck your inbox for a verification email from Berget AI and complete the account setup.',
-            );
-          }
-
-          if (errorObject.error?.code === 'QUOTA_EXCEEDED') {
-            throw new Error(
-              'You have reached your API key limit. Please delete existing keys or contact support to increase your quota.',
-            );
-          }
-
-          if (errorObject.error?.code === 'INSUFFICIENT_PERMISSIONS') {
-            throw new Error(
-              'Your account does not have permission to create API keys. Please contact your administrator.',
-            );
-          }
-
-          if (errorObject.error?.code === 'BILLING_REQUIRED') {
-            throw new Error(
-              'A valid billing method is required to create API keys. Please add a payment method.',
-            );
-          }
-        }
-
-        throw new Error(JSON.stringify(error));
+        throw this.mapCreateError(error);
       }
 
       if (!data) {
@@ -129,28 +71,7 @@ export class ApiKeyService {
 
       return data;
     } catch (error) {
-      // Add additional context for common issues
-      if (error instanceof Error) {
-        if (error.message.includes('ECONNREFUSED')) {
-          throw new Error('Cannot connect to Berget API. Please check your internet connection.');
-        }
-
-        if (error.message.includes('ENOTFOUND')) {
-          throw new Error('Cannot resolve Berget API hostname. Please check your DNS settings.');
-        }
-
-        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          throw new Error('Authentication failed. Please run `berget auth login` to log in again.');
-        }
-
-        if (error.message.includes('403')) {
-          throw new Error(
-            'Access forbidden. Your account may not have permission to create API keys.',
-          );
-        }
-      }
-
-      throw error;
+      throw this.enhanceNetworkError(error);
     }
   }
 
@@ -217,6 +138,102 @@ export class ApiKeyService {
     } catch (error) {
       console.error('Failed to rotate API key:', error);
       throw error;
+    }
+  }
+
+  private buildCreationFailedMessage(): string {
+    return (
+      'Failed to create API key. This could be due to:\n' +
+      '• Account limits or quota restrictions\n' +
+      '• Insufficient permissions for API key creation\n' +
+      '• Temporary server issues\n' +
+      '• Billing or subscription issues\n\n' +
+      'Troubleshooting steps:\n' +
+      '1. Check if you have reached your API key limit\n' +
+      '2. Verify your account has API key creation permissions\n' +
+      '3. Check your billing status and subscription\n' +
+      '4. Try again in a few minutes if this is a temporary issue\n' +
+      '5. Contact support if the problem persists'
+    );
+  }
+
+  private enhanceNetworkError(error: unknown): Error {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+
+    const message = error.message;
+
+    if (message.includes('ECONNREFUSED')) {
+      return new Error('Cannot connect to Berget API. Please check your internet connection.');
+    }
+
+    if (message.includes('ENOTFOUND')) {
+      return new Error('Cannot resolve Berget API hostname. Please check your DNS settings.');
+    }
+
+    if (message.includes('401') || message.includes('Unauthorized')) {
+      return new Error('Authentication failed. Please run `berget auth login` to log in again.');
+    }
+
+    if (message.includes('403')) {
+      return new Error(
+        'Access forbidden. Your account may not have permission to create API keys.',
+      );
+    }
+
+    throw error;
+  }
+
+  private mapCreateError(error: unknown): Error {
+    if (typeof error !== 'object' || error === null) {
+      return new Error(JSON.stringify(error));
+    }
+
+    const errorObject = error as any;
+    const code = errorObject.error?.code;
+
+    switch (code) {
+      case 'API_KEY_CREATION_FAILED': {
+        return new Error(this.buildCreationFailedMessage());
+      }
+      case 'BILLING_REQUIRED': {
+        return new Error(
+          'A valid billing method is required to create API keys. Please add a payment method.',
+        );
+      }
+      case 'INSUFFICIENT_PERMISSIONS': {
+        return new Error(
+          'Your account does not have permission to create API keys. Please contact your administrator.',
+        );
+      }
+      case 'QUOTA_EXCEEDED': {
+        return new Error(
+          'You have reached your API key limit. Please delete existing keys or contact support to increase your quota.',
+        );
+      }
+      case 'USER_NOT_FOUND': {
+        return new Error(
+          'Before you can create API keys, you need to finish setting up your account.\n\nCheck your inbox for a verification email from Berget AI and complete the account setup.',
+        );
+      }
+      default: {
+        return new Error(JSON.stringify(error));
+      }
+    }
+  }
+
+  private validateCreateOptions(options: CreateApiKeyOptions): void {
+    if (!options.name || options.name.trim().length === 0) {
+      throw new Error('API key name is required and cannot be empty');
+    }
+
+    if (options.name.length > 100) {
+      throw new Error('API key name must be 100 characters or less');
+    }
+
+    if (options.description && options.description.length > 500) {
+      throw new Error('API key description must be 500 characters or less');
     }
   }
 }

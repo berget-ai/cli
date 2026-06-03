@@ -67,7 +67,7 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      'sonarjs/cognitive-complexity': 'off',
+      'sonarjs/cognitive-complexity': ['error', 79],
       'sonarjs/different-types-comparison': 'off',
       'sonarjs/function-return-type': 'off',
       'sonarjs/no-duplicated-branches': 'off',
