@@ -221,19 +221,16 @@ async function handleStreamingCompletion(
 }
 
 async function resolveApiKey(options: any): Promise<string | undefined> {
-  let apiKey = options.apiKey;
-
   const environmentApiKey = process.env.BERGET_API_KEY;
   if (environmentApiKey) {
     console.log(chalk.dim('Using API key from BERGET_API_KEY environment variable'));
-    apiKey = environmentApiKey;
 
     if (process.argv.includes('--debug')) {
       console.log(
         chalk.yellow(`DEBUG: API key from env starts with: ${environmentApiKey.slice(0, 4)}...`),
       );
     }
-    return apiKey;
+    return environmentApiKey;
   }
 
   if (options.apiKey) {
@@ -241,53 +238,11 @@ async function resolveApiKey(options: any): Promise<string | undefined> {
     return options.apiKey;
   }
 
-  if (!apiKey && !options.apiKeyId) {
-    try {
-      const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
-      const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData();
-
-      if (defaultApiKeyData) {
-        if (defaultApiKeyData.key) {
-          console.log(chalk.dim(`Using default API key: ${defaultApiKeyData.name}`));
-          return defaultApiKeyData.key;
-        } else {
-          console.log(
-            chalk.yellow(
-              `Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`,
-            ),
-          );
-          console.log(
-            chalk.yellow(
-              `Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`,
-            ),
-          );
-        }
-      } else {
-        console.log(chalk.yellow('No default API key set.'));
-        apiKey = await defaultApiKeyManager.promptForDefaultApiKey();
-
-        if (!apiKey) {
-          console.log(chalk.red('Error: An API key is required to use the chat command.'));
-          console.log(chalk.yellow('You can:'));
-          console.log(
-            chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'),
-          );
-          console.log(
-            chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'),
-          );
-          console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
-          return undefined;
-        }
-      }
-    } catch (error) {
-      if (process.argv.includes('--debug')) {
-        console.log(chalk.yellow('DEBUG: Error checking default API key:'));
-        console.log(chalk.yellow(String(error)));
-      }
-    }
+  if (!options.apiKeyId) {
+    return resolveDefaultApiKey();
   }
 
-  return apiKey;
+  return undefined;
 }
 
 async function resolveApiKeyForList(options: any): Promise<string | undefined> {
@@ -356,6 +311,52 @@ async function resolveApiKeyFromId(apiKeyId: string): Promise<string | undefined
       console.error(error);
     }
     console.log(chalk.yellow('Using default authentication instead.'));
+    return undefined;
+  }
+}
+
+async function resolveDefaultApiKey(): Promise<string | undefined> {
+  try {
+    const defaultApiKeyManager = DefaultApiKeyManager.getInstance();
+    const defaultApiKeyData = defaultApiKeyManager.getDefaultApiKeyData();
+
+    if (defaultApiKeyData) {
+      if (defaultApiKeyData.key) {
+        console.log(chalk.dim(`Using default API key: ${defaultApiKeyData.name}`));
+        return defaultApiKeyData.key;
+      }
+
+      console.log(
+        chalk.yellow(
+          `Default API key "${defaultApiKeyData.name}" exists but the key value is missing.`,
+        ),
+      );
+      console.log(
+        chalk.yellow(`Try rotating the key with: berget api-keys rotate ${defaultApiKeyData.id}`),
+      );
+      return undefined;
+    }
+
+    console.log(chalk.yellow('No default API key set.'));
+    const apiKey = await defaultApiKeyManager.promptForDefaultApiKey();
+
+    if (!apiKey) {
+      console.log(chalk.red('Error: An API key is required to use the chat command.'));
+      console.log(chalk.yellow('You can:'));
+      console.log(
+        chalk.yellow('1. Create an API key with: berget api-keys create --name "My Key"'),
+      );
+      console.log(chalk.yellow('2. Set a default API key with: berget api-keys set-default <id>'));
+      console.log(chalk.yellow('3. Provide an API key with the --api-key option'));
+      return undefined;
+    }
+
+    return apiKey;
+  } catch (error) {
+    if (process.argv.includes('--debug')) {
+      console.log(chalk.yellow('DEBUG: Error checking default API key:'));
+      console.log(chalk.yellow(String(error)));
+    }
     return undefined;
   }
 }
