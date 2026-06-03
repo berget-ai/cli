@@ -66,24 +66,7 @@ export class ChatService {
         optionsCopy.messages = [];
       }
 
-      logger.debug('Starting createCompletion with options:');
-      try {
-        logger.debug(
-          JSON.stringify(
-            {
-              ...optionsCopy,
-              apiKey: optionsCopy.apiKey ? '***' : undefined,
-              messages: optionsCopy.messages
-                ? `${optionsCopy.messages.length} messages`
-                : '0 messages',
-            },
-            null,
-            2,
-          ),
-        );
-      } catch (error) {
-        logger.error('Failed to stringify options:', error);
-      }
+      this.logCompletionOptions(optionsCopy);
 
       const headers: Record<string, string> = {};
 
@@ -91,41 +74,16 @@ export class ChatService {
         headers['Authorization'] = optionsCopy.apiKey;
       }
 
-      // Set default model if not provided
       if (!optionsCopy.model) {
         logger.debug('No model specified, using default: google/gemma-3-27b-it');
         optionsCopy.model = 'google/gemma-3-27b-it';
       }
 
-      logger.debug('Chat completion options:');
-      logger.debug(
-        JSON.stringify(
-          {
-            ...optionsCopy,
-            apiKey: optionsCopy.apiKey ? '***' : undefined,
-          },
-          null,
-          2,
-        ),
-      );
+      this.logCompletionOptions(optionsCopy);
 
       return this.executeCompletion(optionsCopy, headers);
     } catch (error) {
-      let errorMessage = 'Failed to create chat completion';
-
-      if (error instanceof Error) {
-        try {
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error && parsedError.error.message) {
-            errorMessage = `Chat error: ${parsedError.error.message}`;
-          }
-        } catch {
-          errorMessage = `Chat error: ${error.message}`;
-        }
-      }
-
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
+      throw this.formatCompletionError(error);
     }
   }
 
@@ -135,37 +93,23 @@ export class ChatService {
    */
   public async listModels(apiKey?: string): Promise<any> {
     try {
-      const headers = apiKey ? { Authorization: apiKey } : {};
+      let data: any;
+      let error: any;
 
       if (apiKey) {
-        const { data, error } = await this.client.GET('/v1/models', { headers });
-        if (error) throw new Error(JSON.stringify(error));
-        return data;
+        const result = await this.client.GET('/v1/models', { headers: { Authorization: apiKey } });
+        data = result.data;
+        error = result.error;
       } else {
-        const { data, error } = await this.client.GET('/v1/models');
-        if (error) throw new Error(JSON.stringify(error));
-        return data;
+        const result = await this.client.GET('/v1/models');
+        data = result.data;
+        error = result.error;
       }
+
+      if (error) throw new Error(JSON.stringify(error));
+      return data;
     } catch (error) {
-      let errorMessage = 'Failed to list models';
-
-      if (error instanceof Error) {
-        try {
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error) {
-            errorMessage = `Models error: ${
-              typeof parsedError.error === 'string'
-                ? parsedError.error
-                : parsedError.error.message || JSON.stringify(parsedError.error)
-            }`;
-          }
-        } catch {
-          errorMessage = `Models error: ${error.message}`;
-        }
-      }
-
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
+      throw this.formatListModelsError(error);
     }
   }
 
@@ -272,6 +216,46 @@ export class ChatService {
     }
   }
 
+  private formatCompletionError(error: unknown): Error {
+    let errorMessage = 'Failed to create chat completion';
+
+    if (error instanceof Error) {
+      try {
+        const parsedError = JSON.parse(error.message);
+        if (parsedError.error && parsedError.error.message) {
+          errorMessage = `Chat error: ${parsedError.error.message}`;
+        }
+      } catch {
+        errorMessage = `Chat error: ${error.message}`;
+      }
+    }
+
+    logger.error(errorMessage);
+    return new Error(errorMessage);
+  }
+
+  private formatListModelsError(error: unknown): Error {
+    let errorMessage = 'Failed to list models';
+
+    if (error instanceof Error) {
+      try {
+        const parsedError = JSON.parse(error.message);
+        if (parsedError.error) {
+          errorMessage = `Models error: ${
+            typeof parsedError.error === 'string'
+              ? parsedError.error
+              : parsedError.error.message || JSON.stringify(parsedError.error)
+          }`;
+        }
+      } catch {
+        errorMessage = `Models error: ${error.message}`;
+      }
+    }
+
+    logger.error(errorMessage);
+    return new Error(errorMessage);
+  }
+
   /**
    * Handle streaming response from the API
    * @param options Request options
@@ -323,6 +307,26 @@ export class ChatService {
     }
 
     return braceCount === 0;
+  }
+
+  private logCompletionOptions(optionsCopy: ChatCompletionOptions): void {
+    try {
+      logger.debug(
+        JSON.stringify(
+          {
+            ...optionsCopy,
+            apiKey: optionsCopy.apiKey ? '***' : undefined,
+            messages: optionsCopy.messages
+              ? `${optionsCopy.messages.length} messages`
+              : '0 messages',
+          },
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      logger.error('Failed to stringify options:', error);
+    }
   }
 
   private logParseError(error: unknown, jsonData: string): void {
