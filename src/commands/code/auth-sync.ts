@@ -10,7 +10,7 @@ import {
 } from '../../auth/jwt.js';
 import { logger } from '../../utils/logger.js';
 import { FatalError } from './errors.js';
-import { getOpencodeAuthPath } from './xdg-paths.js';
+import { getOpencodeAuthPath, getPiAuthPath } from './xdg-paths.js';
 
 export interface AuthDeps {
   apiKeyService: ApiKeyServicePort;
@@ -34,7 +34,7 @@ const CLI_AUTH_PATH = (homeDir: string) => homeDir + '/.berget/auth.json';
 
 const TOOL_AUTH_PATHS = {
   opencode: getOpencodeAuthPath,
-  pi: (homeDir: string) => homeDir + '/.pi/agent/auth.json',
+  pi: getPiAuthPath,
 } as const;
 
 const TOOL_API_KEY_TYPES: Record<'opencode' | 'pi', string> = {

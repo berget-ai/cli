@@ -7,6 +7,7 @@ import type { Prompter } from './ports/prompter.js';
 import { getAllAgents, toPiPrompt } from '../../agents/index.js';
 import { CancelledError, CommandFailedError } from './errors.js';
 import { readJsonMaybe, writeJsonFile } from './utils.js';
+import { getPiAgentDir, getPiSettingsPath } from './xdg-paths.js';
 
 const PI_PROVIDER = 'npm:@bergetai/pi-provider';
 const PI_PROVIDER_NAME = '@bergetai/pi-provider';
@@ -31,10 +32,7 @@ export async function getPiState(
   cwd: string,
 ): Promise<{ global: boolean; project: boolean }> {
   const projectSettings = await readJsonMaybe(files, path.join(cwd, '.pi', 'settings.json'));
-  const globalSettings = await readJsonMaybe(
-    files,
-    path.join(homeDir, '.pi', 'agent', 'settings.json'),
-  );
+  const globalSettings = await readJsonMaybe(files, getPiSettingsPath(homeDir));
 
   return {
     global: hasPiProviderInSettings(globalSettings),
@@ -61,9 +59,7 @@ export async function initPi(deps: InitPiDeps): Promise<void> {
   }
 
   const settingsPath =
-    scope === 'project'
-      ? path.join(cwd, '.pi', 'settings.json')
-      : path.join(homeDir, '.pi', 'agent', 'settings.json');
+    scope === 'project' ? path.join(cwd, '.pi', 'settings.json') : getPiSettingsPath(homeDir);
 
   const raw = await readJsonMaybe(files, settingsPath);
   const settings: Record<string, unknown> =
@@ -114,7 +110,7 @@ export async function initPiAgent(deps: {
   const systemPath =
     scope === 'project'
       ? path.join(cwd, '.pi', 'SYSTEM.md')
-      : path.join(homeDir, '.pi', 'agent', 'SYSTEM.md');
+      : path.join(getPiAgentDir(homeDir), 'SYSTEM.md');
 
   prompter.note('Pi uses a single system prompt.', 'Agent Setup');
 
@@ -154,8 +150,7 @@ export async function initPiAgent(deps: {
   const s = prompter.spinner();
   s.start('Writing agent configuration...');
   try {
-    const systemDir =
-      scope === 'project' ? path.join(cwd, '.pi') : path.join(homeDir, '.pi', 'agent');
+    const systemDir = scope === 'project' ? path.join(cwd, '.pi') : getPiAgentDir(homeDir);
     await files.mkdir(systemDir);
     await files.writeFile(systemPath, toPiPrompt(agent));
     s.stop(`Wrote agent configuration to ${systemPath}`);

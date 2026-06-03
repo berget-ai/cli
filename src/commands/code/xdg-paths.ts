@@ -31,6 +31,32 @@ export function getOpencodeDataDir(homeDir: string): string {
 }
 
 /**
+ * Resolve the Pi agent base directory.
+ * Honors `PI_CODING_AGENT_DIR` (tilde-expanded), else `~/.pi/agent`.
+ */
+export function getPiAgentDir(homeDir: string): string {
+  const envDir = process.env.PI_CODING_AGENT_DIR;
+  if (envDir) {
+    return expandTilde(envDir, homeDir);
+  }
+  return path.join(homeDir, '.pi', 'agent');
+}
+
+/**
+ * Resolve the path to Pi's global auth.json.
+ */
+export function getPiAuthPath(homeDir: string): string {
+  return path.join(getPiAgentDir(homeDir), 'auth.json');
+}
+
+/**
+ * Resolve the path to Pi's global settings.json.
+ */
+export function getPiSettingsPath(homeDir: string): string {
+  return path.join(getPiAgentDir(homeDir), 'settings.json');
+}
+
+/**
  * Resolve the path to the global opencode config file.
  * Honors OPENCODE_CONFIG (single-file override), then probes
  * OPENCODE_CONFIG_DIR / XDG_CONFIG_HOME / ~/.config.
@@ -51,4 +77,23 @@ export async function resolveGlobalConfigPath(
   if (await exists(jsoncPath)) return jsoncPath;
   if (await exists(jsonPath)) return jsonPath;
   return jsonPath;
+}
+
+/**
+ * Expand a leading tilde in a path to the user's home directory.
+ * Pi's `PI_CODING_AGENT_DIR` env var is tilde-expanded.
+ */
+function expandTilde(input: string, homeDir: string): string {
+  let expanded: string;
+  if (input.startsWith('~/')) {
+    expanded = path.join(homeDir, input.slice(2));
+  } else if (input.startsWith('~\\')) {
+    expanded = path.join(homeDir, input.slice(2));
+  } else if (input === '~') {
+    expanded = homeDir;
+  } else {
+    expanded = input;
+  }
+  // Normalize backslashes for cross-platform consistency
+  return expanded.replace(/\\/g, '/');
 }
