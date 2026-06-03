@@ -8,6 +8,7 @@ import type { Prompter } from './ports/prompter.js';
 import { getAllAgents, toMarkdown } from '../../agents/index.js';
 import { CancelledError } from './errors.js';
 import { readJsonMaybe } from './utils.js';
+import { getOpencodeConfigDir, resolveGlobalConfigPath } from './xdg-paths.js';
 
 const OPENCODE_PLUGIN = '@bergetai/opencode-auth@1.0.24';
 const OPENCODE_PLUGIN_NAME = '@bergetai/opencode-auth';
@@ -33,14 +34,9 @@ export async function getOpencodeState(
 ): Promise<{ global: boolean; project: boolean }> {
   const projectJsonc = await readJsonMaybe(files, path.join(cwd, 'opencode.jsonc'));
   const projectJson = await readJsonMaybe(files, path.join(cwd, 'opencode.json'));
-  const globalJsonc = await readJsonMaybe(
-    files,
-    path.join(homeDir, '.config', 'opencode', 'opencode.jsonc'),
-  );
-  const globalJson = await readJsonMaybe(
-    files,
-    path.join(homeDir, '.config', 'opencode', 'opencode.json'),
-  );
+  const globalDir = getOpencodeConfigDir(homeDir);
+  const globalJsonc = await readJsonMaybe(files, path.join(globalDir, 'opencode.jsonc'));
+  const globalJson = await readJsonMaybe(files, path.join(globalDir, 'opencode.json'));
 
   return {
     global: hasPluginInConfig(globalJsonc) || hasPluginInConfig(globalJson),
@@ -102,7 +98,7 @@ export async function initOpenCodeAgents(deps: {
   const agentsDir =
     scope === 'project'
       ? path.join(cwd, '.opencode', 'agents')
-      : path.join(homeDir, '.config', 'opencode', 'agents');
+      : path.join(getOpencodeConfigDir(homeDir), 'agents');
 
   prompter.note('Space to toggle, Enter to confirm.', 'Agent Setup');
 
@@ -273,10 +269,5 @@ async function resolveOpencodeConfigPath(
     return jsonPath;
   }
 
-  const globalDir = path.join(homeDir, '.config', 'opencode');
-  const jsoncPath = path.join(globalDir, 'opencode.jsonc');
-  const jsonPath = path.join(globalDir, 'opencode.json');
-  if (await files.exists(jsoncPath)) return jsoncPath;
-  if (await files.exists(jsonPath)) return jsonPath;
-  return jsonPath;
+  return resolveGlobalConfigPath(homeDir, (p) => files.exists(p));
 }
