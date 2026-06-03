@@ -83,76 +83,13 @@ export async function runInit(deps: WizardDeps): Promise<void> {
     ],
   });
 
-  // Check if the selected tool is installed
   const toolCheck = await checkTool(commands, tool);
-  let toolConfigured = toolCheck.installed;
-
-  if (!toolCheck.installed) {
-    // Non-TTY guard: throw instead of exit so callers (including tests)
-    // can decide how to handle the failure.
-    if (isTty === false) {
-      throw new FatalError(
-        `${toolCheck.name} is not installed.\nInstall it first:\n  ${toolCheck.installCommand}\nDocs: ${toolCheck.docsUrl}`,
-      );
-    }
-
-    const action = await promptForMissingTool(prompter, toolCheck);
-
-    if (action === 'exit') {
-      throw new CancelledError();
-    }
-
-    if (action === 'retry') {
-      // Re-check once. If still missing, show prompt again.
-      const recheck = await checkTool(commands, tool);
-      if (recheck.installed) {
-        toolConfigured = true;
-      } else {
-        const secondAction = await promptForMissingTool(prompter, recheck);
-        if (secondAction === 'exit') throw new CancelledError();
-        if (secondAction === 'continue') toolConfigured = false;
-        if (secondAction === 'retry') {
-          // One more check, then give up and treat as "continue"
-          const finalCheck = await checkTool(commands, tool);
-          toolConfigured = finalCheck.installed;
-        }
-      }
-    }
-
-    if (action === 'continue') {
-      toolConfigured = false;
-    }
-  }
+  const toolConfigured = await resolveToolConfigured(commands, tool, toolCheck, isTty, prompter);
 
   const scope = await prompter.select<'global' | 'project'>({
     initialValue: 'project',
     message: 'Where should the configuration apply?',
-    options: [
-      {
-        hint:
-          tool === 'opencode'
-            ? ocState.project
-              ? 'Already configured'
-              : 'opencode.json in current directory'
-            : piState.project
-              ? 'Already configured'
-              : '.pi/settings.json in current directory',
-        label: 'This project only',
-        value: 'project',
-      },
-      {
-        hint:
-          tool === 'opencode'
-            ? ocState.global
-              ? 'Already configured'
-              : '~/.config/opencode/opencode.json'
-            : piState.global
-              ? 'Already configured'
-              : '~/.pi/agent/settings.json',
-        label: 'Globally for all projects',
-        value: 'global',
-      },
-    ],
+    options: buildScopeOptions(tool, ocState, piState),
   });
 
   prompter.log('step', 'Configuring authentication...');
@@ -163,33 +100,11 @@ export async function runInit(deps: WizardDeps): Promise<void> {
     cliAuth,
   );
 
-  // Only configure the tool if it's installed (or user chose retry and it was found)
   if (toolConfigured) {
-    if (tool === 'opencode') {
-      await initOpenCode({ commands, cwd, files, homeDir, prompter, scope });
-      await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
-    } else {
-      await initPi({ commands, cwd, files, homeDir, prompter, scope });
-      await initPiAgent({ cwd, files, homeDir, prompter, scope });
-    }
+    await configureTool(commands, cwd, files, homeDir, prompter, tool, scope);
   }
 
-  const nextSteps = toolConfigured
-    ? authResult.authenticated
-      ? tool === 'opencode'
-        ? "You're all set!\n\n1. Run: opencode\n2. Select model: /models"
-        : "You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model"
-      : tool === 'opencode'
-        ? 'Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models'
-        : 'Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model'
-    : authResult.authenticated
-      ? tool === 'opencode'
-        ? `Auth is configured. Next steps:\n\n1. Install OpenCode:\n   ${toolCheck.installCommand}\n2. Run: opencode\n3. Select model: /models`
-        : `Auth is configured. Next steps:\n\n1. Install Pi:\n   ${toolCheck.installCommand}\n2. Run: pi\n3. Select model: /model`
-      : tool === 'opencode'
-        ? `Next steps:\n\n1. Install OpenCode:\n   ${toolCheck.installCommand}\n2. Run: opencode\n3. Authenticate with Berget AI`
-        : `Next steps:\n\n1. Install Pi:\n   ${toolCheck.installCommand}\n2. Run: pi\n3. Authenticate with Berget AI`;
-
+  const nextSteps = buildNextSteps(tool, toolCheck, toolConfigured, authResult.authenticated);
   const toolName = tool === 'opencode' ? 'OpenCode' : 'Pi';
   const docsUrl =
     tool === 'opencode'
@@ -218,4 +133,128 @@ export async function runInitCommand(): Promise<void> {
 
   if (result.stderr) console.error(result.stderr);
   process.exitCode = result.exitCode;
+}
+
+function buildNextSteps(
+  tool: 'opencode' | 'pi',
+  toolCheck: { installCommand: string },
+  toolConfigured: boolean,
+  authenticated: boolean,
+): string {
+  if (toolConfigured && authenticated) {
+    return tool === 'opencode'
+      ? "You're all set!\n\n1. Run: opencode\n2. Select model: /models"
+      : "You're all set!\n\n1. Restart Pi or run /reload\n2. Select model: /model";
+  }
+
+  if (toolConfigured && !authenticated) {
+    return tool === 'opencode'
+      ? 'Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models'
+      : 'Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model';
+  }
+
+  if (!toolConfigured && authenticated) {
+    return tool === 'opencode'
+      ? `Auth is configured. Next steps:\n\n1. Install OpenCode:\n   ${toolCheck.installCommand}\n2. Run: opencode\n3. Select model: /models`
+      : `Auth is configured. Next steps:\n\n1. Install Pi:\n   ${toolCheck.installCommand}\n2. Run: pi\n3. Select model: /model`;
+  }
+
+  return tool === 'opencode'
+    ? `Next steps:\n\n1. Install OpenCode:\n   ${toolCheck.installCommand}\n2. Run: opencode\n3. Authenticate with Berget AI`
+    : `Next steps:\n\n1. Install Pi:\n   ${toolCheck.installCommand}\n2. Run: pi\n3. Authenticate with Berget AI`;
+}
+
+function buildScopeOptions(
+  tool: 'opencode' | 'pi',
+  ocState: { global: boolean; project: boolean },
+  piState: { global: boolean; project: boolean },
+): Array<{ hint: string; label: string; value: 'global' | 'project' }> {
+  const projectHint =
+    tool === 'opencode'
+      ? ocState.project
+        ? 'Already configured'
+        : 'opencode.json in current directory'
+      : piState.project
+        ? 'Already configured'
+        : '.pi/settings.json in current directory';
+
+  const globalHint =
+    tool === 'opencode'
+      ? ocState.global
+        ? 'Already configured'
+        : '~/.config/opencode/opencode.json'
+      : piState.global
+        ? 'Already configured'
+        : '~/.pi/agent/settings.json';
+
+  return [
+    { hint: projectHint, label: 'This project only', value: 'project' },
+    { hint: globalHint, label: 'Globally for all projects', value: 'global' },
+  ];
+}
+
+async function configureTool(
+  commands: CommandRunner,
+  cwd: string,
+  files: FileStore,
+  homeDir: string,
+  prompter: Prompter,
+  tool: 'opencode' | 'pi',
+  scope: 'global' | 'project',
+): Promise<void> {
+  if (tool === 'opencode') {
+    await initOpenCode({ commands, cwd, files, homeDir, prompter, scope });
+    await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
+  } else {
+    await initPi({ commands, cwd, files, homeDir, prompter, scope });
+    await initPiAgent({ cwd, files, homeDir, prompter, scope });
+  }
+}
+
+async function resolveToolConfigured(
+  commands: CommandRunner,
+  tool: 'opencode' | 'pi',
+  toolCheck: {
+    description: string;
+    docsUrl: string;
+    installCommand: string;
+    installed: boolean;
+    name: string;
+  },
+  isTty: boolean | undefined,
+  prompter: Prompter,
+): Promise<boolean> {
+  if (toolCheck.installed) {
+    return true;
+  }
+
+  if (isTty === false) {
+    throw new FatalError(
+      `${toolCheck.name} is not installed.\nInstall it first:\n  ${toolCheck.installCommand}\nDocs: ${toolCheck.docsUrl}`,
+    );
+  }
+
+  const action = await promptForMissingTool(prompter, toolCheck);
+
+  if (action === 'exit') {
+    throw new CancelledError();
+  }
+
+  if (action === 'continue') {
+    return false;
+  }
+
+  // action === 'retry'
+  const recheck = await checkTool(commands, tool);
+  if (recheck.installed) {
+    return true;
+  }
+
+  const secondAction = await promptForMissingTool(prompter, recheck);
+  if (secondAction === 'exit') throw new CancelledError();
+  if (secondAction === 'continue') return false;
+
+  // secondAction === 'retry'
+  const finalCheck = await checkTool(commands, tool);
+  return finalCheck.installed;
 }

@@ -38,6 +38,7 @@
     "@types/marked": "^5.0.2",
     "@types/marked-terminal": "^6.1.1",
     "@types/node": "^20.11.20",
+    "@vitest/coverage-v8": "^4.1.8",
     "@vitest/eslint-plugin": "^1.6.17",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",

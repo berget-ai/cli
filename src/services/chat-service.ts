@@ -1,3 +1,5 @@
+import { ReadableStreamDefaultReader } from 'node:stream/web';
+
 import { createAuthenticatedClient } from '../client.js';
 import { logger } from '../utils/logger.js';
 
@@ -15,6 +17,12 @@ export interface ChatCompletionOptions {
 export interface ChatMessage {
   content: string;
   role: 'assistant' | 'system' | 'user';
+}
+
+interface StreamState {
+  buffer: string;
+  fullContent: string;
+  fullResponse: any;
 }
 
 /**
@@ -58,24 +66,7 @@ export class ChatService {
         optionsCopy.messages = [];
       }
 
-      logger.debug('Starting createCompletion with options:');
-      try {
-        logger.debug(
-          JSON.stringify(
-            {
-              ...optionsCopy,
-              apiKey: optionsCopy.apiKey ? '***' : undefined,
-              messages: optionsCopy.messages
-                ? `${optionsCopy.messages.length} messages`
-                : '0 messages',
-            },
-            null,
-            2,
-          ),
-        );
-      } catch (error) {
-        logger.error('Failed to stringify options:', error);
-      }
+      this.logCompletionOptions(optionsCopy);
 
       const headers: Record<string, string> = {};
 
@@ -83,41 +74,16 @@ export class ChatService {
         headers['Authorization'] = optionsCopy.apiKey;
       }
 
-      // Set default model if not provided
       if (!optionsCopy.model) {
         logger.debug('No model specified, using default: google/gemma-3-27b-it');
         optionsCopy.model = 'google/gemma-3-27b-it';
       }
 
-      logger.debug('Chat completion options:');
-      logger.debug(
-        JSON.stringify(
-          {
-            ...optionsCopy,
-            apiKey: optionsCopy.apiKey ? '***' : undefined,
-          },
-          null,
-          2,
-        ),
-      );
+      this.logCompletionOptions(optionsCopy);
 
       return this.executeCompletion(optionsCopy, headers);
     } catch (error) {
-      let errorMessage = 'Failed to create chat completion';
-
-      if (error instanceof Error) {
-        try {
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error && parsedError.error.message) {
-            errorMessage = `Chat error: ${parsedError.error.message}`;
-          }
-        } catch {
-          errorMessage = `Chat error: ${error.message}`;
-        }
-      }
-
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
+      throw this.formatCompletionError(error);
     }
   }
 
@@ -127,38 +93,51 @@ export class ChatService {
    */
   public async listModels(apiKey?: string): Promise<any> {
     try {
-      const headers = apiKey ? { Authorization: apiKey } : {};
+      let data: any;
+      let error: any;
 
       if (apiKey) {
-        const { data, error } = await this.client.GET('/v1/models', { headers });
-        if (error) throw new Error(JSON.stringify(error));
-        return data;
+        const result = await this.client.GET('/v1/models', { headers: { Authorization: apiKey } });
+        data = result.data;
+        error = result.error;
       } else {
-        const { data, error } = await this.client.GET('/v1/models');
-        if (error) throw new Error(JSON.stringify(error));
-        return data;
+        const result = await this.client.GET('/v1/models');
+        data = result.data;
+        error = result.error;
       }
+
+      if (error) throw new Error(JSON.stringify(error));
+      return data;
     } catch (error) {
-      let errorMessage = 'Failed to list models';
-
-      if (error instanceof Error) {
-        try {
-          const parsedError = JSON.parse(error.message);
-          if (parsedError.error) {
-            errorMessage = `Models error: ${
-              typeof parsedError.error === 'string'
-                ? parsedError.error
-                : parsedError.error.message || JSON.stringify(parsedError.error)
-            }`;
-          }
-        } catch {
-          errorMessage = `Models error: ${error.message}`;
-        }
-      }
-
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
+      throw this.formatListModelsError(error);
     }
+  }
+
+  private accumulateContent(parsedData: any, state: StreamState): void {
+    if (
+      parsedData.choices &&
+      parsedData.choices[0] &&
+      parsedData.choices[0].delta &&
+      parsedData.choices[0].delta.content
+    ) {
+      state.fullContent += parsedData.choices[0].delta.content;
+    }
+  }
+
+  private buildStreamResult(state: StreamState): any {
+    if (state.fullResponse) {
+      if (state.fullContent) {
+        state.fullResponse.choices[0].message = {
+          content: state.fullContent,
+          role: 'assistant',
+        };
+      }
+      return state.fullResponse;
+    }
+
+    return {
+      choices: [{ message: { content: state.fullContent, role: 'assistant' } }],
+    };
   }
 
   /**
@@ -237,6 +216,46 @@ export class ChatService {
     }
   }
 
+  private formatCompletionError(error: unknown): Error {
+    let errorMessage = 'Failed to create chat completion';
+
+    if (error instanceof Error) {
+      try {
+        const parsedError = JSON.parse(error.message);
+        if (parsedError.error && parsedError.error.message) {
+          errorMessage = `Chat error: ${parsedError.error.message}`;
+        }
+      } catch {
+        errorMessage = `Chat error: ${error.message}`;
+      }
+    }
+
+    logger.error(errorMessage);
+    return new Error(errorMessage);
+  }
+
+  private formatListModelsError(error: unknown): Error {
+    let errorMessage = 'Failed to list models';
+
+    if (error instanceof Error) {
+      try {
+        const parsedError = JSON.parse(error.message);
+        if (parsedError.error) {
+          errorMessage = `Models error: ${
+            typeof parsedError.error === 'string'
+              ? parsedError.error
+              : parsedError.error.message || JSON.stringify(parsedError.error)
+          }`;
+        }
+      } catch {
+        errorMessage = `Models error: ${error.message}`;
+      }
+    }
+
+    logger.error(errorMessage);
+    return new Error(errorMessage);
+  }
+
   /**
    * Handle streaming response from the API
    * @param options Request options
@@ -247,183 +266,222 @@ export class ChatService {
     options: any,
     headers: Record<string, string>,
   ): Promise<any> {
-    // Use the same base URL as the client
     const baseUrl = process.env.API_BASE_URL || 'https://api.berget.ai';
     const url = new URL(`${baseUrl}/v1/chat/completions`);
 
     try {
-      logger.debug(`Making streaming request to: ${url.toString()}`);
-      logger.debug(`Headers:`, JSON.stringify(headers, null, 2));
-      logger.debug(`Body:`, JSON.stringify(options, null, 2));
-
-      // Make fetch request directly to handle streaming
-      const response = await fetch(url.toString(), {
-        body: JSON.stringify(options),
-        headers: {
-          Accept: 'text/event-stream',
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        method: 'POST',
-      });
-
-      logger.debug(`Response status: ${response.status}`);
-      logger.debug(
-        `Response headers:`,
-        JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2),
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error(`Stream request failed: ${response.status} ${response.statusText}`);
-        logger.error(`Error response: ${errorText}`);
-        throw new Error(
-          `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`,
-        );
-      }
-
-      if (!response.body) {
-        throw new Error('No response body received');
-      }
-
-      // Process the stream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-      let fullResponse: any = null;
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        logger.debug(`Received chunk: ${chunk.length} bytes`);
-
-        buffer += chunk;
-        logger.debug(`Added chunk to buffer. Buffer length: ${buffer.length}`);
-
-        const lines = buffer.split('\n');
-        logger.debug(`Processing ${lines.length} lines from buffer`);
-
-        let processedLines = 0;
-
-        for (const [index, line] of lines.entries()) {
-          logger.debug(`Line ${index}: "${line}"`);
-
-          if (line.startsWith('data:')) {
-            const jsonData = line.slice(5).trim();
-            logger.debug(`Extracted JSON data: "${jsonData}"`);
-
-            if (jsonData === '' || jsonData === '[DONE]') {
-              logger.debug(`Skipping empty data or [DONE] marker`);
-              processedLines = index + 1;
-              continue;
-            }
-
-            if (!jsonData.startsWith('{')) {
-              logger.warn(
-                `JSON data doesn't start with '{', might be partial: "${jsonData.slice(0, 50)}..."`,
-              );
-              break;
-            }
-
-            let braceCount = 0;
-            let inString = false;
-            let escaped = false;
-
-            for (const char of jsonData) {
-              if (escaped) {
-                escaped = false;
-                continue;
-              }
-              if (char === '\\') {
-                escaped = true;
-                continue;
-              }
-              if (char === '"') {
-                inString = !inString;
-                continue;
-              }
-              if (!inString && char === '{') {
-                braceCount++;
-              } else if (!inString && char === '}') {
-                braceCount--;
-              }
-            }
-
-            if (braceCount !== 0) {
-              logger.warn(
-                `JSON braces don't balance (${braceCount}), treating as partial: "${jsonData.slice(0, 50)}..."`,
-              );
-              break;
-            }
-
-            try {
-              logger.debug(`Attempting to parse JSON of length: ${jsonData.length}`);
-              const parsedData = JSON.parse(jsonData);
-              logger.debug(`Successfully parsed JSON: ${JSON.stringify(parsedData, null, 2)}`);
-              processedLines = index + 1;
-
-              if (options.onChunk) {
-                options.onChunk(parsedData);
-              }
-
-              if (!fullResponse) {
-                fullResponse = parsedData;
-              } else if (
-                parsedData.choices &&
-                parsedData.choices[0] &&
-                parsedData.choices[0].delta &&
-                parsedData.choices[0].delta.content
-              ) {
-                fullContent += parsedData.choices[0].delta.content;
-              }
-            } catch (error) {
-              logger.error(`Error parsing chunk: ${error}`);
-              const errorMsg = (error as any).message || '';
-              const errorPos = Number.parseInt(errorMsg.match(/position (\d+)/)?.[1] || '0');
-              if (errorPos > 0) {
-                const start = Math.max(0, errorPos - 20);
-                const end = Math.min(jsonData.length, errorPos + 20);
-                logger.error(`Context around error position ${errorPos}:`);
-                logger.error(`"${jsonData.substring(start, end)}"`);
-                logger.error(
-                  `Character codes: ${[...jsonData.substring(start, end)]
-                    .map((c) => c.charCodeAt(0))
-                    .join(' ')}`,
-                );
-              }
-            }
-          }
-        }
-
-        if (processedLines > 0) {
-          const remainingLines = lines.slice(processedLines);
-          buffer = remainingLines.join('\n');
-          logger.debug(
-            `Updated buffer. Remaining lines: ${remainingLines.length}, Buffer length: ${buffer.length}`,
-          );
-        }
-      }
-
-      // Construct the final response object similar to non-streaming response
-      if (fullResponse) {
-        if (fullContent) {
-          fullResponse.choices[0].message = {
-            content: fullContent,
-            role: 'assistant',
-          };
-        }
-        return fullResponse;
-      }
-
-      return {
-        choices: [{ message: { content: fullContent, role: 'assistant' } }],
-      };
+      this.logStreamingRequest(url, headers, options);
+      const response = await this.makeStreamingRequest(url, options, headers);
+      const state: StreamState = { buffer: '', fullContent: '', fullResponse: null };
+      await this.readStream(response.body!.getReader(), options, state);
+      return this.buildStreamResult(state);
     } catch (error) {
       logger.error(`Streaming error: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
+    }
+  }
+
+  private hasBalancedBraces(jsonData: string): boolean {
+    let braceCount = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (const char of jsonData) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString && char === '{') {
+        braceCount++;
+      } else if (!inString && char === '}') {
+        braceCount--;
+      }
+    }
+
+    return braceCount === 0;
+  }
+
+  private logCompletionOptions(optionsCopy: ChatCompletionOptions): void {
+    try {
+      logger.debug(
+        JSON.stringify(
+          {
+            ...optionsCopy,
+            apiKey: optionsCopy.apiKey ? '***' : undefined,
+            messages: optionsCopy.messages
+              ? `${optionsCopy.messages.length} messages`
+              : '0 messages',
+          },
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      logger.error('Failed to stringify options:', error);
+    }
+  }
+
+  private logParseError(error: unknown, jsonData: string): void {
+    logger.error(`Error parsing chunk: ${error}`);
+    const errorMsg = (error as any).message || '';
+    const errorPos = Number.parseInt(errorMsg.match(/position (\d+)/)?.[1] || '0');
+    if (errorPos > 0) {
+      const start = Math.max(0, errorPos - 20);
+      const end = Math.min(jsonData.length, errorPos + 20);
+      logger.error(`Context around error position ${errorPos}:`);
+      logger.error(`"${jsonData.substring(start, end)}"`);
+      logger.error(
+        `Character codes: ${[...jsonData.substring(start, end)].map((c) => c.charCodeAt(0)).join(' ')}`,
+      );
+    }
+  }
+
+  private logStreamingRequest(url: URL, headers: Record<string, string>, options: any): void {
+    logger.debug(`Making streaming request to: ${url.toString()}`);
+    logger.debug(`Headers:`, JSON.stringify(headers, null, 2));
+    logger.debug(`Body:`, JSON.stringify(options, null, 2));
+  }
+
+  private async makeStreamingRequest(
+    url: URL,
+    options: any,
+    headers: Record<string, string>,
+  ): Promise<Response> {
+    const response = await fetch(url.toString(), {
+      body: JSON.stringify(options),
+      headers: {
+        Accept: 'text/event-stream',
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      method: 'POST',
+    });
+
+    logger.debug(`Response status: ${response.status}`);
+    logger.debug(
+      `Response headers:`,
+      JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2),
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`Stream request failed: ${response.status} ${response.statusText}`);
+      logger.error(`Error response: ${errorText}`);
+      throw new Error(
+        `Stream request failed: ${response.status} ${response.statusText} - ${errorText}`,
+      );
+    }
+
+    if (!response.body) {
+      throw new Error('No response body received');
+    }
+
+    return response;
+  }
+
+  private processLines(lines: string[], options: any, state: StreamState): number {
+    let processedLines = 0;
+
+    for (const [index, line] of lines.entries()) {
+      logger.debug(`Line ${index}: "${line}"`);
+
+      if (!line.startsWith('data:')) {
+        continue;
+      }
+
+      const jsonData = line.slice(5).trim();
+      logger.debug(`Extracted JSON data: "${jsonData}"`);
+
+      if (jsonData === '' || jsonData === '[DONE]') {
+        logger.debug(`Skipping empty data or [DONE] marker`);
+        processedLines = index + 1;
+        continue;
+      }
+
+      if (!jsonData.startsWith('{')) {
+        logger.warn(
+          `JSON data doesn't start with '{', might be partial: "${jsonData.slice(0, 50)}..."`,
+        );
+        break;
+      }
+
+      if (!this.hasBalancedBraces(jsonData)) {
+        logger.warn(
+          `JSON braces don't balance, treating as partial: "${jsonData.slice(0, 50)}..."`,
+        );
+        break;
+      }
+
+      if (this.tryParseAndProcess(jsonData, options, state)) {
+        processedLines = index + 1;
+      } else {
+        break;
+      }
+    }
+
+    return processedLines;
+  }
+
+  private async readStream(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    options: any,
+    state: StreamState,
+  ): Promise<void> {
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      logger.debug(`Received chunk: ${chunk.length} bytes`);
+
+      state.buffer += chunk;
+      logger.debug(`Added chunk to buffer. Buffer length: ${state.buffer.length}`);
+
+      const lines = state.buffer.split('\n');
+      logger.debug(`Processing ${lines.length} lines from buffer`);
+
+      const processedLines = this.processLines(lines, options, state);
+
+      if (processedLines > 0) {
+        const remainingLines = lines.slice(processedLines);
+        state.buffer = remainingLines.join('\n');
+        logger.debug(
+          `Updated buffer. Remaining lines: ${remainingLines.length}, Buffer length: ${state.buffer.length}`,
+        );
+      }
+    }
+  }
+
+  private tryParseAndProcess(jsonData: string, options: any, state: StreamState): boolean {
+    try {
+      logger.debug(`Attempting to parse JSON of length: ${jsonData.length}`);
+      const parsedData = JSON.parse(jsonData);
+      logger.debug(`Successfully parsed JSON: ${JSON.stringify(parsedData, null, 2)}`);
+
+      if (options.onChunk) {
+        options.onChunk(parsedData);
+      }
+
+      if (state.fullResponse) {
+        this.accumulateContent(parsedData, state);
+      } else {
+        state.fullResponse = parsedData;
+      }
+
+      return true;
+    } catch (error) {
+      this.logParseError(error, jsonData);
+      return false;
     }
   }
 }
