@@ -71,106 +71,19 @@ export async function configureAuth(
     return { authenticated: false };
   }
 
-  // Check Berget Code seat
   const jwtPayload = decodeJwtPayload(cliAuth.access_token);
 
-  // If we can't decode the JWT, sync OAuth anyway — the tokens are valid even if
-  // we can't verify the subscription role. Let the tool handle authorization.
   if (!jwtPayload) {
-    const s = prompter.spinner();
-    s.start('Authenticating with Berget AI...');
-    try {
-      await syncOAuthToTool(files, homeDir, tool, cliAuth);
-      s.stop('Authenticated.');
-    } catch (error) {
-      s.stop('Authentication failed.');
-      throw error;
-    }
-    prompter.note(
-      'Warning: Could not verify Berget Code subscription status.\nIf you do not have a subscription, the tool may show an authorization error.',
-      'Authentication',
-    );
-    return { authenticated: true };
+    return handleUndecodableJwt(prompter, files, homeDir, tool, cliAuth);
   }
 
-  // JWT decoded successfully — check subscription seat
   const hasSeat = hasBergetCodeSeat(cliAuth.access_token);
 
   if (hasSeat) {
-    // Case B: Has seat — ask how to authenticate
-    const method = await prompter.select<'api_key' | 'subscription'>({
-      message: 'You have a Berget Code subscription. How do you want to authenticate?',
-      options: [
-        { label: 'Use my Berget Code subscription', value: 'subscription' },
-        { label: 'Use an API key instead', value: 'api_key' },
-      ],
-    });
-
-    if (method === 'subscription') {
-      const s = prompter.spinner();
-      s.start('Authenticating with Berget AI via subscription...');
-      try {
-        await syncOAuthToTool(files, homeDir, tool, cliAuth);
-        s.stop('Authenticated.');
-      } catch (error) {
-        s.stop('Authentication failed.');
-        throw error;
-      }
-      return { authenticated: true };
-    }
-
-    // Create API key instead
-    const s = prompter.spinner();
-    s.start('Creating API key...');
-    try {
-      const { key } = await apiKeyService.create({
-        description: 'Created by berget code init',
-        name: `${tool === 'opencode' ? 'OpenCode' : 'Pi'} (created by berget CLI)`,
-      });
-      await syncApiKeyToTool(files, homeDir, tool, key);
-      s.stop('API key created and saved.');
-      return { authenticated: true };
-    } catch (error: any) {
-      s.stop('API key creation failed.');
-      throw new FatalError(
-        error?.message ||
-          'Could not create API key. Please create one manually with `berget api-keys create`.',
-      );
-    }
+    return handleHasSeat(prompter, apiKeyService, files, homeDir, tool, cliAuth);
   }
 
-  // No Berget Code seat — prompt for API key creation
-  const shouldCreate = await prompter.confirm({
-    initialValue: true,
-    message: 'You do not have a Berget Code subscription. Would you like to create a new API key?',
-  });
-
-  if (shouldCreate) {
-    const s = prompter.spinner();
-    s.start('Creating API key...');
-    try {
-      const { key } = await apiKeyService.create({
-        description: 'Created by berget code init',
-        name: `${tool === 'opencode' ? 'OpenCode' : 'Pi'} (created by berget CLI)`,
-      });
-      await syncApiKeyToTool(files, homeDir, tool, key);
-      s.stop('API key created and saved.');
-      return { authenticated: true };
-    } catch (error: any) {
-      s.stop('API key creation failed.');
-      throw new FatalError(
-        error?.message ||
-          'Could not create API key. Please create one manually with `berget api-keys create`.',
-      );
-    }
-  }
-
-  // Case D: Declined
-  prompter.note(
-    'Authentication skipped. You\'ll need to set up authentication manually:\n1. Run: berget api-keys create --name "My Key"\n2. Set BERGET_API_KEY environment variable, or\n3. Run `berget auth login` and try again',
-    'Authentication',
-  );
-  return { authenticated: false };
+  return handleNoSeat(prompter, apiKeyService, files, homeDir, tool);
 }
 
 export async function ensureCliAuth(
@@ -324,4 +237,108 @@ export async function syncOAuthToTool(
 
   await files.writeFile(authPath, JSON.stringify(updated, null, 2) + '\n');
   await files.chmod(authPath, 0o600);
+}
+
+async function createAndSyncApiKey(
+  prompter: Prompter,
+  apiKeyService: ApiKeyServicePort,
+  files: FileStore,
+  homeDir: string,
+  tool: 'opencode' | 'pi',
+): Promise<AuthResult> {
+  const s = prompter.spinner();
+  s.start('Creating API key...');
+  try {
+    const { key } = await apiKeyService.create({
+      description: 'Created by berget code init',
+      name: `${tool === 'opencode' ? 'OpenCode' : 'Pi'} (created by berget CLI)`,
+    });
+    await syncApiKeyToTool(files, homeDir, tool, key);
+    s.stop('API key created and saved.');
+    return { authenticated: true };
+  } catch (error: any) {
+    s.stop('API key creation failed.');
+    throw new FatalError(
+      error?.message ||
+        'Could not create API key. Please create one manually with `berget api-keys create`.',
+    );
+  }
+}
+
+async function handleHasSeat(
+  prompter: Prompter,
+  apiKeyService: ApiKeyServicePort,
+  files: FileStore,
+  homeDir: string,
+  tool: 'opencode' | 'pi',
+  cliAuth: CliAuth,
+): Promise<AuthResult> {
+  const method = await prompter.select<'api_key' | 'subscription'>({
+    message: 'You have a Berget Code subscription. How do you want to authenticate?',
+    options: [
+      { label: 'Use my Berget Code subscription', value: 'subscription' },
+      { label: 'Use an API key instead', value: 'api_key' },
+    ],
+  });
+
+  if (method === 'subscription') {
+    const s = prompter.spinner();
+    s.start('Authenticating with Berget AI via subscription...');
+    try {
+      await syncOAuthToTool(files, homeDir, tool, cliAuth);
+      s.stop('Authenticated.');
+    } catch (error) {
+      s.stop('Authentication failed.');
+      throw error;
+    }
+    return { authenticated: true };
+  }
+
+  return createAndSyncApiKey(prompter, apiKeyService, files, homeDir, tool);
+}
+
+async function handleNoSeat(
+  prompter: Prompter,
+  apiKeyService: ApiKeyServicePort,
+  files: FileStore,
+  homeDir: string,
+  tool: 'opencode' | 'pi',
+): Promise<AuthResult> {
+  const shouldCreate = await prompter.confirm({
+    initialValue: true,
+    message: 'You do not have a Berget Code subscription. Would you like to create a new API key?',
+  });
+
+  if (shouldCreate) {
+    return createAndSyncApiKey(prompter, apiKeyService, files, homeDir, tool);
+  }
+
+  prompter.note(
+    'Authentication skipped. You\'ll need to set up authentication manually:\n1. Run: berget api-keys create --name "My Key"\n2. Set BERGET_API_KEY environment variable, or\n3. Run `berget auth login` and try again',
+    'Authentication',
+  );
+  return { authenticated: false };
+}
+
+async function handleUndecodableJwt(
+  prompter: Prompter,
+  files: FileStore,
+  homeDir: string,
+  tool: 'opencode' | 'pi',
+  cliAuth: CliAuth,
+): Promise<AuthResult> {
+  const s = prompter.spinner();
+  s.start('Authenticating with Berget AI...');
+  try {
+    await syncOAuthToTool(files, homeDir, tool, cliAuth);
+    s.stop('Authenticated.');
+  } catch (error) {
+    s.stop('Authentication failed.');
+    throw error;
+  }
+  prompter.note(
+    'Warning: Could not verify Berget Code subscription status.\nIf you do not have a subscription, the tool may show an authorization error.',
+    'Authentication',
+  );
+  return { authenticated: true };
 }
