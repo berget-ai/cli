@@ -11,11 +11,17 @@ describe('authMiddleware', () => {
       getToken: async () => 'my-token',
     });
 
-    const req = { headers: new Headers() } as any;
-    const result = await middleware.onRequest!(req, {} as any);
+    const req = new Request('https://api.berget.ai/v1/users/me', { headers: new Headers() });
+    const result = await middleware.onRequest!({
+      id: 'test-1',
+      options: {} as any,
+      params: {},
+      request: req,
+      schemaPath: '/v1/users/me',
+    });
 
     expect(result).toBeDefined();
-    expect(result!.headers.get('Authorization')).toBe('Bearer my-token');
+    expect((result as Request).headers.get('Authorization')).toBe('Bearer my-token');
   });
 
   it('does not overwrite existing Authorization header', async () => {
@@ -23,10 +29,18 @@ describe('authMiddleware', () => {
       getToken: async () => 'my-token',
     });
 
-    const req = { headers: new Headers({ Authorization: 'Bearer existing' }) } as any;
-    const result = await middleware.onRequest!(req, {} as any);
+    const req = new Request('https://api.berget.ai/v1/users/me', {
+      headers: new Headers({ Authorization: 'Bearer existing' }),
+    });
+    const result = await middleware.onRequest!({
+      id: 'test-2',
+      options: {} as any,
+      params: {},
+      request: req,
+      schemaPath: '/v1/users/me',
+    });
 
-    expect(result!.headers.get('Authorization')).toBe('Bearer existing');
+    expect((result as Request).headers.get('Authorization')).toBe('Bearer existing');
   });
 
   it('skips injection when no token is available', async () => {
@@ -34,10 +48,16 @@ describe('authMiddleware', () => {
       getToken: async () => null,
     });
 
-    const req = { headers: new Headers() } as any;
-    const result = await middleware.onRequest!(req, {} as any);
+    const req = new Request('https://api.berget.ai/v1/users/me', { headers: new Headers() });
+    const result = await middleware.onRequest!({
+      id: 'test-3',
+      options: {} as any,
+      params: {},
+      request: req,
+      schemaPath: '/v1/users/me',
+    });
 
-    expect(result!.headers.get('Authorization')).toBeNull();
+    expect((result as Request).headers.get('Authorization')).toBeNull();
   });
 
   it('returns undefined on non-401 responses (no modification)', async () => {
@@ -47,9 +67,16 @@ describe('authMiddleware', () => {
     });
 
     const response = new Response('OK', { status: 200 });
-    const req = { headers: new Headers() } as any;
+    const req = new Request('https://api.berget.ai/v1/users/me', { headers: new Headers() });
 
-    const result = await middleware.onResponse!(response, {} as any, req);
+    const result = await middleware.onResponse!({
+      id: 'test-4',
+      options: {} as any,
+      params: {},
+      request: req,
+      response,
+      schemaPath: '/v1/users/me',
+    });
     expect(result).toBeUndefined();
   });
 
@@ -65,12 +92,19 @@ describe('authMiddleware', () => {
     });
 
     const response401 = new Response('Unauthorized', { status: 401 });
-    const req = { headers: new Headers() } as any;
+    const req = new Request('https://api.berget.ai/v1/users/me', { headers: new Headers() });
 
     const retryResponse = new Response('OK', { status: 200 });
     mockFetch.mockResolvedValueOnce(retryResponse);
 
-    const result = await middleware.onResponse!(response401, {} as any, req);
+    const result = await middleware.onResponse!({
+      id: 'test-5',
+      options: {} as any,
+      params: {},
+      request: req,
+      response: response401,
+      schemaPath: '/v1/users/me',
+    });
 
     expect(result).toBeInstanceOf(Response);
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -85,9 +119,16 @@ describe('authMiddleware', () => {
     });
 
     const response401 = new Response('Unauthorized', { status: 401 });
-    const req = { headers: new Headers() } as any;
+    const req = new Request('https://api.berget.ai/v1/users/me', { headers: new Headers() });
 
-    const result = await middleware.onResponse!(response401, {} as any, req);
+    const result = await middleware.onResponse!({
+      id: 'test-6',
+      options: {} as any,
+      params: {},
+      request: req,
+      response: response401,
+      schemaPath: '/v1/users/me',
+    });
     expect(result).toBeUndefined();
   });
 });

@@ -15,21 +15,21 @@ export function authMiddleware(options: {
     });
 
   return {
-    async onRequest(req) {
+    async onRequest({ request }) {
       const token = await getToken();
-      if (token && !req.headers.get('Authorization')) {
-        req.headers.set('Authorization', `Bearer ${token}`);
+      if (token && !request.headers.get('Authorization')) {
+        request.headers.set('Authorization', `Bearer ${token}`);
       }
-      return req;
+      return request;
     },
-    async onResponse(res, _options, req) {
-      if (res.status === 401 && options.refresh) {
+    async onResponse({ request, response }) {
+      if (response.status === 401 && options.refresh) {
         const ok = await options.refresh();
         if (ok) {
           const newToken = await getToken();
           if (newToken) {
-            req.headers.set('Authorization', `Bearer ${newToken}`);
-            return fetch(req);
+            request.headers.set('Authorization', `Bearer ${newToken}`);
+            return fetch(request);
           }
         }
       }
