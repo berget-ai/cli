@@ -1,14 +1,16 @@
 import { spawn } from 'node:child_process';
+import which from 'which';
 
 import type { CommandRunner } from '../ports/command-runner.js';
 
 export class SpawnCommandRunner implements CommandRunner {
   async checkInstalled(binary: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const child = spawn('which', [binary], { stdio: 'pipe' });
-      child.on('close', (code) => resolve(code === 0));
-      child.on('error', () => resolve(false));
-    });
+    try {
+      await which(binary);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async run(
