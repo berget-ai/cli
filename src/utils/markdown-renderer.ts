@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 
 // Configure marked to use the terminal renderer
-// @types/marked-terminal is outdated for marked v18; cast to suppress type error
+// @types/marked-terminal is outdated; cast to suppress type error
 marked.use(
   markedTerminal({
     blockquote: chalk.gray.italic,
