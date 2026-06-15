@@ -19,7 +19,7 @@ import {
   initOpenCode,
   initOpenCodeAgents,
 } from './opencode.js';
-import { getPiLabel, getPiState, initPi, initPiAgent } from './pi.js';
+import { getPiLabel, getPiState, initPi } from './pi.js';
 import { checkTool, promptForMissingTool } from './tool-check.js';
 
 export interface InitCommandResult {
@@ -207,7 +207,6 @@ async function configureTool(
     await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
   } else {
     await initPi({ commands, cwd, files, homeDir, prompter, scope });
-    await initPiAgent({ cwd, files, homeDir, prompter, scope });
   }
 }
 

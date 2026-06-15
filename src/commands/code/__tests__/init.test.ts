@@ -131,13 +131,7 @@ describe('runInit', () => {
         commands: new FakeCommandRunner()
           .handle('pi --version', 'mocked') // For checkInstalled
           .handle('pi install', ''), // For actual install
-        prompter: new FakePrompter([
-          select('pi'),
-          select('project'),
-          confirm(true, 'Set up an agent for Pi?'),
-          select('fullstack'), // Agent selection
-          confirm(true, 'Create'),
-        ]),
+        prompter: new FakePrompter([select('pi'), select('project')]),
       });
 
       await runInit(deps);
@@ -148,26 +142,15 @@ describe('runInit', () => {
       expect(installCall?.args).toContain('npm:@bergetai/pi-provider');
     });
 
-    it('skips agent selection for pi project', async () => {
+    it('completes pi init without agent prompts', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner()
           .handle('pi --version', 'mocked') // For checkInstalled
           .handle('pi install', ''), // For actual install
-        prompter: new FakePrompter([
-          select('pi'),
-          select('project'),
-          confirm(false, 'Set up an agent for Pi?'),
-        ]),
+        prompter: new FakePrompter([select('pi'), select('project')]),
       });
 
-      await runInit(deps);
-
-      const files = deps.files as FakeFileStore;
-      const written = files.getWrittenFiles();
-      // Should not create any agent files
-      for (const path of written.keys()) {
-        expect(path).not.toContain('SYSTEM.md');
-      }
+      await expect(runInit(deps)).resolves.not.toThrow();
     });
   });
 
@@ -331,21 +314,6 @@ describe('runInit', () => {
 
       await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
     });
-
-    it('throws CancelledError when user cancels at agent write confirmation (pi)', async () => {
-      const deps = makeDeps({
-        commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
-        prompter: new FakePrompter([
-          select('pi'),
-          select('project'),
-          confirm(true, 'Set up an agent for Pi?'),
-          select('fullstack'),
-          confirm(false, /Create|Overwrite/),
-        ]),
-      });
-
-      await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
-    });
   });
 
   describe('file operations', () => {
@@ -440,13 +408,7 @@ describe('runInit', () => {
     it('preserves existing Pi settings when setting defaultProvider', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
-        prompter: new FakePrompter([
-          select('pi'),
-          select('project'),
-          confirm(true, 'Set up an agent for Pi?'),
-          select('fullstack'),
-          confirm(true, 'Create'),
-        ]),
+        prompter: new FakePrompter([select('pi'), select('project')]),
       });
 
       const files = deps.files as FakeFileStore;
@@ -581,9 +543,6 @@ describe('runInit', () => {
           select('pi'),
           select('project'),
           confirm(true), // API key creation prompt
-          confirm(true, 'Set up an agent for Pi?'),
-          select('fullstack'),
-          confirm(true, 'Create'),
         ]),
       });
 
@@ -683,44 +642,6 @@ describe('runInit', () => {
       expect(written.has('/home/user/.config/opencode/agents/fullstack.md')).toBe(true);
     });
 
-    it('sets up agent for pi project', async () => {
-      const deps = makeDeps({
-        commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
-        prompter: new FakePrompter([
-          select('pi'),
-          select('project'),
-          confirm(true, 'Set up an agent for Pi?'),
-          select('fullstack'),
-          confirm(true, 'Create'),
-        ]),
-      });
-
-      await runInit(deps);
-
-      const files = deps.files as FakeFileStore;
-      const written = files.getWrittenFiles();
-      expect(written.has('/home/user/project/.pi/SYSTEM.md')).toBe(true);
-    });
-
-    it('sets up agent for pi globally', async () => {
-      const deps = makeDeps({
-        commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
-        prompter: new FakePrompter([
-          select('pi'),
-          select('global'),
-          confirm(true, 'Set up an agent for Pi?'),
-          select('backend'),
-          confirm(true, 'Create'),
-        ]),
-      });
-
-      await runInit(deps);
-
-      const files = deps.files as FakeFileStore;
-      const written = files.getWrittenFiles();
-      expect(written.has('/home/user/.pi/agent/SYSTEM.md')).toBe(true);
-    });
-
     it('skips writing identical opencode agent files', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
@@ -763,31 +684,6 @@ describe('runInit', () => {
       expect(files.getWrittenFiles().get('/home/user/project/.opencode/agents/frontend.md')).toBe(
         firstFrontend,
       );
-    });
-
-    it('overwrites pi SYSTEM.md when content differs', async () => {
-      const files = new FakeFileStore();
-      files.seed('/home/user/project/.pi/SYSTEM.md', 'old agent content');
-
-      const deps = makeDeps({
-        commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
-        files,
-        prompter: new FakePrompter([
-          select('pi'),
-          select('project'),
-          confirm(true, 'Set up an agent for Pi?'),
-          select('fullstack'),
-          confirm(true, 'SYSTEM.md already exists'),
-        ]),
-      });
-
-      await runInit(deps);
-
-      const written = files.getWrittenFiles();
-      const content = written.get('/home/user/project/.pi/SYSTEM.md');
-      expect(content).not.toBe('old agent content');
-      // Pi doesn't use front matter, so check for system prompt content
-      expect(content).toContain('Fullstack Agent');
     });
   });
 
