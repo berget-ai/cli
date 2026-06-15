@@ -4,10 +4,9 @@ import type { CommandRunner } from './ports/command-runner.js';
 import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
-import { getAllAgents, toPiPrompt } from '../../agents/index.js';
-import { CancelledError, CommandFailedError } from './errors.js';
+import { CommandFailedError } from './errors.js';
 import { readJsonMaybe, writeJsonFile } from './utils.js';
-import { getPiAgentDir, getPiSettingsPath } from './xdg-paths.js';
+import { getPiSettingsPath } from './xdg-paths.js';
 
 const PI_PROVIDER = 'npm:@bergetai/pi-provider';
 const PI_PROVIDER_NAME = '@bergetai/pi-provider';
@@ -90,75 +89,6 @@ export async function initPi(deps: InitPiDeps): Promise<void> {
     await writeJsonFile(files, settingsPath, settings);
     prompter.note('Berget AI is now your default provider.', 'Updated default provider');
   }
-}
-
-export async function initPiAgent(deps: {
-  cwd: string;
-  files: FileStore;
-  homeDir: string;
-  prompter: Prompter;
-  scope: 'global' | 'project';
-}): Promise<boolean> {
-  const { cwd, files, homeDir, prompter, scope } = deps;
-
-  const agents = getAllAgents().filter((a) => a.config.mode === 'primary');
-
-  if (agents.length === 0) {
-    return false;
-  }
-
-  const systemPath =
-    scope === 'project'
-      ? path.join(cwd, '.pi', 'SYSTEM.md')
-      : path.join(getPiAgentDir(homeDir), 'SYSTEM.md');
-
-  prompter.note('Pi uses a single system prompt.', 'Agent Setup');
-
-  const shouldInitAgent = await prompter.confirm({
-    initialValue: false,
-    message: 'Set up an agent for Pi?',
-  });
-
-  if (!shouldInitAgent) return false;
-
-  const selectedAgentName = await prompter.select({
-    message: 'Choose an agent:',
-    options: agents.map((agent) => ({
-      hint: agent.config.description,
-      label: agent.config.name,
-      value: agent.config.name,
-    })),
-  });
-
-  const agent = agents.find((a) => a.config.name === selectedAgentName);
-  if (!agent) return false;
-
-  const systemExists = await files.exists(systemPath);
-  const confirmMsg = systemExists
-    ? `SYSTEM.md already exists. Replace with ${agent.config.name}?`
-    : 'Create agent configuration?';
-
-  const shouldWrite = await prompter.confirm({
-    initialValue: true,
-    message: confirmMsg,
-  });
-
-  if (!shouldWrite) {
-    throw new CancelledError();
-  }
-
-  const s = prompter.spinner();
-  s.start('Writing agent configuration...');
-  try {
-    const systemDir = scope === 'project' ? path.join(cwd, '.pi') : getPiAgentDir(homeDir);
-    await files.mkdir(systemDir);
-    await files.writeFile(systemPath, toPiPrompt(agent));
-    s.stop(`Wrote agent configuration to ${systemPath}`);
-  } catch (error) {
-    s.stop('Failed to write agent configuration.');
-    throw error;
-  }
-  return true;
 }
 
 function hasPiProviderInSettings(settings: unknown): boolean {

@@ -66,8 +66,4 @@ export function toMarkdown(agent: Agent): string {
   return `${frontmatter}---\n\n${systemPrompt}`;
 }
 
-export function toPiPrompt(agent: Agent): string {
-  return agent.systemPrompt;
-}
-
 export { type Agent, type AgentConfig } from './types.js';
