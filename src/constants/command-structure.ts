@@ -9,7 +9,6 @@ export const COMMAND_GROUPS = {
   APPS: 'apps',
   AUTH: 'auth',
   BILLING: 'billing',
-  CHAT: 'chat',
   CLUSTERS: 'clusters',
   CODE: 'code',
   FLUX: 'flux',
@@ -58,12 +57,6 @@ export const SUBCOMMANDS = {
     LIST_PAYMENT_METHODS: 'list-payment-methods',
     REMOVE_PAYMENT_METHOD: 'remove-payment-method',
     UPDATE_SUBSCRIPTION: 'update-subscription',
-  },
-
-  // Chat commands
-  CHAT: {
-    LIST: 'list',
-    RUN: 'run',
   },
 
   // Clusters commands
@@ -152,8 +145,6 @@ export const COMMAND_DESCRIPTIONS = {
   [`${COMMAND_GROUPS.BILLING} ${SUBCOMMANDS.BILLING.UPDATE_SUBSCRIPTION}`]:
     'Update subscription plan',
 
-  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.LIST}`]: 'List available chat models',
-  [`${COMMAND_GROUPS.CHAT} ${SUBCOMMANDS.CHAT.RUN}`]: 'Run a chat session with a specified model',
   [`${COMMAND_GROUPS.CLUSTERS} ${SUBCOMMANDS.CLUSTERS.DESCRIBE}`]:
     'Get detailed information about a cluster',
 
@@ -190,8 +181,6 @@ export const COMMAND_DESCRIPTIONS = {
 
   // Billing group
   [COMMAND_GROUPS.BILLING]: 'Manage billing and usage',
-  // Chat group
-  [COMMAND_GROUPS.CHAT]: 'Interact with AI chat models',
   // Clusters group
   [COMMAND_GROUPS.CLUSTERS]: 'Manage Kubernetes clusters',
 

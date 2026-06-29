@@ -25,24 +25,6 @@ npx berget api-keys create --name "My CLI Key"
 export BERGET_API_KEY=sk_ber_your_api_key_here
 ```
 
-## Chat Command
-
-### Basic Usage
-
-```bash
-# Interactive chat session
-npx berget chat run
-
-# Use specific model
-npx berget chat run openai/gpt-oss
-
-# Send direct message
-npx berget chat run openai/gpt-oss "Explain what Docker is"
-
-# Use pipe for input
-echo "What is Kubernetes?" | npx berget chat run openai/gpt-oss
-```
-
 ## Environment Variables
 
 ```bash
@@ -68,13 +50,10 @@ npx berget --help
 
 ```bash
 # Enable debug mode
-npx berget --debug chat run openai/gpt-oss "test"
+npx berget --debug auth whoami
 
 # Check authentication
 npx berget auth whoami
-
-# List available models
-npx berget chat list
 
 # Check API key status
 npx berget api-keys list

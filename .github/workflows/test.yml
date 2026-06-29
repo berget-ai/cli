@@ -37,8 +37,8 @@ jobs:
       - name: Check formatting with Prettier
         run: npm run format:check
 
-      - name: Run tests
-        run: npm run test:run
+      - name: Run tests with coverage
+        run: npm run test:coverage
 
       - name: Build project
         run: npm run build
