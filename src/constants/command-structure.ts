@@ -70,6 +70,7 @@ export const SUBCOMMANDS = {
   CLUSTERS: {
     DESCRIBE: 'describe',
     GET_USAGE: 'get-usage',
+    INIT: 'init',
     LIST: 'list',
   },
 
@@ -159,6 +160,8 @@ export const COMMAND_DESCRIPTIONS = {
 
   [`${COMMAND_GROUPS.CLUSTERS} ${SUBCOMMANDS.CLUSTERS.GET_USAGE}`]:
     'Get resource usage for a cluster',
+  [`${COMMAND_GROUPS.CLUSTERS} ${SUBCOMMANDS.CLUSTERS.INIT}`]:
+    'Initialize a new cluster with FluxCD GitOps and infrastructure components',
   [`${COMMAND_GROUPS.CLUSTERS} ${SUBCOMMANDS.CLUSTERS.LIST}`]: 'List all clusters',
   [`${COMMAND_GROUPS.CODE} ${SUBCOMMANDS.CODE.INIT}`]:
     'Interactive setup for Berget AI coding tools',
