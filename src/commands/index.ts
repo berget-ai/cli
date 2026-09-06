@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 
+import { registerAiReviewCommands } from './ai-review.js';
 import { registerApiKeyCommands } from './api-keys.js';
 import { registerAuthCommands } from './auth.js';
 import { registerAutocompleteCommands } from './autocomplete.js';
@@ -21,4 +22,5 @@ export function registerCommands(program: Command): void {
   registerUserCommands(program);
   registerAutocompleteCommands(program);
   registerCodeCommands(program);
+  registerAiReviewCommands(program);
 }

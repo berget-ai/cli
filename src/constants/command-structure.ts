@@ -5,6 +5,7 @@
 
 // Main command groups
 export const COMMAND_GROUPS = {
+  AI_REVIEW: 'ai-review',
   API_KEYS: 'api-keys',
   APPS: 'apps',
   AUTH: 'auth',
@@ -20,6 +21,11 @@ export const COMMAND_GROUPS = {
 
 // Subcommands for each group
 export const SUBCOMMANDS = {
+  // AI Review commands
+  AI_REVIEW: {
+    SETUP: 'setup',
+  },
+
   // API Keys commands
   API_KEYS: {
     CREATE: 'create',
@@ -107,6 +113,8 @@ export const SUBCOMMANDS = {
 
 // Command descriptions
 export const COMMAND_DESCRIPTIONS = {
+  [`${COMMAND_GROUPS.AI_REVIEW} ${SUBCOMMANDS.AI_REVIEW.SETUP}`]:
+    'Set up Berget AI code review in the current repo',
   [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.CREATE}`]: 'Create a new API key',
   [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.DELETE}`]: 'Delete an API key',
   [`${COMMAND_GROUPS.API_KEYS} ${SUBCOMMANDS.API_KEYS.DESCRIBE}`]:
