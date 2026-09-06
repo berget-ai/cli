@@ -4,12 +4,21 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import { COMMAND_GROUPS, SUBCOMMANDS } from '../constants/command-structure.js';
 import { ApiKeyService } from '../services/api-key-service.js';
 import { handleError } from '../utils/error-handler.js';
 
 const WORKFLOW_PATH = '.github/workflows/ai-review.yml';
 
-const WORKFLOW_TEMPLATE = `name: AI Code Review
+/**
+ * The workflow stamped out by `berget ai-review setup`.
+ * MUST stay in sync with this repo's own .github/workflows/ai-review.yml —
+ * enforced by src/commands/__tests__/ai-review.test.ts. The only difference:
+ * the dogfooded file adds `github_app_*`/`approve` inputs for the org-wide
+ * Berget AI app (approvals); customers use the key-only (comment) mode by
+ * default and can opt into approvals later.
+ */
+export const WORKFLOW_TEMPLATE = `name: AI Code Review
 
 on:
   pull_request:
@@ -23,10 +32,8 @@ permissions:
   pull-requests: write
   issues: write
 
-# One active review per PR: a "@berget" comment cancels an in-flight
-# automatic review and replaces it (both review the same PR anyway).
 concurrency:
-  group: ai-review-\${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  group: ai-review-\${{ github.event_name }}-\${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -51,7 +58,7 @@ jobs:
               (github.event.issue.pull_request && format('refs/pull/{0}/merge', github.event.issue.number)) ||
               github.sha
             }}
-      - uses: berget-ai/ai-review-action@v1
+      - uses: berget-ai/ai-review-action@1400f87fac1db96181eea507e7d86997d6c02ba1 # v1.3 (@berget trigger)
         with:
           api_key: \${{ secrets.BERGET_API_KEY }}
           use_dora: 'false'
@@ -85,31 +92,9 @@ interface SetupOptions {
   keyName?: string;
   overwrite: boolean;
   skipKey: boolean;
-  yes: boolean;
 }
 
-function run(cmd: string, args: string[], opts: { cwd: string; input?: string }): string {
-  const res = spawnSync(cmd, args, {
-    cwd: opts.cwd,
-    input: opts.input,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-  if (res.status !== 0) {
-    throw new Error(`${cmd} ${args.join(' ')} failed:\n${res.stderr || res.stdout}`);
-  }
-  return (res.stdout ?? '').trim();
-}
-
-function tryRun(cmd: string, args: string[], opts: { cwd: string }): string | null {
-  try {
-    return run(cmd, args, opts);
-  } catch {
-    return null;
-  }
-}
-
-function parseGitHubRepo(remoteUrl: string): { owner: string; repo: string } | null {
+export function parseGitHubRepo(remoteUrl: string): null | { owner: string; repo: string } {
   // Handles https://github.com/o/r.git and git@github.com:o/r.git
   const m = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
   if (!m) return null;
@@ -121,19 +106,18 @@ function parseGitHubRepo(remoteUrl: string): { owner: string; repo: string } | n
  */
 export function registerAiReviewCommands(program: Command): void {
   const group = program
-    .command('ai-review')
+    .command(COMMAND_GROUPS.AI_REVIEW)
     .description('Set up the Berget AI code review bot in a GitHub repository');
 
   group
-    .command('setup')
+    .command(SUBCOMMANDS.AI_REVIEW.SETUP)
     .description(
       'Create a Berget API key, register it as BERGET_API_KEY repo secret, and open a PR adding the AI review workflow. Run inside the target git repository.',
     )
     .option('--key-name <name>', 'Name for the created API key (default: ai-review-<repo>)')
     .option('--branch <name>', 'Branch name for the setup PR', 'chore/ai-review')
     .option('--overwrite', 'Overwrite the workflow file if it already exists', false)
-    .option('--skip-key', 'Skip API key creation and secret registration', false)
-    .option('-y, --yes', 'Skip confirmation prompts', false)
+    .option('--skip-key', 'Skip API key creation AND secret registration entirely', false)
     .option('--dry-run', 'Print what would be done without changing anything', false)
     .action(async (options: SetupOptions) => {
       try {
@@ -142,6 +126,25 @@ export function registerAiReviewCommands(program: Command): void {
         handleError('Failed to set up AI review', error);
       }
     });
+}
+
+function run(cmd: string, args: string[], opts: { cwd: string; input?: string }): string {
+  const res = spawnSync(cmd, args, {
+    cwd: opts.cwd,
+    encoding: 'utf8',
+    input: opts.input,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  if (res.status !== 0) {
+    const err = new Error(
+      `${cmd} ${args.join(' ')} failed:\n${res.stderr || res.stdout}`,
+    ) as Error & {
+      stderr?: string;
+    };
+    err.stderr = res.stderr ?? '';
+    throw err;
+  }
+  return (res.stdout ?? '').trim();
 }
 
 async function setup(options: SetupOptions): Promise<void> {
@@ -162,19 +165,26 @@ async function setup(options: SetupOptions): Promise<void> {
   }
   console.log(chalk.dim(`  ✓ GitHub repo: ${gh.owner}/${gh.repo}`));
 
-  tryRun('gh', ['--version'], { cwd });
+  if (tryRun('gh', ['--version'], { cwd }) === null) {
+    throw new Error('gh CLI not found. Install it first: https://cli.github.com');
+  }
   const authStatus = spawnSync('gh', ['auth', 'status'], { encoding: 'utf8', stdio: 'pipe' });
   if (authStatus.status !== 0) {
     throw new Error('gh CLI is not authenticated. Run `gh auth login` first.');
   }
   console.log(chalk.dim('  ✓ gh CLI authenticated'));
 
+  // Verify we can administer the repo BEFORE creating a billed API key.
+  if (tryRun('gh', ['secret', 'list', '-R', `${gh.owner}/${gh.repo}`], { cwd }) === null) {
+    throw new Error(`Cannot read secrets on ${gh.owner}/${gh.repo} — need write/admin access.`);
+  }
+
   const workflowPath = join(cwd, WORKFLOW_PATH);
   const workflowExists = existsSync(workflowPath);
   if (workflowExists && !options.overwrite) {
     console.log(
       chalk.yellow(
-        `\n${WORKFLOW_PATH} already exists — nothing to do.\nPass --overwrite to replace it, or --skip-key to only (re-)register the secret.`,
+        `\n${WORKFLOW_PATH} already exists — nothing to do.\nPass --overwrite to replace it${options.skipKey ? ' (with --skip-key the secret is left untouched)' : ''}.`,
       ),
     );
     return;
@@ -218,9 +228,26 @@ async function setup(options: SetupOptions): Promise<void> {
   mkdirSync(dirname(workflowPath), { recursive: true });
   writeFileSync(workflowPath, WORKFLOW_TEMPLATE);
 
-  // --- 4. Branch, commit, PR ------------------------------------------------
+  // --- 4. Branch (from default branch head), commit, PR ----------------------
   console.log(chalk.bold('🌿 Creating branch + PR'));
-  run('git', ['checkout', '-b', options.branch], { cwd });
+  const defaultBranch =
+    tryRun(
+      'gh',
+      [
+        'repo',
+        'view',
+        `${gh.owner}/${gh.repo}`,
+        '--json',
+        'defaultBranchRef',
+        '-q',
+        '.defaultBranchRef.name',
+      ],
+      {
+        cwd,
+      },
+    ) ?? 'main';
+  run('git', ['fetch', 'origin', defaultBranch], { cwd });
+  run('git', ['checkout', '-B', options.branch, `origin/${defaultBranch}`], { cwd });
   run('git', ['add', WORKFLOW_PATH], { cwd });
   run(
     'git',
@@ -229,8 +256,12 @@ async function setup(options: SetupOptions): Promise<void> {
       cwd,
     },
   );
-  const pushed = tryRun('git', ['push', '-u', 'origin', options.branch], { cwd });
-  if (pushed === null) {
+
+  try {
+    run('git', ['push', '-u', 'origin', options.branch], { cwd });
+  } catch (error) {
+    const stderr = (error as Error & { stderr?: string }).stderr ?? '';
+    if (!/non-fast-forward|rejected/.test(stderr)) throw error;
     run('git', ['push', '--force-with-lease', '-u', 'origin', options.branch], { cwd });
   }
 
@@ -255,4 +286,12 @@ async function setup(options: SetupOptions): Promise<void> {
   console.log(chalk.green('✅ Setup PR created: ') + chalk.cyan(prUrl));
   console.log(chalk.dim('Merge it, then comment "@berget" on any PR to trigger a review.'));
   console.log(chalk.dim('Docs: https://github.com/berget-ai/ai-review-action'));
+}
+
+function tryRun(cmd: string, args: string[], opts: { cwd: string }): null | string {
+  try {
+    return run(cmd, args, opts);
+  } catch {
+    return null;
+  }
 }
