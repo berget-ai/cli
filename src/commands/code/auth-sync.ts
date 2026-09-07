@@ -1,13 +1,8 @@
-import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services.js';
+import type { ApiKeyServicePort, AuthServicePort, SeatStatusPort } from './ports/auth-services.js';
 import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
-import {
-  decodeJwtPayload,
-  extractJwtExpiresAt,
-  hasBergetCodeSeat,
-  isTokenExpired,
-} from '../../auth/jwt.js';
+import { decodeJwtPayload, extractJwtExpiresAt, isTokenExpired } from '../../auth/jwt.js';
 import { logger } from '../../utils/logger.js';
 import { FatalError } from './errors.js';
 import { getOpencodeAuthPath, getPiAuthPath } from './xdg-paths.js';
@@ -18,6 +13,7 @@ export interface AuthDeps {
   files: FileStore;
   homeDir: string;
   prompter: Prompter;
+  seatStatusService: SeatStatusPort;
 }
 
 export interface AuthResult {
@@ -43,7 +39,7 @@ const TOOL_API_KEY_TYPES: Record<'opencode' | 'pi', string> = {
 };
 
 export async function configureAuth(
-  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter'>,
+  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter' | 'seatStatusService'>,
   tool: 'opencode' | 'pi',
   cliAuth: CliAuth | null,
 ): Promise<AuthResult> {
@@ -75,13 +71,22 @@ export async function configureAuth(
   const jwtPayload = decodeJwtPayload(cliAuth.access_token);
 
   if (!jwtPayload) {
-    return handleUndecodableJwt(prompter, files, homeDir, tool, cliAuth);
+    return handleUnverifiedAuth(prompter, files, homeDir, tool, cliAuth);
   }
 
-  const hasSeat = hasBergetCodeSeat(cliAuth.access_token);
+  // Resolve the seat from the API's canonical source (berget.seat via
+  // /v1/auth/status) — NOT from JWT roles, which are legacy duplicated state
+  // and drift (e.g. a stale berget_code_seat role on a Summit subscriber).
+  const seatStatus = await deps.seatStatusService.fetchSeatStatus(cliAuth.access_token);
 
-  if (hasSeat) {
-    return handleHasSeat(prompter, apiKeyService, files, homeDir, tool, cliAuth);
+  if (seatStatus === null) {
+    // Status could not be verified (network/5xx) — proceed with the OAuth
+    // sync and a warning, same as the undecodable-JWT path.
+    return handleUnverifiedAuth(prompter, files, homeDir, tool, cliAuth);
+  }
+
+  if (seatStatus.seatId != null || seatStatus.tier != null) {
+    return handleHasSeat(prompter, apiKeyService, files, homeDir, tool, cliAuth, seatStatus.tier);
   }
 
   return handleNoSeat(prompter, apiKeyService, files, homeDir, tool);
@@ -266,6 +271,13 @@ async function createAndSyncApiKey(
   }
 }
 
+const TIER_LABELS: Record<string, string> = {
+  berget_code: 'Berget Code',
+  seat_plan_mini: 'Berget Chat',
+  seat_plan_pro: 'Berget Pro',
+  seat_plan_summit: 'Berget Summit',
+};
+
 async function handleHasSeat(
   prompter: Prompter,
   apiKeyService: ApiKeyServicePort,
@@ -273,11 +285,13 @@ async function handleHasSeat(
   homeDir: string,
   tool: 'opencode' | 'pi',
   cliAuth: CliAuth,
+  tier: null | string,
 ): Promise<AuthResult> {
+  const tierLabel = (tier && TIER_LABELS[tier]) || 'Berget';
   const method = await prompter.select<'api_key' | 'subscription'>({
-    message: 'You have a Berget subscription. How do you want to authenticate?',
+    message: `You have a ${tierLabel} subscription. How do you want to authenticate?`,
     options: [
-      { label: 'Use my Berget Code subscription', value: 'subscription' },
+      { label: `Use my ${tierLabel} subscription`, value: 'subscription' },
       { label: 'Use an API key instead', value: 'api_key' },
     ],
   });
@@ -321,7 +335,7 @@ async function handleNoSeat(
   return { authenticated: false };
 }
 
-async function handleUndecodableJwt(
+async function handleUnverifiedAuth(
   prompter: Prompter,
   files: FileStore,
   homeDir: string,
@@ -338,7 +352,7 @@ async function handleUndecodableJwt(
     throw error;
   }
   prompter.note(
-    'Warning: Could not verify Berget Code subscription status.\nIf you do not have a subscription, the tool may show an authorization error.',
+    'Warning: Could not verify your subscription status.\nIf you do not have a subscription, the tool may show an authorization error.',
     'Authentication',
   );
   return { authenticated: true };

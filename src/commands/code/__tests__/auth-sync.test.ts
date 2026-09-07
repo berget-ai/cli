@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { decodeJwtPayload, hasBergetCodeSeat } from '../../../auth/jwt.js';
+import { decodeJwtPayload } from '../../../auth/jwt.js';
 import {
   type AuthDeps,
   type CliAuth,
@@ -16,6 +16,7 @@ import { FakeApiKeyService } from './fake-api-key-service.js';
 import { FakeAuthService } from './fake-auth-service.js';
 import { FakeFileStore } from './fake-file-store.js';
 import { confirm, FakePrompter, select } from './fake-prompter.js';
+import { FakeSeatStatusService } from './fake-seat-status-service.js';
 
 const ENV_KEYS = [
   'XDG_CONFIG_HOME',
@@ -151,31 +152,6 @@ describe('decodeJwtPayload', () => {
   });
 });
 
-describe('hasBergetCodeSeat', () => {
-  it('returns true when berget_code_seat is present', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['berget_code_seat', 'default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(true);
-  });
-
-  it('returns false when role is missing', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(false);
-  });
-
-  it('returns false when realm_access is missing', () => {
-    const token = makeJwt({ sub: '123' });
-    expect(hasBergetCodeSeat(token)).toBe(false);
-  });
-
-  it('returns false for invalid JWT', () => {
-    expect(hasBergetCodeSeat('invalid')).toBe(false);
-  });
-});
-
 describe('syncOAuthToTool', () => {
   it('writes oauth tokens to opencode auth file', async () => {
     const files = new FakeFileStore();
@@ -306,6 +282,7 @@ describe('configureAuth', () => {
       files: new FakeFileStore(),
       homeDir: HOME,
       prompter: new FakePrompter([]),
+      seatStatusService: new FakeSeatStatusService({ seatId: null, tier: null }),
       ...overrides,
     }) as AuthDeps;
 
@@ -334,7 +311,11 @@ describe('configureAuth', () => {
 
     const prompter = new FakePrompter([select('reconfigure'), select('subscription')]);
 
-    const deps = makeAuthDeps({ files, prompter });
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+    });
     const result = await configureAuth(
       deps,
       'opencode',
@@ -363,7 +344,11 @@ describe('configureAuth', () => {
 
     const prompter = new FakePrompter([select('subscription')]);
 
-    const deps = makeAuthDeps({ files, prompter });
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+    });
     const result = await configureAuth(deps, 'opencode', cliAuth);
 
     expect(result.authenticated).toBe(true);
@@ -387,7 +372,11 @@ describe('configureAuth', () => {
 
     const prompter = new FakePrompter([select('api_key')]);
 
-    const deps = makeAuthDeps({ files, prompter });
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+    });
     const result = await configureAuth(deps, 'opencode', cliAuth);
 
     expect(result.authenticated).toBe(true);
@@ -430,7 +419,12 @@ describe('configureAuth', () => {
       'Before you can create API keys, you need to finish setting up your account.',
     );
 
-    const deps = makeAuthDeps({ apiKeyService: failingApiKeyService, files, prompter });
+    const deps = makeAuthDeps({
+      apiKeyService: failingApiKeyService,
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+    });
 
     await expect(configureAuth(deps, 'opencode', cliAuth)).rejects.toThrow(FatalError);
     expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
@@ -464,6 +458,45 @@ describe('configureAuth', () => {
 
     expect(result.authenticated).toBe(false);
     expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
+  });
+
+  it('seat without recognized tier ({seatId, tier: null}) → still treated as seat-holder', async () => {
+    const files = new FakeFileStore();
+    const prompter = new FakePrompter([select('subscription')]);
+
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 168, tier: null }),
+    });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(true);
+    // Seat path: OAuth synced, NOT the no-seat API-key prompt
+    const written = files.getWrittenFiles();
+    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
+    expect(parsed.berget.type).toBe('oauth');
+  });
+
+  it('seat status unverifiable (API down) → warns and syncs OAuth anyway', async () => {
+    const files = new FakeFileStore();
+    const prompter = new FakePrompter([]);
+
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService(null),
+    });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(true);
+    // OAuth synced despite unverified status
+    const written = files.getWrittenFiles();
+    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
+    expect(parsed.berget.type).toBe('oauth');
+    // Warning note displayed
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    expect(notes.length).toBeGreaterThan(0);
   });
 
   it('Case E: login fails → returns false when cliAuth is null', async () => {
@@ -523,7 +556,11 @@ describe('configureAuth', () => {
 
     const prompter = new FakePrompter([select('subscription')]);
 
-    const deps = makeAuthDeps({ files, prompter });
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+    });
     await configureAuth(
       deps,
       'opencode',
