@@ -41,6 +41,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # OIDC trusted publishing (npmjs.com → berget → Trusted Publisher:
+      # berget-ai/cli / publish.yml). No NPM_TOKEN needed — the old classic
+      # token expired, which made npm publish fail with a misleading 404.
+      id-token: write
     steps:
       # The repo ruleset requires PRs for GITHUB_TOKEN pushes to main.
       # Checking out with the repo Deploy Key (SSH) makes the version-bump
@@ -72,7 +76,7 @@ jobs:
           npm version ${{ inputs.bump }} -m "release: %s"
           git push --follow-tags
 
-      - name: Publish to NPM
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to NPM (OIDC trusted publishing)
+        run: |
+          npm install -g npm@latest   # OIDC trusted publishing needs npm >= 11.5.1
+          npm publish
