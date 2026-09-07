@@ -275,7 +275,7 @@ async function handleHasSeat(
   cliAuth: CliAuth,
 ): Promise<AuthResult> {
   const method = await prompter.select<'api_key' | 'subscription'>({
-    message: 'You have a Berget Code subscription. How do you want to authenticate?',
+    message: 'You have a Berget subscription. How do you want to authenticate?',
     options: [
       { label: 'Use my Berget Code subscription', value: 'subscription' },
       { label: 'Use an API key instead', value: 'api_key' },
@@ -307,7 +307,7 @@ async function handleNoSeat(
 ): Promise<AuthResult> {
   const shouldCreate = await prompter.confirm({
     initialValue: true,
-    message: 'You do not have a Berget Code subscription. Would you like to create a new API key?',
+    message: 'You do not have a Berget subscription. Would you like to create a new API key?',
   });
 
   if (shouldCreate) {
