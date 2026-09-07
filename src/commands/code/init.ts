@@ -11,6 +11,7 @@ import { AuthService } from '../../services/auth-service.js';
 import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
+import { createSeatStatusService } from '../../auth/seat-status.js';
 import { configureAuth, ensureCliAuth } from './auth-sync.js';
 import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {
@@ -129,6 +130,7 @@ export async function runInitCommand(): Promise<void> {
     homeDir: os.homedir(),
     isTty: process.stdin.isTTY,
     prompter: new ClackPrompter(),
+    seatStatusService: createSeatStatusService(),
   });
 
   if (result.stderr) console.error(result.stderr);

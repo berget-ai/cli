@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeJwtPayload,
   extractJwtExpiresAt,
-  hasBergetCodeSeat,
   isTokenExpired,
 } from '../jwt.js';
 
@@ -89,56 +88,3 @@ describe('isTokenExpired', () => {
   });
 });
 
-describe('hasBergetCodeSeat', () => {
-  it('returns true when berget_code_seat is present', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['berget_code_seat', 'default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(true);
-  });
-
-  it('returns true for a Pro seat (seat_plan_pro_seat)', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['seat_plan_pro_seat', 'default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(true);
-  });
-
-  it('returns true for a Summit seat (seat_plan_summit_seat)', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['seat_plan_summit_seat', 'default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(true);
-  });
-
-  it('returns true for a Mini seat (seat_plan_mini_seat)', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['seat_plan_mini_seat', 'default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(true);
-  });
-
-  it('returns false for look-alike roles that are not seat roles', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['seat_plan_pro', 'berget_code', 'seat_plan_pro_seat_v2'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(false);
-  });
-
-  it('returns false when role is missing', () => {
-    const token = makeJwt({
-      realm_access: { roles: ['default-roles-berget'] },
-    });
-    expect(hasBergetCodeSeat(token)).toBe(false);
-  });
-
-  it('returns false when realm_access is missing', () => {
-    const token = makeJwt({ sub: '123' });
-    expect(hasBergetCodeSeat(token)).toBe(false);
-  });
-
-  it('returns false for invalid JWT', () => {
-    expect(hasBergetCodeSeat('invalid')).toBe(false);
-    expect(hasBergetCodeSeat('only.two')).toBe(false);
-  });
-});
