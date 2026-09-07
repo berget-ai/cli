@@ -21,9 +21,22 @@ export function extractJwtExpiresAt(accessToken: string): number {
 }
 
 /**
- * Check if the JWT token has the `berget_code_seat` role.
+ * Seat roles that grant a paid Berget subscription, one per tier.
+ * `berget_code` is the legacy identifier for the Standard tier (do not rename);
+ * newer tiers follow `seat_plan_<tier>`. Mirrors
+ * backend-api/src/config/seat-product.config.ts.
+ */
+const SEAT_ROLES = [
+  'berget_code_seat',
+  'seat_plan_mini_seat',
+  'seat_plan_pro_seat',
+  'seat_plan_summit_seat',
+] as const;
+
+/**
+ * Check if the JWT token has any paid seat role (any tier: Standard/Mini/Pro/Summit).
  * @param accessToken The JWT access token
- * @returns true if the token has the `berget_code_seat` role, false otherwise
+ * @returns true if the token holds a seat role, false otherwise
  */
 export function hasBergetCodeSeat(accessToken: string): boolean {
   const decoded = parseJwtBody(accessToken);
@@ -32,7 +45,7 @@ export function hasBergetCodeSeat(accessToken: string): boolean {
   if (!realmAccess) return false;
   const roles = realmAccess.roles as string[] | undefined;
   if (!Array.isArray(roles)) return false;
-  return roles.includes('berget_code_seat');
+  return roles.some((role) => (SEAT_ROLES as readonly string[]).includes(role));
 }
 
 /**
