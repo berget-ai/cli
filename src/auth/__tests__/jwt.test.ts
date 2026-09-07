@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  decodeJwtPayload,
-  extractJwtExpiresAt,
-  isTokenExpired,
-} from '../jwt.js';
+import { decodeJwtPayload, extractJwtExpiresAt, isTokenExpired } from '../jwt.js';
 
 function base64urlEncode(data: string): string {
   return Buffer.from(data).toString('base64url');
@@ -87,4 +83,3 @@ describe('isTokenExpired', () => {
     expect(isTokenExpired(farFuture)).toBe(false);
   });
 });
-

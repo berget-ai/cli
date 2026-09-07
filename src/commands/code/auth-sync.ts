@@ -1,16 +1,8 @@
-import type {
-  ApiKeyServicePort,
-  AuthServicePort,
-  SeatStatusPort,
-} from './ports/auth-services.js';
+import type { ApiKeyServicePort, AuthServicePort, SeatStatusPort } from './ports/auth-services.js';
 import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
-import {
-  decodeJwtPayload,
-  extractJwtExpiresAt,
-  isTokenExpired,
-} from '../../auth/jwt.js';
+import { decodeJwtPayload, extractJwtExpiresAt, isTokenExpired } from '../../auth/jwt.js';
 import { logger } from '../../utils/logger.js';
 import { FatalError } from './errors.js';
 import { getOpencodeAuthPath, getPiAuthPath } from './xdg-paths.js';
@@ -293,7 +285,7 @@ async function handleHasSeat(
   homeDir: string,
   tool: 'opencode' | 'pi',
   cliAuth: CliAuth,
-  tier: string | null,
+  tier: null | string,
 ): Promise<AuthResult> {
   const tierLabel = (tier && TIER_LABELS[tier]) || 'Berget';
   const method = await prompter.select<'api_key' | 'subscription'>({

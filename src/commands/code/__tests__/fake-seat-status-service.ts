@@ -5,9 +5,9 @@ import type { SeatStatus, SeatStatusPort } from '../ports/auth-services.js';
  * "status could not be verified" (API down).
  */
 export class FakeSeatStatusService implements SeatStatusPort {
-  constructor(private readonly result: SeatStatus | null) {}
+  constructor(private readonly result: null | SeatStatus) {}
 
-  async fetchSeatStatus(): Promise<SeatStatus | null> {
+  async fetchSeatStatus(): Promise<null | SeatStatus> {
     return this.result;
   }
 }

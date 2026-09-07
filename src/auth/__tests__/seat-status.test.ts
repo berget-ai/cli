@@ -14,8 +14,8 @@ describe('seat-status service (GET /v1/auth/status)', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
-        ok: true,
         json: async () => ({ authenticated: true, seatId: 168, tier: 'seat_plan_pro' }),
+        ok: true,
       }),
     );
     const svc = createSeatStatusService();
@@ -30,8 +30,8 @@ describe('seat-status service (GET /v1/auth/status)', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
-        ok: true,
         json: async () => ({ authenticated: true, seatId: null, tier: null }),
+        ok: true,
       }),
     );
     const svc = createSeatStatusService();
@@ -41,7 +41,7 @@ describe('seat-status service (GET /v1/auth/status)', () => {
   it('returns null on non-OK responses (e.g. 401)', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) }),
+      vi.fn().mockResolvedValue({ json: async () => ({}), ok: false, status: 401 }),
     );
     const svc = createSeatStatusService();
     expect(await svc.fetchSeatStatus('token')).toBeNull();
@@ -55,7 +55,7 @@ describe('seat-status service (GET /v1/auth/status)', () => {
 
   it('honours BERGET_API_URL override', async () => {
     vi.stubEnv('BERGET_API_URL', 'https://api.stage.berget.ai');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({}), ok: true }));
     const svc = createSeatStatusService();
     await svc.fetchSeatStatus('token');
     expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('https://api.stage.berget.ai/v1/auth/status');

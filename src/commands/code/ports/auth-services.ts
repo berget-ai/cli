@@ -14,8 +14,8 @@ export interface AuthServicePort {
 }
 
 export interface SeatStatus {
-  seatId: number | null;
-  tier: string | null;
+  seatId: null | number;
+  tier: null | string;
 }
 
 /**
@@ -26,5 +26,5 @@ export interface SeatStatus {
  * caller can fall back to a warn-and-continue path.
  */
 export interface SeatStatusPort {
-  fetchSeatStatus(accessToken: string): Promise<SeatStatus | null>;
+  fetchSeatStatus(accessToken: string): Promise<null | SeatStatus>;
 }

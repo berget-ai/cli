@@ -1,5 +1,6 @@
-import { getAuthConfig } from '../../../auth/config.js';
 import type { SeatStatusPort } from '../ports/auth-services.js';
+
+import { getAuthConfig } from '../../../auth/config.js';
 
 /**
  * Resolves the caller's seat via GET /v1/auth/status — the API resolves the
@@ -21,7 +22,7 @@ export function createSeatStatusService(): SeatStatusPort {
           signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) return null;
-        const data = (await res.json()) as { seatId?: number | null; tier?: string | null };
+        const data = (await res.json()) as { seatId?: null | number; tier?: null | string };
         const seatStatus: { seatId: null | number; tier: null | string } = {
           seatId: data.seatId ?? null,
           tier: data.tier ?? null,

@@ -14,9 +14,9 @@ import {
 import { FatalError } from '../errors.js';
 import { FakeApiKeyService } from './fake-api-key-service.js';
 import { FakeAuthService } from './fake-auth-service.js';
-import { FakeSeatStatusService } from './fake-seat-status-service.js';
 import { FakeFileStore } from './fake-file-store.js';
 import { confirm, FakePrompter, select } from './fake-prompter.js';
+import { FakeSeatStatusService } from './fake-seat-status-service.js';
 
 const ENV_KEYS = [
   'XDG_CONFIG_HOME',
