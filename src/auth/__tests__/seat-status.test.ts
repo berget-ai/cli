@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createSeatStatusService } from '../seat-status.js';
+import { createSeatStatusService } from '../../commands/code/adapters/seat-status.js';
 
 const BASE = 'https://api.berget.ai';
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  delete process.env.BERGET_API_URL;
+  vi.unstubAllEnvs();
 });
 
 describe('seat-status service (GET /v1/auth/status)', () => {
@@ -54,7 +54,7 @@ describe('seat-status service (GET /v1/auth/status)', () => {
   });
 
   it('honours BERGET_API_URL override', async () => {
-    process.env.BERGET_API_URL = 'https://api.stage.berget.ai';
+    vi.stubEnv('BERGET_API_URL', 'https://api.stage.berget.ai');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
     const svc = createSeatStatusService();
     await svc.fetchSeatStatus('token');

@@ -460,6 +460,24 @@ describe('configureAuth', () => {
     expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
   });
 
+  it('seat without recognized tier ({seatId, tier: null}) → still treated as seat-holder', async () => {
+    const files = new FakeFileStore();
+    const prompter = new FakePrompter([select('subscription')]);
+
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 168, tier: null }),
+    });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(true);
+    // Seat path: OAuth synced, NOT the no-seat API-key prompt
+    const written = files.getWrittenFiles();
+    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
+    expect(parsed.berget.type).toBe('oauth');
+  });
+
   it('seat status unverifiable (API down) → warns and syncs OAuth anyway', async () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([]);

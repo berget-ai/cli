@@ -1,4 +1,5 @@
-import type { SeatStatusPort } from '../commands/code/ports/auth-services.js';
+import { getAuthConfig } from '../../../auth/config.js';
+import type { SeatStatusPort } from '../ports/auth-services.js';
 
 /**
  * Resolves the caller's seat via GET /v1/auth/status — the API resolves the
@@ -7,16 +8,17 @@ import type { SeatStatusPort } from '../commands/code/ports/auth-services.js';
  * deliberately NOT consulted (they drift: e.g. a stale berget_code_seat role
  * on a Summit subscriber).
  *
- * Never throws: any failure (network, non-OK, bad payload) returns null so
- * the caller can fall back to a warn-and-continue path.
+ * Never throws: any failure (network, timeout, non-OK, bad payload) returns
+ * null so the caller can fall back to a warn-and-continue path.
  */
 export function createSeatStatusService(): SeatStatusPort {
   return {
     async fetchSeatStatus(accessToken: string) {
-      const base = process.env.BERGET_API_URL || 'https://api.berget.ai';
+      const base = getAuthConfig().apiBaseUrl.replace(/\/$/, '');
       try {
         const res = await fetch(`${base}/v1/auth/status`, {
           headers: { Authorization: `Bearer ${accessToken}` },
+          signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) return null;
         const data = (await res.json()) as { seatId?: number | null; tier?: string | null };

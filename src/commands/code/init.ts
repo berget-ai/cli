@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth-service.js';
 import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
-import { createSeatStatusService } from '../../auth/seat-status.js';
+import { createSeatStatusService } from './adapters/seat-status.js';
 import { configureAuth, ensureCliAuth } from './auth-sync.js';
 import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {

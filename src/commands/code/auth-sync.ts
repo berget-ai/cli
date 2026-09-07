@@ -47,7 +47,7 @@ const TOOL_API_KEY_TYPES: Record<'opencode' | 'pi', string> = {
 };
 
 export async function configureAuth(
-  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter'>,
+  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter' | 'seatStatusService'>,
   tool: 'opencode' | 'pi',
   cliAuth: CliAuth | null,
 ): Promise<AuthResult> {
@@ -93,7 +93,7 @@ export async function configureAuth(
     return handleUnverifiedAuth(prompter, files, homeDir, tool, cliAuth);
   }
 
-  if (seatStatus.tier) {
+  if (seatStatus.seatId != null || seatStatus.tier != null) {
     return handleHasSeat(prompter, apiKeyService, files, homeDir, tool, cliAuth, seatStatus.tier);
   }
 
@@ -293,9 +293,9 @@ async function handleHasSeat(
   homeDir: string,
   tool: 'opencode' | 'pi',
   cliAuth: CliAuth,
-  tier: string,
+  tier: string | null,
 ): Promise<AuthResult> {
-  const tierLabel = TIER_LABELS[tier] ?? 'Berget';
+  const tierLabel = (tier && TIER_LABELS[tier]) || 'Berget';
   const method = await prompter.select<'api_key' | 'subscription'>({
     message: `You have a ${tierLabel} subscription. How do you want to authenticate?`,
     options: [
