@@ -10,6 +10,7 @@ import { FakeAuthService } from './fake-auth-service.js';
 import { FakeCommandRunner } from './fake-command-runner.js';
 import { FakeFileStore } from './fake-file-store.js';
 import { CANCEL, confirm, FakePrompter, multiselect, select } from './fake-prompter.js';
+import { FakeSeatStatusService } from './fake-seat-status-service.js';
 
 const ENV_KEYS = [
   'XDG_CONFIG_HOME',
@@ -48,6 +49,8 @@ const makeDeps = (
     homeDir: '/home/user',
     isTty: overrides.isTty ?? true,
     prompter: overrides.prompter ?? new FakePrompter([]),
+    seatStatusService:
+      overrides.seatStatusService ?? new FakeSeatStatusService({ seatId: null, tier: null }),
     ...Object.fromEntries(
       Object.entries(overrides).filter(
         ([k]) =>
@@ -575,6 +578,7 @@ describe('runInit', () => {
           confirm(true, 'Create'),
           multiselect([]),
         ]),
+        seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
       });
 
       await runInit(deps);
@@ -730,6 +734,7 @@ describe('runInit', () => {
           select('project'),
           select('subscription'),
         ]),
+        seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
       });
 
       await runInit(deps);

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import * as os from 'node:os';
 
-import type { ApiKeyServicePort, AuthServicePort } from './ports/auth-services.js';
+import type { ApiKeyServicePort, AuthServicePort, SeatStatusPort } from './ports/auth-services.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
@@ -10,8 +10,8 @@ import { ApiKeyService } from '../../services/api-key-service.js';
 import { AuthService } from '../../services/auth-service.js';
 import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
-import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
 import { createSeatStatusService } from './adapters/seat-status.js';
+import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
 import { configureAuth, ensureCliAuth } from './auth-sync.js';
 import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {
@@ -37,6 +37,7 @@ export interface WizardDeps {
   homeDir: string;
   isTty?: boolean;
   prompter: Prompter;
+  seatStatusService: SeatStatusPort;
 }
 
 export async function executeInitCommand(deps: WizardDeps): Promise<InitCommandResult> {
@@ -54,7 +55,17 @@ export async function executeInitCommand(deps: WizardDeps): Promise<InitCommandR
 }
 
 export async function runInit(deps: WizardDeps): Promise<void> {
-  const { apiKeyService, authService, commands, cwd, files, homeDir, isTty, prompter } = deps;
+  const {
+    apiKeyService,
+    authService,
+    commands,
+    cwd,
+    files,
+    homeDir,
+    isTty,
+    prompter,
+    seatStatusService,
+  } = deps;
 
   prompter.intro(`${chalk.bgGreen.black(' berget code ')}`);
   prompter.note(
@@ -96,7 +107,7 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   prompter.log('step', 'Configuring authentication...');
 
   const authResult = await configureAuth(
-    { apiKeyService, files, homeDir, prompter },
+    { apiKeyService, files, homeDir, prompter, seatStatusService },
     tool,
     cliAuth,
   );
