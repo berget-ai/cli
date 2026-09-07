@@ -81,5 +81,9 @@
     "*.{json,yml,yaml,md}": [
       "prettier --write"
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/berget-ai/cli.git"
   }
 }
