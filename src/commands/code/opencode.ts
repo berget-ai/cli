@@ -10,7 +10,7 @@ import { CancelledError } from './errors.js';
 import { readJsonMaybe } from './utils.js';
 import { getOpencodeConfigDir, resolveGlobalConfigPath } from './xdg-paths.js';
 
-const OPENCODE_PLUGIN = '@bergetai/opencode-auth@^1.0.26';
+const OPENCODE_PLUGIN = '@bergetai/opencode-auth@latest';
 const OPENCODE_PLUGIN_NAME = '@bergetai/opencode-auth';
 
 export interface InitOpenCodeDeps {
