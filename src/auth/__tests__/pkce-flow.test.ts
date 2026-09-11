@@ -85,7 +85,7 @@ vi.mock('openid-client', async () => {
   return {
     authorizationCodeGrant: vi.fn(),
     buildAuthorizationUrl: vi.fn((_config, params) => {
-      const url = new URL('https://keycloak.berget.ai/realms/berget/protocol/openid-connect/auth');
+      const url = new URL('https://auth.berget.ai/realms/berget/protocol/openid-connect/auth');
       for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value as string);
       }
@@ -304,7 +304,7 @@ describe('startPkceFlow', () => {
 
     // Keycloak sends extra params like iss and session_state
     const req = {
-      url: '/callback?code=authcode123&state=mock-state-uuid&iss=https%3A%2F%2Fkeycloak.berget.ai%2Frealms%2Fberget&session_state=abc-def',
+      url: '/callback?code=authcode123&state=mock-state-uuid&iss=https%3A%2F%2Fauth.berget.ai%2Frealms%2Fberget&session_state=abc-def',
     };
     const res = { end: vi.fn(), writeHead: vi.fn() };
     mockServer._triggerRequest(req, res);
@@ -315,7 +315,7 @@ describe('startPkceFlow', () => {
     const passedUrl = (authorizationCodeGrant as ReturnType<typeof vi.fn>).mock.calls[0][1] as URL;
     expect(passedUrl.searchParams.get('code')).toBe('authcode123');
     expect(passedUrl.searchParams.get('state')).toBe('mock-state-uuid');
-    expect(passedUrl.searchParams.get('iss')).toBe('https://keycloak.berget.ai/realms/berget');
+    expect(passedUrl.searchParams.get('iss')).toBe('https://auth.berget.ai/realms/berget');
     expect(passedUrl.searchParams.get('session_state')).toBe('abc-def');
   });
 });

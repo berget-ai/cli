@@ -127,8 +127,8 @@ describe('refreshAccessToken', () => {
     const storeB = createMockStore({
       _data: { access_token: 'old-b', expires_at: 1, refresh_token: 'refresh-b' },
     });
-    const configA = { issuer: 'https://keycloak.berget.ai' } as any;
-    const configB = { issuer: 'https://keycloak.stage.berget.ai' } as any;
+    const configA = { issuer: 'https://auth.berget.ai' } as any;
+    const configB = { issuer: 'https://auth.stage.berget.ai' } as any;
 
     mockRefreshTokenGrantResult = {
       access_token: 'new-token',
