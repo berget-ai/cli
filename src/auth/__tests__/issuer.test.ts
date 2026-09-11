@@ -23,17 +23,17 @@ describe('getConfiguration', () => {
     const authConfig = {
       apiBaseUrl: 'https://api.berget.ai',
       clientId: 'berget-code',
-      keycloakUrl: 'https://keycloak.berget.ai',
+      keycloakUrl: 'https://auth.berget.ai',
       realm: 'berget',
     };
 
     const result1 = await getConfiguration(authConfig);
-    expect((result1 as any)._url).toBe('https://keycloak.berget.ai/realms/berget');
+    expect((result1 as any)._url).toBe('https://auth.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(1);
 
     // Second call should use cache
     const result2 = await getConfiguration(authConfig);
-    expect((result2 as any)._url).toBe('https://keycloak.berget.ai/realms/berget');
+    expect((result2 as any)._url).toBe('https://auth.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(1); // no additional call
   });
 
@@ -41,7 +41,7 @@ describe('getConfiguration', () => {
     const authConfig = {
       apiBaseUrl: 'https://api.berget.ai',
       clientId: 'berget-code',
-      keycloakUrl: 'https://keycloak.berget.ai',
+      keycloakUrl: 'https://auth.berget.ai',
       realm: 'berget',
     };
 
@@ -52,11 +52,11 @@ describe('getConfiguration', () => {
 
     const stageConfig = {
       ...authConfig,
-      keycloakUrl: 'https://keycloak.stage.berget.ai',
+      keycloakUrl: 'https://auth.stage.berget.ai',
     };
 
     const result = await getConfiguration(stageConfig);
-    expect((result as any)._url).toBe('https://keycloak.stage.berget.ai/realms/berget');
+    expect((result as any)._url).toBe('https://auth.stage.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(2);
   });
 
@@ -64,22 +64,22 @@ describe('getConfiguration', () => {
     const prodConfig = {
       apiBaseUrl: 'https://api.berget.ai',
       clientId: 'berget-code',
-      keycloakUrl: 'https://keycloak.berget.ai',
+      keycloakUrl: 'https://auth.berget.ai',
       realm: 'berget',
     };
 
     const stageConfig = {
       ...prodConfig,
-      keycloakUrl: 'https://keycloak.stage.berget.ai',
+      keycloakUrl: 'https://auth.stage.berget.ai',
     };
 
     // First call discovers stage
     const stageResult = await getConfiguration(stageConfig);
-    expect((stageResult as any)._url).toBe('https://keycloak.stage.berget.ai/realms/berget');
+    expect((stageResult as any)._url).toBe('https://auth.stage.berget.ai/realms/berget');
 
     // Second call with prod must NOT return stage config from cache
     const prodResult = await getConfiguration(prodConfig);
-    expect((prodResult as any)._url).toBe('https://keycloak.berget.ai/realms/berget');
+    expect((prodResult as any)._url).toBe('https://auth.berget.ai/realms/berget');
     expect(mockDiscoveryCalls).toHaveLength(2); // two distinct discoveries
   });
 });
