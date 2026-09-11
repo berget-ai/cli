@@ -20,19 +20,19 @@ export function getAuthConfig(options?: { local?: boolean; stage?: boolean }): A
     apiBaseUrl = process.env.BERGET_API_URL;
     // Infer keycloak from API URL for custom endpoints
     if (apiBaseUrl.includes('localhost') || apiBaseUrl.includes('stage.')) {
-      keycloakUrl = 'https://keycloak.stage.berget.ai';
+      keycloakUrl = 'https://auth.stage.berget.ai';
     } else {
-      keycloakUrl = 'https://keycloak.berget.ai';
+      keycloakUrl = 'https://auth.berget.ai';
     }
   } else if (options?.local) {
     apiBaseUrl = 'http://localhost:3000';
-    keycloakUrl = 'https://keycloak.stage.berget.ai';
+    keycloakUrl = 'https://auth.stage.berget.ai';
   } else if (options?.stage) {
     apiBaseUrl = 'https://api.stage.berget.ai';
-    keycloakUrl = 'https://keycloak.stage.berget.ai';
+    keycloakUrl = 'https://auth.stage.berget.ai';
   } else {
     apiBaseUrl = 'https://api.berget.ai';
-    keycloakUrl = 'https://keycloak.berget.ai';
+    keycloakUrl = 'https://auth.berget.ai';
   }
 
   return {
