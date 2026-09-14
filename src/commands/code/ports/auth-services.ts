@@ -4,7 +4,7 @@ export interface ApiKeyServicePort {
 
 export interface AuthServicePort {
   login(): Promise<boolean>;
-  loginInteractive(options?: { debug?: boolean }): Promise<{
+  loginInteractive(options?: { debug?: boolean; method?: 'browser' | 'device' }): Promise<{
     accessToken?: string;
     error?: string;
     expiresIn?: number;

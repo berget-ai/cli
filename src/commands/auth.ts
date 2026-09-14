@@ -16,9 +16,10 @@ export function registerAuthCommands(program: Command): void {
   auth
     .command(AuthService.COMMANDS.LOGIN)
     .description('Log in to Berget')
-    .action(async () => {
+    .option('--device', 'Sign in with a device code (QR / another machine) instead of the browser')
+    .action(async (options: { device?: boolean }) => {
       const authService = AuthService.getInstance();
-      await authService.login();
+      await authService.login({ method: options.device ? 'device' : undefined });
     });
 
   auth

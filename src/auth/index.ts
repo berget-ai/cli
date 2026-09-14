@@ -5,6 +5,7 @@ export { resolveAuth } from './credentials/resolver.js';
 export { clearConfigurationCache, getConfiguration } from './issuer.js';
 export { decodeJwtPayload, extractJwtExpiresAt, isTokenExpired } from './jwt.js';
 export { authMiddleware } from './middleware/auth-middleware.js';
+export { startDeviceFlow } from './oauth/device-flow.js';
 export { startPkceFlow } from './oauth/pkce-flow.js';
 export { refreshAccessToken } from './oauth/token-refresh.js';
 export { FileTokenStore, TokenStore } from './storage/token-store.js';

@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { getAuthConfig } from '../auth/config.js';
 import { getConfiguration } from '../auth/issuer.js';
 import { extractJwtExpiresAt } from '../auth/jwt.js';
+import { startDeviceFlow } from '../auth/oauth/device-flow.js';
 import { startPkceFlow } from '../auth/oauth/pkce-flow.js';
 import { FileTokenStore } from '../auth/storage/token-store.js';
 import { createAuthenticatedClient } from '../client.js';
@@ -36,7 +37,11 @@ export class AuthService {
    * Prints status to stdout/stderr. Use loginInteractive() when you need
    * a silent, UI-agnostic result (e.g. inside the setup wizard).
    */
-  public async login(options?: { debug?: boolean; stage?: boolean }): Promise<boolean> {
+  public async login(options?: {
+    debug?: boolean;
+    method?: 'browser' | 'device';
+    stage?: boolean;
+  }): Promise<boolean> {
     try {
       const result = await this.loginInteractive(options);
 
@@ -72,7 +77,12 @@ export class AuthService {
    * Does NOT print to stdout — returns tokens so callers can display
    * their own UI (e.g. via clack/prompts).
    */
-  public async loginInteractive(options?: { debug?: boolean; stage?: boolean }): Promise<{
+  public async loginInteractive(options?: {
+    debug?: boolean;
+    /** Force a login method; default: browser PKCE. */
+    method?: 'browser' | 'device';
+    stage?: boolean;
+  }): Promise<{
     accessToken?: string;
     error?: string;
     expiresIn?: number;
@@ -81,8 +91,14 @@ export class AuthService {
   }> {
     try {
       const config = getAuthConfig(options);
-      const configuration = await getConfiguration(config);
-      const result = await startPkceFlow({ config: configuration, debug: options?.debug });
+      const authResult =
+        options?.method === 'device'
+          ? await startDeviceFlow({ config, debug: options?.debug })
+          : await (async () => {
+              const configuration = await getConfiguration(config);
+              return startPkceFlow({ config: configuration, debug: options?.debug });
+            })();
+      const result = authResult;
 
       if (result.success && result.accessToken && result.refreshToken) {
         const tokenStore = new FileTokenStore();

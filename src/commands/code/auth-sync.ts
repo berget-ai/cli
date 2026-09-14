@@ -105,11 +105,28 @@ export async function ensureCliAuth(
 
   prompter.note('Authentication required to use Berget AI.', 'Connect your account');
 
+  const method = await prompter.select<'browser' | 'device'>({
+    message: 'How do you want to sign in?',
+    options: [
+      { label: 'Browser (opens the login page here)', value: 'browser' },
+      {
+        hint: 'Scan a code with your phone — for SSH/headless machines',
+        label: 'Device code (QR / another device)',
+        value: 'device',
+      },
+    ],
+  });
+
   const s = prompter.spinner();
-  s.start('Waiting for browser login...');
+  s.start(
+    method === 'device'
+      ? 'Waiting for approval on your other device...'
+      : 'Waiting for browser login...',
+  );
 
   const loginResult = await authService.loginInteractive({
     debug: process.env.LOG_LEVEL === 'debug',
+    method,
   });
   if (!loginResult.success) {
     s.stop('Login failed.');

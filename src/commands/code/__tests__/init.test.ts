@@ -96,6 +96,7 @@ describe('runInit', () => {
     it('sets up opencode project without existing config', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'), // Config write
@@ -115,6 +116,7 @@ describe('runInit', () => {
     it('sets up opencode globally without existing config', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('global'),
           confirm(true, 'Create'), // Config write
@@ -134,7 +136,7 @@ describe('runInit', () => {
         commands: new FakeCommandRunner()
           .handle('pi --version', 'mocked') // For checkInstalled
           .handle('pi install', ''), // For actual install
-        prompter: new FakePrompter([select('pi'), select('project')]),
+        prompter: new FakePrompter([select('browser'), select('pi'), select('project')]),
       });
 
       await runInit(deps);
@@ -150,7 +152,7 @@ describe('runInit', () => {
         commands: new FakeCommandRunner()
           .handle('pi --version', 'mocked') // For checkInstalled
           .handle('pi install', ''), // For actual install
-        prompter: new FakePrompter([select('pi'), select('project')]),
+        prompter: new FakePrompter([select('browser'), select('pi'), select('project')]),
       });
 
       await expect(runInit(deps)).resolves.not.toThrow();
@@ -161,7 +163,7 @@ describe('runInit', () => {
     it('handles missing opencode with interactive prompt', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner(),
-        prompter: new FakePrompter([select('opencode'), select('exit')]),
+        prompter: new FakePrompter([select('browser'), select('opencode'), select('exit')]),
       });
 
       // User selects 'exit' when prompted about missing tool
@@ -171,7 +173,12 @@ describe('runInit', () => {
     it('continues without installing when user chooses continue', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner(),
-        prompter: new FakePrompter([select('opencode'), select('continue'), select('project')]),
+        prompter: new FakePrompter([
+          select('browser'),
+          select('opencode'),
+          select('continue'),
+          select('project'),
+        ]),
       });
 
       // Should complete without throwing - auth is configured even without tool
@@ -184,7 +191,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands: createStubRunner([false]), // opencode not installed
         isTty: false,
-        prompter: new FakePrompter([select('opencode')]),
+        prompter: new FakePrompter([select('browser'), select('opencode')]),
       });
 
       await expect(runInit(deps)).rejects.toBeInstanceOf(FatalError);
@@ -194,7 +201,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands: createStubRunner([false]), // pi not installed
         isTty: false,
-        prompter: new FakePrompter([select('pi')]),
+        prompter: new FakePrompter([select('browser'), select('pi')]),
       });
 
       await expect(runInit(deps)).rejects.toBeInstanceOf(FatalError);
@@ -208,6 +215,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands,
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('retry'),
           select('project'),
@@ -228,6 +236,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands,
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('retry'),
           select('continue'),
@@ -248,6 +257,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands,
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('retry'),
           select('retry'),
@@ -269,6 +279,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands,
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('retry'),
           select('retry'),
@@ -286,7 +297,7 @@ describe('runInit', () => {
   describe('cancellation', () => {
     it('throws CancelledError when user cancels at tool selection', async () => {
       const deps = makeDeps({
-        prompter: new FakePrompter([select(CANCEL)]),
+        prompter: new FakePrompter([select('browser'), select(CANCEL)]),
       });
 
       await expect(runInit(deps)).rejects.toBeInstanceOf(CancelledError);
@@ -295,6 +306,7 @@ describe('runInit', () => {
     it('throws CancelledError when user cancels at write confirmation', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(false, 'Create'),
@@ -307,6 +319,7 @@ describe('runInit', () => {
     it('throws CancelledError when user cancels at agent write confirmation (opencode)', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'),
@@ -323,6 +336,7 @@ describe('runInit', () => {
     it('preserves existing configuration keys when updating', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Write'),
@@ -351,6 +365,7 @@ describe('runInit', () => {
     it('preserves jsonc comments when updating', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Write'),
@@ -381,7 +396,12 @@ describe('runInit', () => {
 
     it('shows no changes needed when config is already up to date', async () => {
       const deps = makeDeps({
-        prompter: new FakePrompter([select('opencode'), select('project'), multiselect([])]),
+        prompter: new FakePrompter([
+          select('browser'),
+          select('opencode'),
+          select('project'),
+          multiselect([]),
+        ]),
       });
 
       const files = deps.files as FakeFileStore;
@@ -411,7 +431,7 @@ describe('runInit', () => {
     it('preserves existing Pi settings when setting defaultProvider', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
-        prompter: new FakePrompter([select('pi'), select('project')]),
+        prompter: new FakePrompter([select('browser'), select('pi'), select('project')]),
       });
 
       const files = deps.files as FakeFileStore;
@@ -435,6 +455,7 @@ describe('runInit', () => {
     it('creates parent directories when writing files', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('global'),
           confirm(true, 'Create'),
@@ -455,6 +476,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
         prompter: new FakePrompter([
+          select('browser'),
           select('pi'),
           select('project'),
           confirm(true, 'Set up an agent for Pi?'),
@@ -478,7 +500,7 @@ describe('runInit', () => {
         commands: new FakeCommandRunner()
           .handle('pi --version', 'mocked')
           .handle('pi install', new Error('npm error')),
-        prompter: new FakePrompter([select('pi'), select('project')]),
+        prompter: new FakePrompter([select('browser'), select('pi'), select('project')]),
       });
 
       await expect(runInit(deps)).rejects.toBeInstanceOf(CommandFailedError);
@@ -496,6 +518,7 @@ describe('runInit', () => {
       const deps = makeDeps({
         files,
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           select('keep'), // New: keep existing auth
@@ -519,6 +542,7 @@ describe('runInit', () => {
         commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
         files: new FakeFileStore(), // No pre-seeded auth → auth flow runs
         prompter: new FakePrompter([
+          select('browser'),
           select('pi'),
           select('project'),
           confirm(true, 'Set up an agent for Pi?'),
@@ -543,6 +567,7 @@ describe('runInit', () => {
         commands: new FakeCommandRunner().handle('pi --version', 'mocked').handle('pi install', ''),
         files,
         prompter: new FakePrompter([
+          select('browser'),
           select('pi'),
           select('project'),
           confirm(true), // API key creation prompt
@@ -593,6 +618,7 @@ describe('runInit', () => {
     it('sets up multiple agents for opencode project', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'),
@@ -612,6 +638,7 @@ describe('runInit', () => {
     it('sets up no agents for opencode when none selected', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'),
@@ -631,6 +658,7 @@ describe('runInit', () => {
     it('sets up agent globally for opencode', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('global'),
           confirm(true, 'Create'),
@@ -649,6 +677,7 @@ describe('runInit', () => {
     it('skips writing identical opencode agent files', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'),
@@ -672,6 +701,7 @@ describe('runInit', () => {
       const deps2 = makeDeps({
         files,
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           multiselect(['backend', 'frontend']),
@@ -697,6 +727,7 @@ describe('runInit', () => {
         authService: new FakeAuthService(false), // login fails
         commands: new FakeCommandRunner().handle('opencode --version', 'mocked'), // tool is installed
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'),
@@ -753,6 +784,7 @@ describe('runInit', () => {
         authService: new FakeAuthService(false), // login fails
         commands: new FakeCommandRunner(), // opencode not installed
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('continue'), // skip install
           select('project'),
@@ -777,6 +809,7 @@ describe('executeInitCommand', () => {
     it('returns exitCode 0 on success', async () => {
       const deps = makeDeps({
         prompter: new FakePrompter([
+          select('browser'),
           select('opencode'),
           select('project'),
           confirm(true, 'Create'),
@@ -791,7 +824,7 @@ describe('executeInitCommand', () => {
 
     it('returns exitCode 130 on CancelledError', async () => {
       const deps = makeDeps({
-        prompter: new FakePrompter([select(CANCEL)]),
+        prompter: new FakePrompter([select('browser'), select(CANCEL)]),
       });
 
       const result = await executeInitCommand(deps);
@@ -803,7 +836,7 @@ describe('executeInitCommand', () => {
       const deps = makeDeps({
         commands: createStubRunner([false]), // not installed
         isTty: false,
-        prompter: new FakePrompter([select('opencode')]),
+        prompter: new FakePrompter([select('browser'), select('opencode')]),
       });
 
       const result = await executeInitCommand(deps);
@@ -820,7 +853,7 @@ describe('executeInitCommand', () => {
           },
           run: async () => '',
         },
-        prompter: new FakePrompter([select('opencode')]),
+        prompter: new FakePrompter([select('browser'), select('opencode')]),
       });
 
       const result = await executeInitCommand(deps);
@@ -833,7 +866,7 @@ describe('executeInitCommand', () => {
         commands: new FakeCommandRunner()
           .handle('pi --version', 'mocked')
           .handle('pi install', new Error('npm error')),
-        prompter: new FakePrompter([select('pi'), select('project')]),
+        prompter: new FakePrompter([select('browser'), select('pi'), select('project')]),
       });
 
       const result = await executeInitCommand(deps);
@@ -849,7 +882,7 @@ describe('executeInitCommand', () => {
           },
           run: async () => '',
         },
-        prompter: new FakePrompter([select('opencode')]),
+        prompter: new FakePrompter([select('browser'), select('opencode')]),
       });
 
       await expect(executeInitCommand(deps)).rejects.toThrow('unexpected explosion');
@@ -861,7 +894,7 @@ describe('executeInitCommand', () => {
       const deps = makeDeps({
         commands: createStubRunner([false]), // not installed
         isTty: false,
-        prompter: new FakePrompter([select('opencode')]),
+        prompter: new FakePrompter([select('browser'), select('opencode')]),
       });
 
       const result = await executeInitCommand(deps);
@@ -874,7 +907,7 @@ describe('executeInitCommand', () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner(), // pi not installed
         isTty: false,
-        prompter: new FakePrompter([select('pi')]),
+        prompter: new FakePrompter([select('browser'), select('pi')]),
       });
 
       const result = await executeInitCommand(deps);
