@@ -1,3 +1,4 @@
+import * as p from '@clack/prompts';
 import chalk from 'chalk';
 
 import { getAuthConfig } from '../auth/config.js';
@@ -43,7 +44,29 @@ export class AuthService {
     stage?: boolean;
   }): Promise<boolean> {
     try {
-      const result = await this.loginInteractive(options);
+      // Interactive default: ask how to sign in (non-TTY and explicit
+      // --device skip the prompt).
+      let method = options?.method;
+      if (!method && process.stdin.isTTY) {
+        const choice = await p.select<'browser' | 'device'>({
+          message: 'How do you want to sign in?',
+          options: [
+            { label: 'Login using this device', value: 'browser' },
+            {
+              hint: 'Scan a code with your phone — for SSH/headless machines',
+              label: 'Login using other device with QR',
+              value: 'device',
+            },
+          ],
+        });
+        if (p.isCancel(choice)) {
+          console.log(chalk.yellow('\nLogin cancelled.'));
+          return false;
+        }
+        method = choice as 'browser' | 'device';
+      }
+
+      const result = await this.loginInteractive({ ...options, method });
 
       if (!result.success) {
         console.log(chalk.red(`\nAuthentication failed: ${result.error || 'Unknown error'}`));

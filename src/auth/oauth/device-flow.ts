@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import QRCode from 'qrcode';
 
 import type { AuthConfig } from '../types.js';
@@ -111,7 +112,7 @@ export function renderTerminalQrCode(data: string): string {
 
   const lines: string[] = [];
   for (let r = 0; r < total; r += 2) {
-    let line = '  ';
+    let line = '    ';
     for (let c = 0; c < total; c += 1) {
       const top = moduleAt(r, c) === 1;
       const bottom = moduleAt(r + 1, c) === 1;
@@ -167,16 +168,18 @@ export async function startDeviceFlow(options: DeviceFlowOptions): Promise<Brows
 
   const verificationUri = deviceInfo.verification_uri_complete ?? deviceInfo.verification_uri;
 
+  const linkedUrl = `\u001B]8;;${verificationUri}\u0007${verificationUri}\u001B]8;;\u0007`;
+
   console.log('');
-  console.log('  Scan with your phone, or open this link — the code is included:');
-  console.log(`  ${verificationUri}`);
+  console.log(chalk.cyan.bold('  Scan with your phone, or open this link — the code is included:'));
+  console.log('');
+  console.log(`  ${chalk.underline(linkedUrl)}`);
   console.log('');
   console.log(renderTerminalQrCode(verificationUri));
   console.log('');
-  console.log(`  Or enter the code manually: ${deviceInfo.user_code}`);
+  console.log(`  Or enter the code manually: ${chalk.bold(deviceInfo.user_code)}`);
   console.log(`  Valid for ${Math.round(deviceInfo.expires_in / 60)} minutes.`);
   console.log('');
-  console.log('  Waiting for approval...');
 
   return pollForTokens({ baseUrl, clientId: options.config.clientId, debug, deviceInfo });
 }

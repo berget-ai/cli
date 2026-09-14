@@ -108,10 +108,10 @@ export async function ensureCliAuth(
   const method = await prompter.select<'browser' | 'device'>({
     message: 'How do you want to sign in?',
     options: [
-      { label: 'Browser (opens the login page here)', value: 'browser' },
+      { label: 'Login using this device', value: 'browser' },
       {
         hint: 'Scan a code with your phone — for SSH/headless machines',
-        label: 'Device code (QR / another device)',
+        label: 'Login using other device with QR',
         value: 'device',
       },
     ],
