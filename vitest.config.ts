@@ -16,7 +16,7 @@ export default defineConfig({
       },
     },
     environment: 'node',
-    exclude: ['node_modules', 'dist'],
+    exclude: ['node_modules', 'dist', '.pi/**'],
     globals: true,
   },
 });

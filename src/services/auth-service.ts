@@ -96,9 +96,11 @@ export class AuthService {
   }
 
   /**
-   * Browser-based PKCE login for wizard / programmatic use.
-   * Does NOT print to stdout — returns tokens so callers can display
-   * their own UI (e.g. via clack/prompts).
+   * Login for wizard / programmatic use. The browser (PKCE) method does NOT
+   * print to stdout — it returns tokens so callers can display their own UI
+   * (e.g. via clack/prompts). The device method PRINTS its QR/link/user-code
+   * instructions to stdout; callers must not hold an active spinner while it
+   * runs (a clack spinner repaints every ~80ms and would erase the output).
    */
   public async loginInteractive(options?: {
     debug?: boolean;

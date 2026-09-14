@@ -6,8 +6,7 @@ import type { BrowserAuthResult } from '../types.js';
 
 import { logger, LogLevel } from '../../utils/logger.js';
 
-const DEVICE_AUTHORIZATION_PATH = '/realms/berget/protocol/openid-connect/auth/device';
-const TOKEN_PATH = '/realms/berget/protocol/openid-connect/token';
+const OPENID_CONNECT_PATH = '/protocol/openid-connect';
 const DEVICE_FLOW_SCOPE = 'openid email profile offline_access device-email-otp';
 
 const DEFAULT_POLL_INTERVAL_SECONDS = 5;
@@ -139,11 +138,13 @@ export function renderTerminalQrCode(data: string): string {
  */
 export async function startDeviceFlow(options: DeviceFlowOptions): Promise<BrowserAuthResult> {
   const debug = options.debug || logger.getLogLevel() >= LogLevel.DEBUG;
-  const baseUrl = `https://${new URL(options.config.keycloakUrl).host}`;
+  const baseUrl = `${options.config.keycloakUrl.replace(/\/$/, '')}/realms/${options.config.realm}`;
+  // Same scope the opencode/pi plugins request; device-email-otp is assigned
+  // to the berget-code client on both stage and prod realms.
 
   let deviceInfo: DeviceAuthorizationResponse;
   try {
-    const response = await fetch(`${baseUrl}${DEVICE_AUTHORIZATION_PATH}`, {
+    const response = await fetch(`${baseUrl}${OPENID_CONNECT_PATH}/auth/device`, {
       body: new URLSearchParams({
         client_id: options.config.clientId,
         scope: DEVICE_FLOW_SCOPE,
@@ -159,6 +160,13 @@ export async function startDeviceFlow(options: DeviceFlowOptions): Promise<Brows
     }
 
     deviceInfo = (await response.json()) as DeviceAuthorizationResponse;
+    if (
+      typeof deviceInfo.device_code !== 'string' ||
+      typeof deviceInfo.user_code !== 'string' ||
+      typeof deviceInfo.expires_in !== 'number'
+    ) {
+      throw new TypeError('Invalid device authorization response from Keycloak');
+    }
   } catch (error) {
     return {
       error: `Failed to start device flow: ${error instanceof Error ? error.message : String(error)}`,
@@ -195,7 +203,7 @@ async function fetchTokenPollBody(
   deviceInfo: DeviceAuthorizationResponse,
 ): Promise<Record<string, unknown> | undefined> {
   try {
-    const response = await fetch(`${baseUrl}${TOKEN_PATH}`, {
+    const response = await fetch(`${baseUrl}${OPENID_CONNECT_PATH}/token`, {
       body: new URLSearchParams({
         client_id: clientId,
         device_code: deviceInfo.device_code,
@@ -237,7 +245,15 @@ async function pollForTokens(input: {
       return result;
     }
 
-    const action = handlePollError(data as unknown as DeviceTokenErrorResponse, intervalSeconds);
+    let action: { intervalSeconds?: number };
+    try {
+      action = handlePollError(data as unknown as DeviceTokenErrorResponse, intervalSeconds);
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : String(error),
+        success: false,
+      };
+    }
     if (action.intervalSeconds !== undefined) {
       intervalSeconds = action.intervalSeconds;
     }
