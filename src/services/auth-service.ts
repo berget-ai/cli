@@ -1,8 +1,10 @@
+import * as p from '@clack/prompts';
 import chalk from 'chalk';
 
 import { getAuthConfig } from '../auth/config.js';
 import { getConfiguration } from '../auth/issuer.js';
 import { extractJwtExpiresAt } from '../auth/jwt.js';
+import { startDeviceFlow } from '../auth/oauth/device-flow.js';
 import { startPkceFlow } from '../auth/oauth/pkce-flow.js';
 import { FileTokenStore } from '../auth/storage/token-store.js';
 import { createAuthenticatedClient } from '../client.js';
@@ -36,9 +38,35 @@ export class AuthService {
    * Prints status to stdout/stderr. Use loginInteractive() when you need
    * a silent, UI-agnostic result (e.g. inside the setup wizard).
    */
-  public async login(options?: { debug?: boolean; stage?: boolean }): Promise<boolean> {
+  public async login(options?: {
+    debug?: boolean;
+    method?: 'browser' | 'device';
+    stage?: boolean;
+  }): Promise<boolean> {
     try {
-      const result = await this.loginInteractive(options);
+      // Interactive default: ask how to sign in (non-TTY and explicit
+      // --device skip the prompt).
+      let method = options?.method;
+      if (!method && process.stdin.isTTY) {
+        const choice = await p.select<'browser' | 'device'>({
+          message: 'How do you want to sign in?',
+          options: [
+            { label: 'Login using this device', value: 'browser' },
+            {
+              hint: 'Scan a code with your phone — for SSH/headless machines',
+              label: 'Login using other device with QR',
+              value: 'device',
+            },
+          ],
+        });
+        if (p.isCancel(choice)) {
+          console.log(chalk.yellow('\nLogin cancelled.'));
+          return false;
+        }
+        method = choice as 'browser' | 'device';
+      }
+
+      const result = await this.loginInteractive({ ...options, method });
 
       if (!result.success) {
         console.log(chalk.red(`\nAuthentication failed: ${result.error || 'Unknown error'}`));
@@ -68,11 +96,18 @@ export class AuthService {
   }
 
   /**
-   * Browser-based PKCE login for wizard / programmatic use.
-   * Does NOT print to stdout — returns tokens so callers can display
-   * their own UI (e.g. via clack/prompts).
+   * Login for wizard / programmatic use. The browser (PKCE) method does NOT
+   * print to stdout — it returns tokens so callers can display their own UI
+   * (e.g. via clack/prompts). The device method PRINTS its QR/link/user-code
+   * instructions to stdout; callers must not hold an active spinner while it
+   * runs (a clack spinner repaints every ~80ms and would erase the output).
    */
-  public async loginInteractive(options?: { debug?: boolean; stage?: boolean }): Promise<{
+  public async loginInteractive(options?: {
+    debug?: boolean;
+    /** Force a login method; default: browser PKCE. */
+    method?: 'browser' | 'device';
+    stage?: boolean;
+  }): Promise<{
     accessToken?: string;
     error?: string;
     expiresIn?: number;
@@ -81,8 +116,14 @@ export class AuthService {
   }> {
     try {
       const config = getAuthConfig(options);
-      const configuration = await getConfiguration(config);
-      const result = await startPkceFlow({ config: configuration, debug: options?.debug });
+      const authResult =
+        options?.method === 'device'
+          ? await startDeviceFlow({ config, debug: options?.debug })
+          : await (async () => {
+              const configuration = await getConfiguration(config);
+              return startPkceFlow({ config: configuration, debug: options?.debug });
+            })();
+      const result = authResult;
 
       if (result.success && result.accessToken && result.refreshToken) {
         const tokenStore = new FileTokenStore();

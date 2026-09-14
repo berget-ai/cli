@@ -105,26 +105,73 @@ export async function ensureCliAuth(
 
   prompter.note('Authentication required to use Berget AI.', 'Connect your account');
 
-  const s = prompter.spinner();
-  s.start('Waiting for browser login...');
+  const method = await prompter.select<'browser' | 'device'>({
+    message: 'How do you want to sign in?',
+    options: [
+      { label: 'Login using this device', value: 'browser' },
+      {
+        hint: 'Scan a code with your phone — for SSH/headless machines',
+        label: 'Login using other device with QR',
+        value: 'device',
+      },
+    ],
+  });
+
+  // The device flow prints its QR/link to stdout — a running clack spinner
+  // repaints every ~80ms and would erase it. Only the browser path gets a
+  // spinner; the device flow logs completion via the prompter instead.
+  if (method === 'device') {
+    prompter.log('step', 'Sign in using the QR or link shown below.');
+  } else {
+    const s = prompter.spinner();
+    s.start('Waiting for browser login...');
+
+    const loginResult = await authService.loginInteractive({
+      debug: process.env.LOG_LEVEL === 'debug',
+      method,
+    });
+    if (!loginResult.success) {
+      s.stop('Login failed.');
+      prompter.note(
+        `${loginResult.error || 'Login timed out or was cancelled.'}\n\nPlease run \`berget auth login\` manually, then run \`berget code init\` again.`,
+        'Authentication Failed',
+      );
+      return null;
+    }
+
+    s.stop('Successfully logged in to Berget.');
+
+    const jwtExpiresAt = extractJwtExpiresAt(loginResult.accessToken!);
+    if (jwtExpiresAt === 0) {
+      s.stop('Login succeeded but received invalid token.');
+      prompter.note('Please try logging in again or contact support.', 'Authentication Error');
+      return null;
+    }
+
+    return {
+      access_token: loginResult.accessToken!,
+      expires_at: jwtExpiresAt,
+      refresh_token: loginResult.refreshToken!,
+    };
+  }
 
   const loginResult = await authService.loginInteractive({
     debug: process.env.LOG_LEVEL === 'debug',
+    method,
   });
   if (!loginResult.success) {
-    s.stop('Login failed.');
-    prompter.note(
+    prompter.log(
+      'error',
       `${loginResult.error || 'Login timed out or was cancelled.'}\n\nPlease run \`berget auth login\` manually, then run \`berget code init\` again.`,
-      'Authentication Failed',
     );
     return null;
   }
 
-  s.stop('Successfully logged in to Berget.');
+  prompter.log('info', 'Successfully logged in to Berget.');
 
   const jwtExpiresAt = extractJwtExpiresAt(loginResult.accessToken!);
   if (jwtExpiresAt === 0) {
-    s.stop('Login succeeded but received invalid token.');
+    prompter.log('error', 'Login succeeded but received invalid token.');
     prompter.note('Please try logging in again or contact support.', 'Authentication Error');
     return null;
   }

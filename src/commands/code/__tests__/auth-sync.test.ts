@@ -299,7 +299,7 @@ describe('configureAuth', () => {
     const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
     expect(result.authenticated).toBe(true);
-    expect((deps.prompter as FakePrompter).calls.length).toBe(1); // Only the select prompt
+    expect((deps.prompter as FakePrompter).calls).toHaveLength(1); // Only the select prompt
   });
 
   it('Case A reconfigure: already authenticated — reconfigure with valid CLI token', async () => {
@@ -480,7 +480,7 @@ describe('configureAuth', () => {
 
   it('seat status unverifiable (API down) → warns and syncs OAuth anyway', async () => {
     const files = new FakeFileStore();
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
 
     const deps = makeAuthDeps({
       files,
@@ -511,7 +511,7 @@ describe('configureAuth', () => {
   it('skips seat check when JWT cannot be decoded', async () => {
     const files = new FakeFileStore();
     // No prompts expected — the !jwtPayload guard should short-circuit
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
 
     const deps = makeAuthDeps({ files, prompter });
 
@@ -537,7 +537,7 @@ describe('configureAuth', () => {
   });
 
   it('fails authentication when cliAuth is null', async () => {
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
 
     const deps = makeAuthDeps({ prompter });
     const result = await configureAuth(deps, 'opencode', null);
@@ -625,7 +625,7 @@ describe('ensureCliAuth', () => {
     );
 
     const authService = new FakeAuthService(true);
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
     const deps = makeEnsureDeps({ authService, files, prompter });
     const result = await ensureCliAuth(deps);
 
@@ -635,7 +635,7 @@ describe('ensureCliAuth', () => {
 
   it('returns auth on successful login when no existing token', async () => {
     const authService = new FakeAuthService(true);
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
     const deps = makeEnsureDeps({ authService, prompter });
     const result = await ensureCliAuth(deps);
 
@@ -646,7 +646,7 @@ describe('ensureCliAuth', () => {
 
   it('returns null on failed login', async () => {
     const authService = new FakeAuthService(false);
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
     const deps = makeEnsureDeps({ authService, prompter });
     const result = await ensureCliAuth(deps);
 
@@ -660,7 +660,7 @@ describe('ensureCliAuth', () => {
 
   it('returns null when JWT is invalid after login', async () => {
     const authService = new FakeAuthService(true, true, false); // succeed, has seat, invalid token
-    const prompter = new FakePrompter([]);
+    const prompter = new FakePrompter([select('browser')]);
     const deps = makeEnsureDeps({ authService, prompter });
     const result = await ensureCliAuth(deps);
 

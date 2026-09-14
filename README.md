@@ -16,7 +16,8 @@ Before you can use the CLI, you need to authenticate:
 
 ```bash
 # Login with OAuth
-npx berget auth login
+npx berget auth login            # interactive: this device or QR
+npx berget auth login --device   # force device code (QR / another machine)
 
 # Create an API key
 npx berget api-keys create --name "My CLI Key"
