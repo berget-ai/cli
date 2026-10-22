@@ -33,10 +33,29 @@ const TOOL_AUTH_PATHS = {
   pi: getPiAuthPath,
 } as const;
 
-const TOOL_API_KEY_TYPES: Record<'opencode' | 'pi', string> = {
-  opencode: 'api',
-  pi: 'api_key',
-};
+const TOOL_NAMES = {
+  opencode: 'OpenCode',
+  pi: 'Pi',
+} as const;
+
+/**
+ * Tool-specific login instructions. Authentication is ALWAYS performed by the
+ * tool itself (OpenCode /connect, Pi /login) — never by writing the tool's
+ * private auth store from the CLI. OpenCode V2 moved its credential store and
+ * silently ignores the V1 auth.json we used to write; delegating login to the
+ * tool is the only version-proof contract, and gives each tool its own
+ * Keycloak session (no shared refresh tokens).
+ */
+const SUBSCRIPTION_LOGIN_INSTRUCTIONS = {
+  opencode: 'Run `opencode`, type `/connect` and choose "Login with Berget".',
+  pi: 'Run `pi`, type `/login` and choose "Use a subscription" → "Berget AI".',
+} as const;
+
+const API_KEY_LOGIN_INSTRUCTIONS = {
+  opencode:
+    'Run `opencode`, type `/connect` and choose "Enter Berget API Key manually",\nor set the BERGET_API_KEY environment variable.',
+  pi: 'Run `pi`, type `/login` and paste the key,\nor set the BERGET_API_KEY environment variable.',
+} as const;
 
 export async function configureAuth(
   deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter' | 'seatStatusService'>,
@@ -49,7 +68,7 @@ export async function configureAuth(
 
   if (alreadyAuth) {
     const choice = await prompter.select<'keep' | 'reconfigure'>({
-      message: `Account is already connected to Berget AI (${tool === 'opencode' ? 'OpenCode' : 'Pi'}). How do you want to proceed?`,
+      message: `Account is already connected to Berget AI (${TOOL_NAMES[tool]}). How do you want to proceed?`,
       options: [
         { label: 'Keep existing authentication', value: 'keep' },
         { label: 'Reconfigure — choose a different method', value: 'reconfigure' },
@@ -59,7 +78,9 @@ export async function configureAuth(
     if (choice === 'keep') {
       return { authenticated: true };
     }
-    // Fall through to reconfigure
+    // Reconfigure: drop the stale entry so the tool falls back cleanly to its
+    // own login flow instead of retrying a potentially dead credential.
+    await removeToolAuth(files, homeDir, tool);
   } else if (cliAuth !== null) {
     prompter.note('Authentication required to use Berget AI.', 'Connect your account');
   }
@@ -71,7 +92,7 @@ export async function configureAuth(
   const jwtPayload = decodeJwtPayload(cliAuth.access_token);
 
   if (!jwtPayload) {
-    return handleUnverifiedAuth(prompter, files, homeDir, tool, cliAuth);
+    return handleUnverifiedAuth(prompter, tool);
   }
 
   // Resolve the seat from the API's canonical source (berget.seat via
@@ -80,16 +101,15 @@ export async function configureAuth(
   const seatStatus = await deps.seatStatusService.fetchSeatStatus(cliAuth.access_token);
 
   if (seatStatus === null) {
-    // Status could not be verified (network/5xx) — proceed with the OAuth
-    // sync and a warning, same as the undecodable-JWT path.
-    return handleUnverifiedAuth(prompter, files, homeDir, tool, cliAuth);
+    // Status could not be verified (network/5xx) — instruct, don't guess.
+    return handleUnverifiedAuth(prompter, tool);
   }
 
   if (seatStatus.seatId != null || seatStatus.tier != null) {
-    return handleHasSeat(prompter, apiKeyService, files, homeDir, tool, cliAuth, seatStatus.tier);
+    return handleHasSeat(prompter, apiKeyService, tool, seatStatus.tier);
   }
 
-  return handleNoSeat(prompter, apiKeyService, files, homeDir, tool);
+  return handleNoSeat(prompter, apiKeyService, tool);
 }
 
 export async function ensureCliAuth(
@@ -227,88 +247,47 @@ export async function readCliAuth(files: FileStore, homeDir: string): Promise<Cl
   return null;
 }
 
-export async function syncApiKeyToTool(
+/**
+ * Removes the `berget` entry from the tool's auth file, preserving any other
+ * providers. Used when the user explicitly asks to reconfigure.
+ */
+export async function removeToolAuth(
   files: FileStore,
   homeDir: string,
   tool: 'opencode' | 'pi',
-  apiKey: string,
 ): Promise<void> {
   const authPath = TOOL_AUTH_PATHS[tool](homeDir);
-  let existing: Record<string, unknown> = {};
 
   const content = await files.readFile(authPath);
-  if (content) {
-    try {
-      existing = JSON.parse(content) as Record<string, unknown>;
-    } catch {
-      existing = {};
-    }
+  if (!content) return;
+
+  let existing: Record<string, unknown>;
+  try {
+    existing = JSON.parse(content) as Record<string, unknown>;
+  } catch {
+    return;
   }
 
-  const updated = {
-    ...existing,
-    berget: {
-      key: apiKey,
-      type: TOOL_API_KEY_TYPES[tool],
-    },
-  };
+  if (!('berget' in existing)) return;
 
-  await files.writeFile(authPath, JSON.stringify(updated, null, 2) + '\n');
+  const { berget: _removed, ...remaining } = existing;
+  await files.writeFile(authPath, JSON.stringify(remaining, null, 2) + '\n');
   await files.chmod(authPath, 0o600);
 }
 
-export async function syncOAuthToTool(
-  files: FileStore,
-  homeDir: string,
-  tool: 'opencode' | 'pi',
-  cliAuth: CliAuth,
-): Promise<void> {
-  const authPath = TOOL_AUTH_PATHS[tool](homeDir);
-  let existing: Record<string, unknown> = {};
-
-  const content = await files.readFile(authPath);
-  if (content) {
-    try {
-      existing = JSON.parse(content) as Record<string, unknown>;
-    } catch {
-      existing = {};
-    }
-  }
-
-  // Use the JWT's actual expiry time for consistency
-  const jwtExpiresAt = extractJwtExpiresAt(cliAuth.access_token);
-
-  const updated = {
-    ...existing,
-    berget: {
-      access: cliAuth.access_token,
-      expires: jwtExpiresAt,
-      refresh: cliAuth.refresh_token,
-      type: 'oauth',
-    },
-  };
-
-  await files.writeFile(authPath, JSON.stringify(updated, null, 2) + '\n');
-  await files.chmod(authPath, 0o600);
-}
-
-async function createAndSyncApiKey(
+async function createApiKey(
   prompter: Prompter,
   apiKeyService: ApiKeyServicePort,
-  files: FileStore,
-  homeDir: string,
   tool: 'opencode' | 'pi',
 ): Promise<AuthResult> {
   const s = prompter.spinner();
   s.start('Creating API key...');
+  let key: string;
   try {
-    const { key } = await apiKeyService.create({
+    ({ key } = await apiKeyService.create({
       description: 'Created by berget code init',
-      name: `${tool === 'opencode' ? 'OpenCode' : 'Pi'} (created by berget CLI)`,
-    });
-    await syncApiKeyToTool(files, homeDir, tool, key);
-    s.stop('API key created and saved.');
-    return { authenticated: true };
+      name: `${TOOL_NAMES[tool]} (created by berget CLI)`,
+    }));
   } catch (error: any) {
     s.stop('API key creation failed.');
     throw new FatalError(
@@ -316,6 +295,13 @@ async function createAndSyncApiKey(
         'Could not create API key. Please create one manually with `berget api-keys create`.',
     );
   }
+  s.stop('API key created.');
+
+  prompter.note(
+    `${key}\n\nThis key is shown once. To use it:\n${API_KEY_LOGIN_INSTRUCTIONS[tool]}`,
+    'Your API key',
+  );
+  return { authenticated: false };
 }
 
 const TIER_LABELS: Record<string, string> = {
@@ -328,10 +314,7 @@ const TIER_LABELS: Record<string, string> = {
 async function handleHasSeat(
   prompter: Prompter,
   apiKeyService: ApiKeyServicePort,
-  files: FileStore,
-  homeDir: string,
   tool: 'opencode' | 'pi',
-  cliAuth: CliAuth,
   tier: null | string,
 ): Promise<AuthResult> {
   const tierLabel = (tier && TIER_LABELS[tier]) || 'Berget';
@@ -344,26 +327,19 @@ async function handleHasSeat(
   });
 
   if (method === 'subscription') {
-    const s = prompter.spinner();
-    s.start('Authenticating with Berget AI via subscription...');
-    try {
-      await syncOAuthToTool(files, homeDir, tool, cliAuth);
-      s.stop('Authenticated.');
-    } catch (error) {
-      s.stop('Authentication failed.');
-      throw error;
-    }
-    return { authenticated: true };
+    prompter.note(
+      `Your ${tierLabel} seat is ready. To connect ${TOOL_NAMES[tool]}:\n${SUBSCRIPTION_LOGIN_INSTRUCTIONS[tool]}`,
+      'One last step',
+    );
+    return { authenticated: false };
   }
 
-  return createAndSyncApiKey(prompter, apiKeyService, files, homeDir, tool);
+  return createApiKey(prompter, apiKeyService, tool);
 }
 
 async function handleNoSeat(
   prompter: Prompter,
   apiKeyService: ApiKeyServicePort,
-  files: FileStore,
-  homeDir: string,
   tool: 'opencode' | 'pi',
 ): Promise<AuthResult> {
   const shouldCreate = await prompter.confirm({
@@ -372,7 +348,7 @@ async function handleNoSeat(
   });
 
   if (shouldCreate) {
-    return createAndSyncApiKey(prompter, apiKeyService, files, homeDir, tool);
+    return createApiKey(prompter, apiKeyService, tool);
   }
 
   prompter.note(
@@ -384,23 +360,11 @@ async function handleNoSeat(
 
 async function handleUnverifiedAuth(
   prompter: Prompter,
-  files: FileStore,
-  homeDir: string,
   tool: 'opencode' | 'pi',
-  cliAuth: CliAuth,
 ): Promise<AuthResult> {
-  const s = prompter.spinner();
-  s.start('Authenticating with Berget AI...');
-  try {
-    await syncOAuthToTool(files, homeDir, tool, cliAuth);
-    s.stop('Authenticated.');
-  } catch (error) {
-    s.stop('Authentication failed.');
-    throw error;
-  }
   prompter.note(
-    'Warning: Could not verify your subscription status.\nIf you do not have a subscription, the tool may show an authorization error.',
+    `Could not verify your subscription status.\nIf you have a Berget subscription:\n${SUBSCRIPTION_LOGIN_INSTRUCTIONS[tool]}\n\nIf you do not have a subscription, create an API key with \`berget api-keys create\`.`,
     'Authentication',
   );
-  return { authenticated: true };
+  return { authenticated: false };
 }

@@ -8,8 +8,7 @@ import {
   ensureCliAuth,
   isToolAuthenticated,
   readCliAuth,
-  syncApiKeyToTool,
-  syncOAuthToTool,
+  removeToolAuth,
 } from '../auth-sync.js';
 import { FatalError } from '../errors.js';
 import { FakeApiKeyService } from './fake-api-key-service.js';
@@ -152,125 +151,75 @@ describe('decodeJwtPayload', () => {
   });
 });
 
-describe('syncOAuthToTool', () => {
-  it('writes oauth tokens to opencode auth file', async () => {
-    const files = new FakeFileStore();
-    const auth = fakeCliAuth();
-
-    await syncOAuthToTool(files, HOME, 'opencode', auth);
-
-    const written = files.getWrittenFiles();
-    const content = written.get(HOME + '/.local/share/opencode/auth.json')!;
-    const parsed = JSON.parse(content);
-    // The expires field should now use the JWT's exp claim (converted to milliseconds)
-    const jwtPayload = JSON.parse(
-      Buffer.from(auth.access_token.split('.')[1], 'base64url').toString(),
-    );
-    expect(parsed.berget).toEqual({
-      access: auth.access_token,
-      expires: (jwtPayload.exp as number) * 1000,
-      refresh: auth.refresh_token,
-      type: 'oauth',
-    });
-  });
-
-  it('writes oauth tokens to pi auth file', async () => {
-    const files = new FakeFileStore();
-    const auth = fakeCliAuth();
-
-    await syncOAuthToTool(files, HOME, 'pi', auth);
-
-    const written = files.getWrittenFiles();
-    const content = written.get(HOME + '/.pi/agent/auth.json')!;
-    const parsed = JSON.parse(content);
-    expect(parsed.berget.type).toBe('oauth');
-  });
-
-  it('merges with existing providers', async () => {
+describe('removeToolAuth', () => {
+  it('removes the berget entry from the opencode auth file', async () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + '/.local/share/opencode/auth.json',
-      JSON.stringify({ openai: { key: 'sk-openai', type: 'api' } }),
+      JSON.stringify({ berget: { access: 'tok', type: 'oauth' } }),
     );
 
-    const auth = fakeCliAuth();
-    await syncOAuthToTool(files, HOME, 'opencode', auth);
+    await removeToolAuth(files, HOME, 'opencode');
 
     const written = files.getWrittenFiles();
     const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
+    expect(parsed.berget).toBeUndefined();
+  });
+
+  it('preserves other providers when removing the berget entry', async () => {
+    const files = new FakeFileStore();
+    files.seed(
+      HOME + '/.local/share/opencode/auth.json',
+      JSON.stringify({
+        berget: { access: 'tok', type: 'oauth' },
+        openai: { key: 'sk-openai', type: 'api' },
+      }),
+    );
+
+    await removeToolAuth(files, HOME, 'opencode');
+
+    const written = files.getWrittenFiles();
+    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
+    expect(parsed.berget).toBeUndefined();
     expect(parsed.openai).toEqual({ key: 'sk-openai', type: 'api' });
-    expect(parsed.berget.type).toBe('oauth');
   });
 
-  it('sets 0o600 permissions on the auth file', async () => {
+  it('removes the berget entry from the pi auth file', async () => {
     const files = new FakeFileStore();
-    const auth = fakeCliAuth();
+    files.seed(HOME + '/.pi/agent/auth.json', JSON.stringify({ berget: { type: 'oauth' } }));
 
-    await syncOAuthToTool(files, HOME, 'opencode', auth);
-
-    const chmodCalls = files.getChmodCalls();
-    expect(chmodCalls).toHaveLength(1);
-    expect(chmodCalls[0]).toEqual({
-      mode: 0o600,
-      path: HOME + '/.local/share/opencode/auth.json',
-    });
-  });
-});
-
-describe('syncApiKeyToTool', () => {
-  it('writes api key to opencode auth file with type "api"', async () => {
-    const files = new FakeFileStore();
-
-    await syncApiKeyToTool(files, HOME, 'opencode', 'sk_ber_test');
+    await removeToolAuth(files, HOME, 'pi');
 
     const written = files.getWrittenFiles();
-    const content = written.get(HOME + '/.local/share/opencode/auth.json')!;
-    const parsed = JSON.parse(content);
-    expect(parsed.berget).toEqual({
-      key: 'sk_ber_test',
-      type: 'api',
-    });
+    const parsed = JSON.parse(written.get(HOME + '/.pi/agent/auth.json')!);
+    expect(parsed.berget).toBeUndefined();
   });
 
-  it('writes api key to pi auth file with type "api_key"', async () => {
+  it('does nothing when the auth file does not exist', async () => {
     const files = new FakeFileStore();
 
-    await syncApiKeyToTool(files, HOME, 'pi', 'sk_ber_pi');
+    await removeToolAuth(files, HOME, 'opencode');
 
-    const written = files.getWrittenFiles();
-    const content = written.get(HOME + '/.pi/agent/auth.json')!;
-    const parsed = JSON.parse(content);
-    expect(parsed.berget).toEqual({
-      key: 'sk_ber_pi',
-      type: 'api_key',
-    });
+    expect(files.getWrittenFiles().size).toBe(0);
   });
 
-  it('merges with existing providers', async () => {
+  it('does nothing when the auth file has no berget entry', async () => {
     const files = new FakeFileStore();
-    files.seed(
-      HOME + '/.local/share/opencode/auth.json',
-      JSON.stringify({ anthropic: { key: 'sk-ant', type: 'api' } }),
-    );
+    const original = JSON.stringify({ openai: { key: 'sk-openai', type: 'api' } });
+    files.seed(HOME + '/.local/share/opencode/auth.json', original);
 
-    await syncApiKeyToTool(files, HOME, 'opencode', 'sk_ber_test');
+    await removeToolAuth(files, HOME, 'opencode');
 
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.anthropic).toEqual({ key: 'sk-ant', type: 'api' });
+    expect(files.getWrittenFiles().get(HOME + '/.local/share/opencode/auth.json')).toBe(original);
   });
 
-  it('sets 0o600 permissions on the auth file', async () => {
+  it('does nothing when the auth file is malformed', async () => {
     const files = new FakeFileStore();
+    files.seed(HOME + '/.local/share/opencode/auth.json', 'not json');
 
-    await syncApiKeyToTool(files, HOME, 'opencode', 'sk_ber_test');
+    await removeToolAuth(files, HOME, 'opencode');
 
-    const chmodCalls = files.getChmodCalls();
-    expect(chmodCalls).toHaveLength(1);
-    expect(chmodCalls[0]).toEqual({
-      mode: 0o600,
-      path: HOME + '/.local/share/opencode/auth.json',
-    });
+    expect(files.getWrittenFiles().get(HOME + '/.local/share/opencode/auth.json')).toBe('not json');
   });
 });
 
@@ -302,7 +251,7 @@ describe('configureAuth', () => {
     expect((deps.prompter as FakePrompter).calls).toHaveLength(1); // Only the select prompt
   });
 
-  it('Case A reconfigure: already authenticated — reconfigure with valid CLI token', async () => {
+  it('Case A reconfigure: already authenticated — reconfigure removes stale entry and delegates login to the tool', async () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + '/.local/share/opencode/auth.json',
@@ -327,10 +276,14 @@ describe('configureAuth', () => {
       }),
     );
 
-    expect(result.authenticated).toBe(true);
+    expect(result.authenticated).toBe(false);
+    // Stale berget entry removed so the tool falls back to its own login flow
+    const written = files.getWrittenFiles();
+    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
+    expect(parsed.berget).toBeUndefined();
   });
 
-  it('Case B: login success + berget_code_seat → chooses subscription', async () => {
+  it('Case B: login success + berget_code_seat → chooses subscription → instructs /connect, writes nothing', async () => {
     const files = new FakeFileStore();
     const jwt = makeJwt({
       exp: 9_999_999_999_999,
@@ -351,14 +304,35 @@ describe('configureAuth', () => {
     });
     const result = await configureAuth(deps, 'opencode', cliAuth);
 
-    expect(result.authenticated).toBe(true);
-    const written = files.getWrittenFiles();
-    expect(written.has(HOME + '/.local/share/opencode/auth.json')).toBe(true);
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget.type).toBe('oauth');
+    expect(result.authenticated).toBe(false);
+    // The CLI must never write the tool's private auth store
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const instruction = notes.find((n) => JSON.stringify(n.args).includes('/connect'));
+    expect(instruction).toBeDefined();
+    expect(JSON.stringify(instruction!.args)).toContain('Login with Berget');
   });
 
-  it('Case B variant: login success + seat → chooses api_key', async () => {
+  it('Case B (pi): subscription → instructs /login, writes nothing', async () => {
+    const files = new FakeFileStore();
+    const prompter = new FakePrompter([select('subscription')]);
+
+    const deps = makeAuthDeps({
+      files,
+      prompter,
+      seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+    });
+    const result = await configureAuth(deps, 'pi', fakeCliAuth());
+
+    expect(result.authenticated).toBe(false);
+    expect(files.getWrittenFiles().has(HOME + '/.pi/agent/auth.json')).toBe(false);
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const instruction = notes.find((n) => JSON.stringify(n.args).includes('/login'));
+    expect(instruction).toBeDefined();
+    expect(JSON.stringify(instruction!.args)).toContain('Use a subscription');
+  });
+
+  it('Case B variant: login success + seat → chooses api_key → displays key, writes nothing', async () => {
     const files = new FakeFileStore();
     const jwt = makeJwt({
       exp: 9_999_999_999_999,
@@ -379,25 +353,26 @@ describe('configureAuth', () => {
     });
     const result = await configureAuth(deps, 'opencode', cliAuth);
 
-    expect(result.authenticated).toBe(true);
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget.type).toBe('api');
-    expect(parsed.berget.key).toBe('sk_ber_test');
+    expect(result.authenticated).toBe(false);
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const keyNote = notes.find((n) => JSON.stringify(n.args).includes('sk_ber_test'));
+    expect(keyNote).toBeDefined();
+    expect(JSON.stringify(keyNote!.args)).toContain('/connect');
   });
 
-  it('Case C: login success + no seat → creates api key', async () => {
+  it('Case C: login success + no seat → creates api key → displays key, writes nothing', async () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([confirm(true)]);
 
     const deps = makeAuthDeps({ files, prompter });
     const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
-    expect(result.authenticated).toBe(true);
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget.type).toBe('api');
-    expect(parsed.berget.key).toBe('sk_ber_test');
+    expect(result.authenticated).toBe(false);
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const keyNote = notes.find((n) => JSON.stringify(n.args).includes('sk_ber_test'));
+    expect(keyNote).toBeDefined();
   });
 
   it('Case B variant failure: login success + seat → chooses api_key + creation fails', async () => {
@@ -471,14 +446,15 @@ describe('configureAuth', () => {
     });
     const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
-    expect(result.authenticated).toBe(true);
-    // Seat path: OAuth synced, NOT the no-seat API-key prompt
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget.type).toBe('oauth');
+    expect(result.authenticated).toBe(false);
+    // Seat path: /connect instructions, NOT the no-seat API-key prompt
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    const instruction = notes.find((n) => JSON.stringify(n.args).includes('/connect'));
+    expect(instruction).toBeDefined();
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
   });
 
-  it('seat status unverifiable (API down) → warns and syncs OAuth anyway', async () => {
+  it('seat status unverifiable (API down) → warns and instructs, writes nothing', async () => {
     const files = new FakeFileStore();
     const prompter = new FakePrompter([select('browser')]);
 
@@ -489,14 +465,11 @@ describe('configureAuth', () => {
     });
     const result = await configureAuth(deps, 'opencode', fakeCliAuth());
 
-    expect(result.authenticated).toBe(true);
-    // OAuth synced despite unverified status
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget.type).toBe('oauth');
-    // Warning note displayed
+    expect(result.authenticated).toBe(false);
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
     const notes = prompter.calls.filter((c) => c.method === 'note');
-    expect(notes.length).toBeGreaterThan(0);
+    const warningNote = notes.find((n) => JSON.stringify(n.args).includes('Could not verify'));
+    expect(warningNote).toBeDefined();
   });
 
   it('Case E: login fails → returns false when cliAuth is null', async () => {
@@ -523,12 +496,12 @@ describe('configureAuth', () => {
 
     const result = await configureAuth(deps, 'opencode', cliAuth);
 
-    expect(result.authenticated).toBe(true);
+    expect(result.authenticated).toBe(false);
     // No seat-selection prompt should have been shown
     const selectCalls = prompter.calls.filter((c) => c.method === 'select');
     expect(selectCalls).toHaveLength(0);
-    // OAuth was synced to the tool
-    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(true);
+    // Nothing written to the tool's auth store
+    expect(files.getWrittenFiles().has(HOME + '/.local/share/opencode/auth.json')).toBe(false);
     // Warning note displayed
     const notes = prompter.calls.filter((c) => c.method === 'note');
     const warningNote = notes.find((n) => (n.args as any).title === 'Authentication');
@@ -547,7 +520,7 @@ describe('configureAuth', () => {
     expect(written.size).toBe(0); // No files should be written
   });
 
-  it('preserves existing providers during sync', async () => {
+  it('never writes the tool auth store, regardless of path', async () => {
     const files = new FakeFileStore();
     files.seed(
       HOME + '/.local/share/opencode/auth.json',
@@ -572,10 +545,10 @@ describe('configureAuth', () => {
       }),
     );
 
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.openai).toEqual({ key: 'sk-openai', type: 'api' });
-    expect(parsed.berget).toBeDefined();
+    // Other providers' entries are left untouched and nothing is added
+    expect(files.getWrittenFiles().get(HOME + '/.local/share/opencode/auth.json')).toBe(
+      JSON.stringify({ openai: { key: 'sk-openai', type: 'api' } }),
+    );
   });
 });
 
