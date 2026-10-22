@@ -559,7 +559,7 @@ describe('runInit', () => {
       expect(JSON.stringify(lastNote)).toContain('/login');
     });
 
-    it('creates api key for pi when no seat', async () => {
+    it('creates api key for pi when no seat and displays it without writing the tool auth store', async () => {
       const files = new FakeFileStore();
 
       const deps = makeDeps({
@@ -577,12 +577,14 @@ describe('runInit', () => {
       await runInit(deps);
 
       const written = files.getWrittenFiles();
-      expect(written.has('/home/user/.pi/agent/auth.json')).toBe(true);
-      const parsed = JSON.parse(written.get('/home/user/.pi/agent/auth.json')!);
-      expect(parsed.berget.type).toBe('api_key');
+      expect(written.has('/home/user/.pi/agent/auth.json')).toBe(false);
+      const prompter = deps.prompter as FakePrompter;
+      const notes = prompter.calls.filter((c) => c.method === 'note');
+      const keyNote = notes.find((n) => JSON.stringify(n.args).includes('sk_ber_test'));
+      expect(keyNote).toBeDefined();
     });
 
-    it('uses subscription when berget_code_seat present', async () => {
+    it('subscription path delegates login to the tool via /connect instructions', async () => {
       const files = new FakeFileStore();
       const farFuture = Math.floor(Date.now() / 1000) + 3600 * 24 * 365; // 1 year from now in seconds
       files.seed(
@@ -609,8 +611,11 @@ describe('runInit', () => {
       await runInit(deps);
 
       const written = files.getWrittenFiles();
-      const parsed = JSON.parse(written.get('/home/user/.local/share/opencode/auth.json')!);
-      expect(parsed.berget.type).toBe('oauth');
+      expect(written.has('/home/user/.local/share/opencode/auth.json')).toBe(false);
+      const prompter = deps.prompter as FakePrompter;
+      const notes = prompter.calls.filter((c) => c.method === 'note');
+      const instruction = notes.find((n) => JSON.stringify(n.args).includes('/connect'));
+      expect(instruction).toBeDefined();
     });
   });
 
@@ -744,7 +749,7 @@ describe('runInit', () => {
       expect(JSON.stringify(lastNote)).not.toContain("You're all set");
     });
 
-    it('shows auth-only next steps when toolConfigured=false but auth=true (pi)', async () => {
+    it('shows install + auth instructions when toolConfigured=false and subscription delegates login (pi)', async () => {
       const files = new FakeFileStore();
       const farFuture = Math.floor(Date.now() / 1000) + 3600 * 24 * 365;
       files.seed(
@@ -776,7 +781,7 @@ describe('runInit', () => {
       const noteText = JSON.stringify(lastNote);
       expect(noteText).toContain('Install Pi:');
       expect(noteText).toContain('Run: pi');
-      expect(noteText).toContain('Select model: /model');
+      expect(noteText).toContain('Authenticate with Berget AI');
     });
 
     it('shows full setup instructions when toolConfigured=false and auth=false (opencode)', async () => {
