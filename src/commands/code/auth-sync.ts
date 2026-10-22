@@ -39,19 +39,20 @@ const TOOL_NAMES = {
 } as const;
 
 /**
- * Tool-specific login instructions. Authentication is ALWAYS performed by the
- * tool itself (OpenCode /connect, Pi /login) — never by writing the tool's
- * private auth store from the CLI. OpenCode V2 moved its credential store and
- * silently ignores the V1 auth.json we used to write; delegating login to the
- * tool is the only version-proof contract, and gives each tool its own
- * Keycloak session (no shared refresh tokens).
+ * Tool-specific login instructions — the single source of truth, also used by
+ * init.ts#buildNextSteps. Authentication is ALWAYS performed by the tool
+ * itself (OpenCode /connect, Pi /login) — never by writing the tool's private
+ * auth store from the CLI. OpenCode V2 moved its credential store and silently
+ * ignores the V1 auth.json we used to write; delegating login to the tool is
+ * the only version-proof contract, and gives each tool its own Keycloak
+ * session (no shared refresh tokens).
  */
-const SUBSCRIPTION_LOGIN_INSTRUCTIONS = {
+export const SUBSCRIPTION_LOGIN_INSTRUCTIONS = {
   opencode: 'Run `opencode`, type `/connect` and choose "Login with Berget".',
   pi: 'Run `pi`, type `/login` and choose "Use a subscription" → "Berget AI".',
 } as const;
 
-const API_KEY_LOGIN_INSTRUCTIONS = {
+export const API_KEY_LOGIN_INSTRUCTIONS = {
   opencode:
     'Run `opencode`, type `/connect` and choose "Enter Berget API Key manually",\nor set the BERGET_API_KEY environment variable.',
   pi: 'Run `pi`, type `/login` and paste the key,\nor set the BERGET_API_KEY environment variable.',
@@ -78,9 +79,10 @@ export async function configureAuth(
     if (choice === 'keep') {
       return { authenticated: true };
     }
-    // Reconfigure: drop the stale entry so the tool falls back cleanly to its
-    // own login flow instead of retrying a potentially dead credential.
-    await removeToolAuth(files, homeDir, tool);
+    // Reconfigure: fall through to method selection. The old entry is left in
+    // place deliberately — the tool's own login (/connect, /login) overwrites
+    // it on success, and deleting it now would leave the user with LESS
+    // working auth if this run is cancelled or fails mid-flow.
   } else if (cliAuth !== null) {
     prompter.note('Authentication required to use Berget AI.', 'Connect your account');
   }
@@ -203,6 +205,13 @@ export async function ensureCliAuth(
   };
 }
 
+/**
+ * Detects an existing berget entry in the tool's V1 auth file. Deliberately
+ * file-based only: OpenCode V2 stores credentials in a SQLite database we
+ * must NOT read (same private-store mistake as writing it). Consequence: on
+ * V2, users who connected via /connect are not detected here and init simply
+ * shows the login instructions again — harmless, and version-proof.
+ */
 export async function isToolAuthenticated(
   files: FileStore,
   homeDir: string,
@@ -245,34 +254,6 @@ export async function readCliAuth(files: FileStore, homeDir: string): Promise<Cl
     };
   }
   return null;
-}
-
-/**
- * Removes the `berget` entry from the tool's auth file, preserving any other
- * providers. Used when the user explicitly asks to reconfigure.
- */
-export async function removeToolAuth(
-  files: FileStore,
-  homeDir: string,
-  tool: 'opencode' | 'pi',
-): Promise<void> {
-  const authPath = TOOL_AUTH_PATHS[tool](homeDir);
-
-  const content = await files.readFile(authPath);
-  if (!content) return;
-
-  let existing: Record<string, unknown>;
-  try {
-    existing = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return;
-  }
-
-  if (!('berget' in existing)) return;
-
-  const { berget: _removed, ...remaining } = existing;
-  await files.writeFile(authPath, JSON.stringify(remaining, null, 2) + '\n');
-  await files.chmod(authPath, 0o600);
 }
 
 async function createApiKey(

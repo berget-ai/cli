@@ -12,7 +12,12 @@ import { ClackPrompter } from './adapters/clack-prompter.js';
 import { FsFileStore } from './adapters/fs-file-store.js';
 import { createSeatStatusService } from './adapters/seat-status.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
-import { configureAuth, ensureCliAuth } from './auth-sync.js';
+import {
+  API_KEY_LOGIN_INSTRUCTIONS,
+  configureAuth,
+  ensureCliAuth,
+  SUBSCRIPTION_LOGIN_INSTRUCTIONS,
+} from './auth-sync.js';
 import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {
   getOpencodeLabel,
@@ -162,8 +167,8 @@ function buildNextSteps(
 
   if (toolConfigured && !authenticated) {
     return tool === 'opencode'
-      ? 'Next steps:\n\n1. Run: opencode\n2. Type: /connect\n3. Choose your auth method:\n   • "Login with Berget" — Berget Code plan\n   • "Enter Berget API Key manually"\n   • (or set BERGET_API_KEY env var)\n4. Select model: /models'
-      : 'Next steps:\n\n1. Restart Pi or run /reload\n2. Type: /login\n3. Choose your auth method:\n   • "Use a subscription" → Berget AI\n   • (or set BERGET_API_KEY env var)\n4. Select model: /model';
+      ? `Next steps:\n\n1. ${SUBSCRIPTION_LOGIN_INSTRUCTIONS.opencode}\n   ${API_KEY_LOGIN_INSTRUCTIONS.opencode}\n2. Select model: /models`
+      : `Next steps:\n\n1. Restart Pi or run /reload\n2. ${SUBSCRIPTION_LOGIN_INSTRUCTIONS.pi}\n   ${API_KEY_LOGIN_INSTRUCTIONS.pi}\n3. Select model: /model`;
   }
 
   if (!toolConfigured && authenticated) {

@@ -8,7 +8,6 @@ import {
   ensureCliAuth,
   isToolAuthenticated,
   readCliAuth,
-  removeToolAuth,
 } from '../auth-sync.js';
 import { FatalError } from '../errors.js';
 import { FakeApiKeyService } from './fake-api-key-service.js';
@@ -151,78 +150,6 @@ describe('decodeJwtPayload', () => {
   });
 });
 
-describe('removeToolAuth', () => {
-  it('removes the berget entry from the opencode auth file', async () => {
-    const files = new FakeFileStore();
-    files.seed(
-      HOME + '/.local/share/opencode/auth.json',
-      JSON.stringify({ berget: { access: 'tok', type: 'oauth' } }),
-    );
-
-    await removeToolAuth(files, HOME, 'opencode');
-
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget).toBeUndefined();
-  });
-
-  it('preserves other providers when removing the berget entry', async () => {
-    const files = new FakeFileStore();
-    files.seed(
-      HOME + '/.local/share/opencode/auth.json',
-      JSON.stringify({
-        berget: { access: 'tok', type: 'oauth' },
-        openai: { key: 'sk-openai', type: 'api' },
-      }),
-    );
-
-    await removeToolAuth(files, HOME, 'opencode');
-
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget).toBeUndefined();
-    expect(parsed.openai).toEqual({ key: 'sk-openai', type: 'api' });
-  });
-
-  it('removes the berget entry from the pi auth file', async () => {
-    const files = new FakeFileStore();
-    files.seed(HOME + '/.pi/agent/auth.json', JSON.stringify({ berget: { type: 'oauth' } }));
-
-    await removeToolAuth(files, HOME, 'pi');
-
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.pi/agent/auth.json')!);
-    expect(parsed.berget).toBeUndefined();
-  });
-
-  it('does nothing when the auth file does not exist', async () => {
-    const files = new FakeFileStore();
-
-    await removeToolAuth(files, HOME, 'opencode');
-
-    expect(files.getWrittenFiles().size).toBe(0);
-  });
-
-  it('does nothing when the auth file has no berget entry', async () => {
-    const files = new FakeFileStore();
-    const original = JSON.stringify({ openai: { key: 'sk-openai', type: 'api' } });
-    files.seed(HOME + '/.local/share/opencode/auth.json', original);
-
-    await removeToolAuth(files, HOME, 'opencode');
-
-    expect(files.getWrittenFiles().get(HOME + '/.local/share/opencode/auth.json')).toBe(original);
-  });
-
-  it('does nothing when the auth file is malformed', async () => {
-    const files = new FakeFileStore();
-    files.seed(HOME + '/.local/share/opencode/auth.json', 'not json');
-
-    await removeToolAuth(files, HOME, 'opencode');
-
-    expect(files.getWrittenFiles().get(HOME + '/.local/share/opencode/auth.json')).toBe('not json');
-  });
-});
-
 describe('configureAuth', () => {
   const makeAuthDeps = (overrides: Partial<AuthDeps> = {}): AuthDeps =>
     ({
@@ -251,12 +178,10 @@ describe('configureAuth', () => {
     expect((deps.prompter as FakePrompter).calls).toHaveLength(1); // Only the select prompt
   });
 
-  it('Case A reconfigure: already authenticated — reconfigure removes stale entry and delegates login to the tool', async () => {
+  it('Case A reconfigure: already authenticated — reconfigure delegates login to the tool and leaves the old entry untouched', async () => {
     const files = new FakeFileStore();
-    files.seed(
-      HOME + '/.local/share/opencode/auth.json',
-      JSON.stringify({ berget: { type: 'oauth' } }),
-    );
+    const original = JSON.stringify({ berget: { type: 'oauth' } });
+    files.seed(HOME + '/.local/share/opencode/auth.json', original);
 
     const prompter = new FakePrompter([select('reconfigure'), select('subscription')]);
 
@@ -277,10 +202,10 @@ describe('configureAuth', () => {
     );
 
     expect(result.authenticated).toBe(false);
-    // Stale berget entry removed so the tool falls back to its own login flow
-    const written = files.getWrittenFiles();
-    const parsed = JSON.parse(written.get(HOME + '/.local/share/opencode/auth.json')!);
-    expect(parsed.berget).toBeUndefined();
+    // The old entry is never deleted mid-flow: the tool's own login
+    // (/connect) overwrites it on success, and a cancelled/failed run must
+    // not leave the user with less working auth than before.
+    expect(files.getWrittenFiles().get(HOME + '/.local/share/opencode/auth.json')).toBe(original);
   });
 
   it('Case B: login success + berget_code_seat → chooses subscription → instructs /connect, writes nothing', async () => {
