@@ -13,10 +13,10 @@ import { FsFileStore } from './adapters/fs-file-store.js';
 import { createSeatStatusService } from './adapters/seat-status.js';
 import { SpawnCommandRunner } from './adapters/spawn-command-runner.js';
 import {
-  API_KEY_LOGIN_INSTRUCTIONS,
   configureAuth,
   ensureCliAuth,
-  SUBSCRIPTION_LOGIN_INSTRUCTIONS,
+  LOGIN_METHOD_BULLETS,
+  TOOL_LOGIN_METHODS,
 } from './auth-sync.js';
 import { CancelledError, CommandFailedError, FatalError, PrerequisiteError } from './errors.js';
 import {
@@ -166,9 +166,12 @@ function buildNextSteps(
   }
 
   if (toolConfigured && !authenticated) {
-    return tool === 'opencode'
-      ? `Next steps:\n\n1. ${SUBSCRIPTION_LOGIN_INSTRUCTIONS.opencode}\n   ${API_KEY_LOGIN_INSTRUCTIONS.opencode}\n2. Select model: /models`
-      : `Next steps:\n\n1. Restart Pi or run /reload\n2. ${SUBSCRIPTION_LOGIN_INSTRUCTIONS.pi}\n   ${API_KEY_LOGIN_INSTRUCTIONS.pi}\n3. Select model: /model`;
+    const steps = [
+      ...(tool === 'pi' ? ['Restart Pi or run /reload'] : []),
+      `Run \`${tool}\` and type \`${TOOL_LOGIN_METHODS[tool].command}\`, then either:\n${LOGIN_METHOD_BULLETS[tool]}`,
+      `Select model: ${tool === 'opencode' ? '/models' : '/model'}`,
+    ];
+    return `Next steps:\n\n${steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`;
   }
 
   if (!toolConfigured && authenticated) {
