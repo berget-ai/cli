@@ -39,24 +39,50 @@ const TOOL_NAMES = {
 } as const;
 
 /**
- * Tool-specific login instructions — the single source of truth, also used by
- * init.ts#buildNextSteps. Authentication is ALWAYS performed by the tool
- * itself (OpenCode /connect, Pi /login) — never by writing the tool's private
- * auth store from the CLI. OpenCode V2 moved its credential store and silently
- * ignores the V1 auth.json we used to write; delegating login to the tool is
- * the only version-proof contract, and gives each tool its own Keycloak
- * session (no shared refresh tokens).
+ * Tool-specific login methods — the single source of truth for all login
+ * copy (inline notes AND init.ts#buildNextSteps). Authentication is ALWAYS
+ * performed by the tool itself (OpenCode /connect, Pi /login) — never by
+ * writing the tool's private auth store from the CLI. OpenCode V2 moved its
+ * credential store and silently ignores the V1 auth.json we used to write;
+ * delegating login to the tool is the only version-proof contract, and gives
+ * each tool its own Keycloak session (no shared refresh tokens).
  */
-export const SUBSCRIPTION_LOGIN_INSTRUCTIONS = {
-  opencode: 'Run `opencode`, type `/connect` and choose "Login with Berget".',
-  pi: 'Run `pi`, type `/login` and choose "Use a subscription" → "Berget AI".',
+export const TOOL_LOGIN_METHODS = {
+  opencode: {
+    apiKey: 'choose "Enter Berget API Key manually"',
+    command: '/connect',
+    subscription: 'choose "Login with Berget"',
+  },
+  pi: {
+    apiKey: 'paste the key',
+    command: '/login',
+    subscription: 'choose "Use a subscription" → "Berget AI"',
+  },
 } as const;
 
-export const API_KEY_LOGIN_INSTRUCTIONS = {
-  opencode:
-    'Run `opencode`, type `/connect` and choose "Enter Berget API Key manually",\nor set the BERGET_API_KEY environment variable.',
-  pi: 'Run `pi`, type `/login` and paste the key,\nor set the BERGET_API_KEY environment variable.',
-} as const;
+type Tool = keyof typeof TOOL_LOGIN_METHODS;
+
+const loginInstruction = (tool: Tool, method: 'apiKey' | 'subscription'): string =>
+  `Run \`${tool}\`, type \`${TOOL_LOGIN_METHODS[tool].command}\` and ${TOOL_LOGIN_METHODS[tool][method]}`;
+
+export const SUBSCRIPTION_LOGIN_INSTRUCTIONS: Record<Tool, string> = {
+  opencode: `${loginInstruction('opencode', 'subscription')}.`,
+  pi: `${loginInstruction('pi', 'subscription')}.`,
+};
+
+export const API_KEY_LOGIN_INSTRUCTIONS: Record<Tool, string> = {
+  opencode: `${loginInstruction('opencode', 'apiKey')},\nor set the BERGET_API_KEY environment variable.`,
+  pi: `${loginInstruction('pi', 'apiKey')},\nor set the BERGET_API_KEY environment variable.`,
+};
+
+/**
+ * The two login alternatives presented as a bullet list in the final
+ * next-steps panel.
+ */
+export const LOGIN_METHOD_BULLETS: Record<Tool, string> = {
+  opencode: `   • ${TOOL_LOGIN_METHODS.opencode.subscription} (subscription), or\n   • ${TOOL_LOGIN_METHODS.opencode.apiKey} — or set BERGET_API_KEY`,
+  pi: `   • ${TOOL_LOGIN_METHODS.pi.subscription} (subscription), or\n   • ${TOOL_LOGIN_METHODS.pi.apiKey} — or set BERGET_API_KEY`,
+};
 
 export async function configureAuth(
   deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter' | 'seatStatusService'>,
