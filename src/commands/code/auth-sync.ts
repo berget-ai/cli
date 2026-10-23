@@ -49,9 +49,9 @@ const TOOL_NAMES = {
  */
 export const TOOL_LOGIN_METHODS = {
   opencode: {
-    apiKey: 'choose "Enter Berget API Key manually"',
+    apiKey: 'choose "Berget API Key - Enter API key manually"',
     command: '/connect',
-    subscription: 'choose "Login with Berget"',
+    subscription: 'choose "Berget Code Seat - Login using this device"',
   },
   pi: {
     apiKey: 'paste the key',

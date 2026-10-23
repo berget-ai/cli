@@ -235,7 +235,7 @@ describe('configureAuth', () => {
     const notes = prompter.calls.filter((c) => c.method === 'note');
     const instruction = notes.find((n) => JSON.stringify(n.args).includes('/connect'));
     expect(instruction).toBeDefined();
-    expect(JSON.stringify(instruction!.args)).toContain('Login with Berget');
+    expect(JSON.stringify(instruction!.args)).toContain('Berget Code Seat');
   });
 
   it('Case B (pi): subscription → instructs /login, writes nothing', async () => {
