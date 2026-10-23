@@ -1,6 +1,6 @@
 {
   "name": "berget",
-  "version": "2.2.29",
+  "version": "2.2.30",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
