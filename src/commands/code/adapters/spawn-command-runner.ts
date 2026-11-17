@@ -16,13 +16,24 @@ export class SpawnCommandRunner implements CommandRunner {
   async run(
     command: string,
     arguments_: readonly string[],
-    options?: { cwd?: string },
+    options?: {
+      cwd?: string;
+      input?: string;
+    },
   ): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const child = spawn(command, arguments_ as string[], {
         cwd: options?.cwd || process.cwd(),
         stdio: 'pipe',
       });
+
+      if (options?.input !== undefined) {
+        // Child may exit before consuming stdin (e.g. an opencode build
+        // without `auth import`) — an unread write would emit EPIPE on the
+        // stream and crash the wizard outside runInit's try/catch.
+        child.stdin?.on('error', () => {});
+        child.stdin?.end(options.input);
+      }
 
       let stdout = '';
       let stderr = '';

@@ -5,6 +5,8 @@ export interface CommandRunner {
     arguments_: readonly string[],
     options?: {
       cwd?: string;
+      /** Optional data written to the child process's stdin. */
+      input?: string;
     },
   ): Promise<string>;
 }

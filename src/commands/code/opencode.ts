@@ -20,7 +20,16 @@ export interface InitOpenCodeDeps {
   homeDir: string;
   prompter: Prompter;
   scope: 'global' | 'project';
+  /** When true (auth succeeded), a default Berget model is written if the config has none. */
+  setDefaultModel?: boolean;
 }
+
+/**
+ * The default model written by the wizard's OpenCode config step. Verified
+ * against https://api.berget.ai/v1/models/chat (lifecycleState: stable,
+ * 1M context, vision). Only written when the config has no `model` set.
+ */
+export const DEFAULT_OPENCODE_MODEL = 'berget/zai-org/GLM-5.3-Flash';
 
 export function getOpencodeLabel(state: { global: boolean; project: boolean }): string {
   if (state.project || state.global) return ' (already configured)';
@@ -51,7 +60,11 @@ export async function initOpenCode(deps: InitOpenCodeDeps): Promise<void> {
 
   const configPath = await resolveOpencodeConfigPath(files, homeDir, cwd, scope);
   const existingContent = await files.readFile(configPath);
-  const newContent = generateModifiedContent(existingContent, configPath);
+  const newContent = generateModifiedContent(
+    existingContent,
+    configPath,
+    deps.setDefaultModel === true,
+  );
 
   if (existingContent && existingContent === newContent) {
     return;
@@ -174,7 +187,21 @@ export async function initOpenCodeAgents(deps: {
   return true;
 }
 
-function generateModifiedContent(existingContent: null | string, configPath: string): string {
+function generateModifiedContent(
+  existingContent: null | string,
+  configPath: string,
+  setDefaultModel: boolean,
+): string {
+  /** Adds the wizard's default model to a parsed config object when absent. */
+  const shouldSetDefaultModel = (config: Record<string, unknown>): boolean =>
+    setDefaultModel && config.model === undefined;
+
+  const addDefaultModel = (config: Record<string, unknown>): void => {
+    if (shouldSetDefaultModel(config)) {
+      config.model = DEFAULT_OPENCODE_MODEL;
+    }
+  };
+
   if (configPath.endsWith('.jsonc')) {
     const content = existingContent || '{}';
     const parseErrors: any[] = [];
@@ -218,6 +245,13 @@ function generateModifiedContent(existingContent: null | string, configPath: str
         modifiedContent = applyEdits(modifiedContent, schemaEdits);
       }
 
+      if (shouldSetDefaultModel(jsConfig)) {
+        const modelEdits = modify(modifiedContent, ['model'], DEFAULT_OPENCODE_MODEL, {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        });
+        modifiedContent = applyEdits(modifiedContent, modelEdits);
+      }
+
       return modifiedContent;
     }
 
@@ -225,6 +259,7 @@ function generateModifiedContent(existingContent: null | string, configPath: str
       $schema: 'https://opencode.ai/config.json',
       [pluginsKey]: filtered,
     };
+    addDefaultModel(config);
     return JSON.stringify(config, null, 2) + '\n';
   }
 
@@ -243,6 +278,7 @@ function generateModifiedContent(existingContent: null | string, configPath: str
   filtered.push(OPENCODE_PLUGIN);
   config[pluginsKey] = filtered;
   config.$schema = config.$schema || 'https://opencode.ai/config.json';
+  addDefaultModel(config);
 
   return JSON.stringify(config, null, 2) + '\n';
 }

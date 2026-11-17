@@ -131,6 +131,78 @@ describe('runInit', () => {
       expect(written.has('/home/user/.config/opencode/opencode.json')).toBe(true);
     });
 
+    it('subscription auth → writes the default Berget model into the opencode config', async () => {
+      const deps = makeDeps({
+        authService: new FakeAuthService(true),
+        commands: new FakeCommandRunner()
+          .handle('opencode --version', 'opencode v2.0.32')
+          .handle('opencode auth import', ''),
+        prompter: new FakePrompter([
+          select('browser'),
+          select('opencode'),
+          select('global'),
+          select('subscription'),
+          confirm(true, 'Create'),
+          multiselect([]),
+        ]),
+        seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+      });
+
+      await runInit(deps);
+
+      const written = (deps.files as FakeFileStore).getWrittenFiles();
+      const config = JSON.parse(written.get('/home/user/.config/opencode/opencode.json')!);
+      expect(config.model).toBe('berget/zai-org/GLM-5.3-Flash');
+    });
+
+    it('models.dev-style existing model in config is never overwritten', async () => {
+      const files = new FakeFileStore();
+      files.seed(
+        '/home/user/.config/opencode/opencode.json',
+        JSON.stringify({ model: 'openai/gpt-5' }),
+      );
+      const deps = makeDeps({
+        authService: new FakeAuthService(true),
+        commands: new FakeCommandRunner()
+          .handle('opencode --version', 'opencode v2.0.32')
+          .handle('opencode auth import', ''),
+        files,
+        prompter: new FakePrompter([
+          select('browser'),
+          select('opencode'),
+          select('global'),
+          select('subscription'),
+          confirm(true, /Write|Create/),
+          multiselect([]),
+        ]),
+        seatStatusService: new FakeSeatStatusService({ seatId: 1, tier: 'berget_code' }),
+      });
+
+      await runInit(deps);
+
+      const written = files.getWrittenFiles();
+      const config = JSON.parse(written.get('/home/user/.config/opencode/opencode.json')!);
+      expect(config.model).toBe('openai/gpt-5');
+    });
+
+    it('unauthenticated (api key shown but not imported) → no default model written', async () => {
+      const deps = makeDeps({
+        prompter: new FakePrompter([
+          select('browser'),
+          select('opencode'),
+          select('global'),
+          confirm(true, 'Create'),
+          multiselect([]),
+        ]),
+      });
+
+      await runInit(deps);
+
+      const written = (deps.files as FakeFileStore).getWrittenFiles();
+      const config = JSON.parse(written.get('/home/user/.config/opencode/opencode.json')!);
+      expect(config.model).toBeUndefined();
+    });
+
     it('sets up pi project with fresh install', async () => {
       const deps = makeDeps({
         commands: new FakeCommandRunner()
