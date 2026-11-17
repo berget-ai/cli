@@ -659,4 +659,63 @@ describe('opencode v2 credential import', () => {
     expect(result.authenticated).toBe(false);
     expect(deps.commands.calls.filter((c) => c.command === 'opencode')).toHaveLength(0);
   });
+
+  it('api key created + opencode v2 → imports the key credential', async () => {
+    const commands = new FakeCommandRunner()
+      .handle('opencode --version', 'opencode v2.0.32')
+      .handle('opencode auth import', '');
+    const prompter = new FakePrompter([select('api_key'), confirm(true)]);
+    const deps = makeV2Deps({ commands, prompter });
+    const result = await configureAuth(deps.deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(true);
+    const importCall = commands.calls.find((c) => c.args.join(' ') === 'auth import');
+    expect(importCall).toBeDefined();
+    const imported = JSON.parse((importCall!.options as { input: string }).input!);
+    expect(imported[0].value).toMatchObject({ key: 'sk_ber_test', type: 'key' });
+  });
+
+  it('api key created + opencode v2 → import failure falls back to manual instructions', async () => {
+    const commands = new FakeCommandRunner()
+      .handle('opencode --version', 'opencode v2.0.32')
+      .handle('opencode auth import', new Error('service unreachable'));
+    const prompter = new FakePrompter([select('api_key'), confirm(true)]);
+    const deps = makeV2Deps({ commands, prompter });
+    const result = await configureAuth(deps.deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(false);
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    // Both remediation (from manualInstructions) and the key survive in copy.
+    expect(notes.some((n) => JSON.stringify(n.args).includes('connect manually'))).toBe(true);
+    expect(notes.some((n) => JSON.stringify(n.args).includes('sk_ber_test'))).toBe(true);
+  });
+
+  it('subscription + `opencode --version` fails → manual instructions, no crash', async () => {
+    const commands = new FakeCommandRunner().handle(
+      'opencode --version',
+      new Error('spawn ENOENT'),
+    );
+    const { deps, prompter } = makeV2Deps({ commands });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(false);
+    const notes = prompter.calls.filter((c) => c.method === 'note');
+    expect(notes.some((n) => JSON.stringify(n.args).includes('/connect'))).toBe(true);
+  });
+
+  it('subscription + unparseable version output (e.g. build banner) → skipped, no import', async () => {
+    const commands = new FakeCommandRunner()
+      .handle('opencode --version', 'building 2026-11-17…')
+      .handle('opencode auth import', '');
+    const { deps } = makeV2Deps({ commands });
+    const result = await configureAuth(deps, 'opencode', fakeCliAuth());
+
+    expect(result.authenticated).toBe(false);
+    expect(commands.calls.filter((c) => c.args.join(' ') === 'auth import')).toHaveLength(0);
+  });
+
+  it('parseOpencodeVersionMajor ignores non-version digits anywhere else in the output', () => {
+    expect(parseOpencodeVersionMajor('build 2026-11-17 ok opencode v1.9.0')).toBe(1);
+    expect(parseOpencodeVersionMajor('2026 banner\nopencode v2.0.32')).toBe(2);
+  });
 });

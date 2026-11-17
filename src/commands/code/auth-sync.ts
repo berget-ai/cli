@@ -322,6 +322,7 @@ async function createApiKey(
     const outcome = await importCredentialToOpencode(
       { commands: deps.commands, prompter },
       { key, kind: 'key' },
+      API_KEY_LOGIN_INSTRUCTIONS[tool],
     );
     authenticated = outcome.imported;
   }
@@ -365,17 +366,18 @@ async function handleHasSeat(
   });
 
   if (method === 'subscription') {
-    if (tool === 'opencode') {
+    if (tool === 'opencode' && deps.commands) {
       // Carry the wizard login into OpenCode's own credential store via its
       // official `auth import` channel, so the user does not have to repeat
       // the browser login inside OpenCode (/connect). Best-effort.
       const outcome = await importCredentialToOpencode(
-        { commands: deps.commands!, prompter },
+        { commands: deps.commands, prompter },
         {
           access: cliAuth.access_token,
           kind: 'oauth',
           refresh: cliAuth.refresh_token,
         },
+        SUBSCRIPTION_LOGIN_INSTRUCTIONS[tool],
       );
       if (outcome.imported) {
         return { authenticated: true };

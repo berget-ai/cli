@@ -83,9 +83,11 @@ export async function importCredentialToOpencode(
 
 /** Parses "opencode v2.0.32" (or "2.0.32") into the major version. */
 export function parseOpencodeVersionMajor(versionOutput: string): null | number {
-  const match = versionOutput.match(/\d{1,3}/);
+  // Anchored to the full version token so leading non-version digits (build
+  // banners, dates) can never parse as a bogus major.
+  const match = versionOutput.match(/\bv?\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
   if (!match) return null;
-  const major = Number.parseInt(match[0], 10);
+  const major = Number.parseInt(match[0].replace(/^\D+/, ''), 10);
   return Number.isFinite(major) ? major : null;
 }
 

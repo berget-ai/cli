@@ -28,8 +28,11 @@ export class SpawnCommandRunner implements CommandRunner {
       });
 
       if (options?.input !== undefined) {
-        child.stdin?.write(options.input);
-        child.stdin?.end();
+        // Child may exit before consuming stdin (e.g. an opencode build
+        // without `auth import`) — an unread write would emit EPIPE on the
+        // stream and crash the wizard outside runInit's try/catch.
+        child.stdin?.on('error', () => {});
+        child.stdin?.end(options.input);
       }
 
       let stdout = '';
