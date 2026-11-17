@@ -118,7 +118,9 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   );
 
   if (toolConfigured) {
-    await configureTool(commands, cwd, files, homeDir, prompter, tool, scope);
+    await configureTool(commands, cwd, files, homeDir, prompter, tool, scope, {
+      authenticated: authResult.authenticated,
+    });
   }
 
   const nextSteps = buildNextSteps(tool, toolCheck, toolConfigured, authResult.authenticated);
@@ -222,9 +224,18 @@ async function configureTool(
   prompter: Prompter,
   tool: 'opencode' | 'pi',
   scope: 'global' | 'project',
+  auth: { authenticated: boolean },
 ): Promise<void> {
   if (tool === 'opencode') {
-    await initOpenCode({ commands, cwd, files, homeDir, prompter, scope });
+    await initOpenCode({
+      commands,
+      cwd,
+      files,
+      homeDir,
+      prompter,
+      scope,
+      setDefaultModel: auth.authenticated,
+    });
     await initOpenCodeAgents({ cwd, files, homeDir, prompter, scope });
   } else {
     await initPi({ commands, cwd, files, homeDir, prompter, scope });
