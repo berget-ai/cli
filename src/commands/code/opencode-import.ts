@@ -24,15 +24,17 @@ import { logger } from '../../utils/logger.js';
  * best-effort and never fails the wizard.
  */
 
-export type CredentialToImport =
-  { access: string; kind: 'oauth'; refresh: string } | { key: string; kind: 'key' };
-
+export type CredentialToImport = ApiKeyCredential | OAuthCredential;
 export interface OpencodeImportResult {
   /** true when `opencode auth import` reported success. */
   imported: boolean;
   /** Human-readable explanation when imported=false. 'skipped-v1' when V1 is not affected. */
   reason?: string;
 }
+
+type ApiKeyCredential = { key: string; kind: 'key' };
+
+type OAuthCredential = { access: string; kind: 'oauth'; refresh: string };
 
 /**
  * Imports the credential into OpenCode v2's credential store. Failures are
