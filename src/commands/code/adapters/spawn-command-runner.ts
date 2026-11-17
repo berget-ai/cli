@@ -16,13 +16,21 @@ export class SpawnCommandRunner implements CommandRunner {
   async run(
     command: string,
     arguments_: readonly string[],
-    options?: { cwd?: string },
+    options?: {
+      cwd?: string;
+      input?: string;
+    },
   ): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const child = spawn(command, arguments_ as string[], {
         cwd: options?.cwd || process.cwd(),
         stdio: 'pipe',
       });
+
+      if (options?.input !== undefined) {
+        child.stdin?.write(options.input);
+        child.stdin?.end();
+      }
 
       let stdout = '';
       let stderr = '';

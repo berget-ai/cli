@@ -1,15 +1,19 @@
 import type { ApiKeyServicePort, AuthServicePort, SeatStatusPort } from './ports/auth-services.js';
+import type { CommandRunner } from './ports/command-runner.js';
 import type { FileStore } from './ports/file-store.js';
 import type { Prompter } from './ports/prompter.js';
 
 import { decodeJwtPayload, extractJwtExpiresAt, isTokenExpired } from '../../auth/jwt.js';
 import { logger } from '../../utils/logger.js';
 import { FatalError } from './errors.js';
+import { importCredentialToOpencode } from './opencode-import.js';
 import { getOpencodeAuthPath, getPiAuthPath } from './xdg-paths.js';
 
 export interface AuthDeps {
   apiKeyService: ApiKeyServicePort;
   authService: AuthServicePort;
+  /** Optional — when present, the credential is also imported into OpenCode v2's store. */
+  commands?: CommandRunner;
   files: FileStore;
   homeDir: string;
   prompter: Prompter;
@@ -84,8 +88,14 @@ export const LOGIN_METHOD_BULLETS: Record<Tool, string> = {
   pi: `   • ${TOOL_LOGIN_METHODS.pi.subscription} (subscription), or\n   • ${TOOL_LOGIN_METHODS.pi.apiKey} — or set BERGET_API_KEY`,
 };
 
+type AuthCommandDeps = Pick<
+  AuthDeps,
+  'apiKeyService' | 'commands' | 'files' | 'homeDir' | 'prompter'
+>;
+
 export async function configureAuth(
-  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter' | 'seatStatusService'>,
+  deps: Pick<AuthDeps, 'apiKeyService' | 'files' | 'homeDir' | 'prompter' | 'seatStatusService'> &
+    Pick<AuthDeps, 'commands'>,
   tool: 'opencode' | 'pi',
   cliAuth: CliAuth | null,
 ): Promise<AuthResult> {
@@ -134,10 +144,10 @@ export async function configureAuth(
   }
 
   if (seatStatus.seatId != null || seatStatus.tier != null) {
-    return handleHasSeat(prompter, apiKeyService, tool, seatStatus.tier);
+    return handleHasSeat(deps, apiKeyService, tool, cliAuth, seatStatus.tier);
   }
 
-  return handleNoSeat(prompter, apiKeyService, tool);
+  return handleNoSeat(deps, apiKeyService, tool);
 }
 
 export async function ensureCliAuth(
@@ -283,10 +293,11 @@ export async function readCliAuth(files: FileStore, homeDir: string): Promise<Cl
 }
 
 async function createApiKey(
-  prompter: Prompter,
+  deps: AuthCommandDeps,
   apiKeyService: ApiKeyServicePort,
   tool: 'opencode' | 'pi',
 ): Promise<AuthResult> {
+  const { prompter } = deps;
   const s = prompter.spinner();
   s.start('Creating API key...');
   let key: string;
@@ -304,11 +315,29 @@ async function createApiKey(
   }
   s.stop('API key created.');
 
-  prompter.note(
-    `${key}\n\nThis key is shown once. To use it:\n${API_KEY_LOGIN_INSTRUCTIONS[tool]}`,
-    'Your API key',
-  );
-  return { authenticated: false };
+  let authenticated = false;
+  if (tool === 'opencode' && deps.commands) {
+    // Import the key into OpenCode v2's credential store so it works without
+    // BERGET_API_KEY or a manual /connect. Best-effort.
+    const outcome = await importCredentialToOpencode(
+      { commands: deps.commands, prompter },
+      { key, kind: 'key' },
+    );
+    authenticated = outcome.imported;
+  }
+
+  if (authenticated) {
+    prompter.note(
+      `${key}\n\nThis key is shown once. It has been imported into OpenCode's credential store.`,
+      'Your API key',
+    );
+  } else {
+    prompter.note(
+      `${key}\n\nThis key is shown once. To use it:\n${API_KEY_LOGIN_INSTRUCTIONS[tool]}`,
+      'Your API key',
+    );
+  }
+  return { authenticated };
 }
 
 const TIER_LABELS: Record<string, string> = {
@@ -319,11 +348,13 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 async function handleHasSeat(
-  prompter: Prompter,
+  deps: Pick<AuthDeps, 'apiKeyService' | 'commands' | 'files' | 'homeDir' | 'prompter'>,
   apiKeyService: ApiKeyServicePort,
   tool: 'opencode' | 'pi',
+  cliAuth: CliAuth,
   tier: null | string,
 ): Promise<AuthResult> {
+  const { prompter } = deps;
   const tierLabel = (tier && TIER_LABELS[tier]) || 'Berget';
   const method = await prompter.select<'api_key' | 'subscription'>({
     message: `You have a ${tierLabel} subscription. How do you want to authenticate?`,
@@ -334,6 +365,23 @@ async function handleHasSeat(
   });
 
   if (method === 'subscription') {
+    if (tool === 'opencode') {
+      // Carry the wizard login into OpenCode's own credential store via its
+      // official `auth import` channel, so the user does not have to repeat
+      // the browser login inside OpenCode (/connect). Best-effort.
+      const outcome = await importCredentialToOpencode(
+        { commands: deps.commands!, prompter },
+        {
+          access: cliAuth.access_token,
+          kind: 'oauth',
+          refresh: cliAuth.refresh_token,
+        },
+      );
+      if (outcome.imported) {
+        return { authenticated: true };
+      }
+    }
+    // Pi, V1 OpenCode, or a failed import: the tool's own login flow.
     prompter.note(
       `Your ${tierLabel} seat is ready. To connect ${TOOL_NAMES[tool]}:\n${SUBSCRIPTION_LOGIN_INSTRUCTIONS[tool]}`,
       'One last step',
@@ -341,21 +389,22 @@ async function handleHasSeat(
     return { authenticated: false };
   }
 
-  return createApiKey(prompter, apiKeyService, tool);
+  return createApiKey(deps, apiKeyService, tool);
 }
 
 async function handleNoSeat(
-  prompter: Prompter,
+  deps: Pick<AuthDeps, 'apiKeyService' | 'commands' | 'files' | 'homeDir' | 'prompter'>,
   apiKeyService: ApiKeyServicePort,
   tool: 'opencode' | 'pi',
 ): Promise<AuthResult> {
+  const { prompter } = deps;
   const shouldCreate = await prompter.confirm({
     initialValue: true,
     message: 'You do not have a Berget subscription. Would you like to create a new API key?',
   });
 
   if (shouldCreate) {
-    return createApiKey(prompter, apiKeyService, tool);
+    return createApiKey(deps, apiKeyService, tool);
   }
 
   prompter.note(

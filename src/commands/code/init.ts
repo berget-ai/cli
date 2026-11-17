@@ -112,7 +112,7 @@ export async function runInit(deps: WizardDeps): Promise<void> {
   prompter.log('step', 'Configuring authentication...');
 
   const authResult = await configureAuth(
-    { apiKeyService, files, homeDir, prompter, seatStatusService },
+    { apiKeyService, commands, files, homeDir, prompter, seatStatusService },
     tool,
     cliAuth,
   );
