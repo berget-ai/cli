@@ -6,7 +6,7 @@ import type { Prompter } from './ports/prompter.js';
 import { decodeJwtPayload, extractJwtExpiresAt, isTokenExpired } from '../../auth/jwt.js';
 import { logger } from '../../utils/logger.js';
 import { FatalError } from './errors.js';
-import { importCredentialToOpencode } from './opencode-import.js';
+import { importCredentialToOpencode, type OpencodeImportResult } from './opencode-import.js';
 import { getOpencodeAuthPath, getPiAuthPath } from './xdg-paths.js';
 
 export interface AuthDeps {
@@ -316,15 +316,16 @@ async function createApiKey(
   s.stop('API key created.');
 
   let authenticated = false;
+  let importOutcome: OpencodeImportResult | undefined;
   if (tool === 'opencode' && deps.commands) {
     // Import the key into OpenCode v2's credential store so it works without
     // BERGET_API_KEY or a manual /connect. Best-effort.
-    const outcome = await importCredentialToOpencode(
+    importOutcome = await importCredentialToOpencode(
       { commands: deps.commands, prompter },
       { key, kind: 'key' },
       API_KEY_LOGIN_INSTRUCTIONS[tool],
     );
-    authenticated = outcome.imported;
+    authenticated = importOutcome.imported;
   }
 
   if (authenticated) {
@@ -332,6 +333,10 @@ async function createApiKey(
       `${key}\n\nThis key is shown once. It has been imported into OpenCode's credential store.`,
       'Your API key',
     );
+  } else if (importOutcome?.notedManualInstructions) {
+    // The import failure note already showed the connect instructions —
+    // don't print them twice next to the key.
+    prompter.note(`${key}\n\nThis key is shown once.`, 'Your API key');
   } else {
     prompter.note(
       `${key}\n\nThis key is shown once. To use it:\n${API_KEY_LOGIN_INSTRUCTIONS[tool]}`,

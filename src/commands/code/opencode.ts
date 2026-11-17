@@ -193,8 +193,11 @@ function generateModifiedContent(
   setDefaultModel: boolean,
 ): string {
   /** Adds the wizard's default model to a parsed config object when absent. */
+  const shouldSetDefaultModel = (config: Record<string, unknown>): boolean =>
+    setDefaultModel && config.model === undefined;
+
   const addDefaultModel = (config: Record<string, unknown>): void => {
-    if (setDefaultModel && config.model === undefined) {
+    if (shouldSetDefaultModel(config)) {
       config.model = DEFAULT_OPENCODE_MODEL;
     }
   };
@@ -242,7 +245,7 @@ function generateModifiedContent(
         modifiedContent = applyEdits(modifiedContent, schemaEdits);
       }
 
-      if (setDefaultModel && jsConfig.model === undefined) {
+      if (shouldSetDefaultModel(jsConfig)) {
         const modelEdits = modify(modifiedContent, ['model'], DEFAULT_OPENCODE_MODEL, {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
         });

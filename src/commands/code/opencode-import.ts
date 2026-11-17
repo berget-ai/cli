@@ -28,6 +28,11 @@ export type CredentialToImport = ApiKeyCredential | OAuthCredential;
 export interface OpencodeImportResult {
   /** true when `opencode auth import` reported success. */
   imported: boolean;
+  /**
+   * true when the failure note already showed `manualInstructions` to the
+   * user — callers must not print the same instructions again.
+   */
+  notedManualInstructions?: boolean;
   /** Human-readable explanation when imported=false. 'skipped-v1' when V1 is not affected. */
   reason?: string;
 }
@@ -77,7 +82,11 @@ export async function importCredentialToOpencode(
       `OpenCode credential import failed.${manualInstructions ? ` To connect manually: ${manualInstructions}` : ''}`,
       'Heads up',
     );
-    return { imported: false, reason: message };
+    return {
+      imported: false,
+      notedManualInstructions: manualInstructions !== undefined,
+      reason: message,
+    };
   }
 
   return { imported: true };

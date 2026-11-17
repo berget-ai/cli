@@ -685,9 +685,13 @@ describe('opencode v2 credential import', () => {
 
     expect(result.authenticated).toBe(false);
     const notes = prompter.calls.filter((c) => c.method === 'note');
-    // Both remediation (from manualInstructions) and the key survive in copy.
     expect(notes.some((n) => JSON.stringify(n.args).includes('connect manually'))).toBe(true);
-    expect(notes.some((n) => JSON.stringify(n.args).includes('sk_ber_test'))).toBe(true);
+    // The key is shown, but the connect instructions appear exactly once —
+    // in the import-failure note, not duplicated next to the key.
+    const instructionCount = notes.filter((n) =>
+      JSON.stringify(n.args).includes('Berget API Key - Enter API key manually'),
+    ).length;
+    expect(instructionCount).toBe(1);
   });
 
   it('subscription + `opencode --version` fails → manual instructions, no crash', async () => {
